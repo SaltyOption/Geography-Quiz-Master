@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for Geography Quiz platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: quizzes
+    description: Quiz management
+  - name: questions
+    description: Question management
+  - name: quiz-attempts
+    description: Quiz attempt and scoring
 paths:
   /healthz:
     get:
@@ -24,6 +30,247 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /quizzes:
+    get:
+      operationId: listQuizzes
+      tags: [quizzes]
+      summary: List all quizzes
+      responses:
+        "200":
+          description: List of quizzes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizSummary"
+    post:
+      operationId: createQuiz
+      tags: [quizzes]
+      summary: Create a new quiz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuizBody"
+      responses:
+        "201":
+          description: Created quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+
+  /quizzes/{id}:
+    get:
+      operationId: getQuiz
+      tags: [quizzes]
+      summary: Get a quiz with its questions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz with questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizWithQuestions"
+        "404":
+          description: Quiz not found
+    patch:
+      operationId: updateQuiz
+      tags: [quizzes]
+      summary: Update a quiz
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuizBody"
+      responses:
+        "200":
+          description: Updated quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+        "404":
+          description: Quiz not found
+    delete:
+      operationId: deleteQuiz
+      tags: [quizzes]
+      summary: Delete a quiz
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Quiz not found
+
+  /quizzes/{id}/questions:
+    get:
+      operationId: listQuestions
+      tags: [questions]
+      summary: List questions for a quiz
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Create a question for a quiz
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionBody"
+      responses:
+        "201":
+          description: Created question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "404":
+          description: Quiz not found
+
+  /questions/{id}:
+    get:
+      operationId: getQuestion
+      tags: [questions]
+      summary: Get a single question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateQuestion
+      tags: [questions]
+      summary: Update a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuestionBody"
+      responses:
+        "200":
+          description: Updated question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteQuestion
+      tags: [questions]
+      summary: Delete a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /quiz-attempts:
+    post:
+      operationId: submitQuizAttempt
+      tags: [quiz-attempts]
+      summary: Submit answers for a quiz attempt and get score
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitQuizAttemptBody"
+      responses:
+        "200":
+          description: Quiz result with score and per-question feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAttemptResult"
+
+  /quizzes/{id}/stats:
+    get:
+      operationId: getQuizStats
+      tags: [quizzes]
+      summary: Get stats for a quiz (total attempts, average score)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizStats"
+        "404":
+          description: Not found
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +281,286 @@ components:
       required:
         - status
 
+    QuizSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+        questionCount:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - description
+        - category
+        - difficulty
+        - questionCount
+        - createdAt
+
+    Quiz:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - description
+        - category
+        - difficulty
+        - createdAt
+        - updatedAt
+
+    QuizWithQuestions:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+      required:
+        - id
+        - title
+        - description
+        - category
+        - difficulty
+        - createdAt
+        - updatedAt
+        - questions
+
+    CreateQuizBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+      required:
+        - title
+        - description
+        - category
+        - difficulty
+
+    UpdateQuizBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+        quizId:
+          type: integer
+        text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctOption:
+          type: integer
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - quizId
+        - text
+        - options
+        - correctOption
+        - explanation
+        - funFact
+        - imageUrl
+        - orderIndex
+        - createdAt
+        - updatedAt
+
+    CreateQuestionBody:
+      type: object
+      properties:
+        text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctOption:
+          type: integer
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+      required:
+        - text
+        - options
+        - correctOption
+        - explanation
+        - orderIndex
+
+    UpdateQuestionBody:
+      type: object
+      properties:
+        text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctOption:
+          type: integer
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+
+    SubmitQuizAttemptBody:
+      type: object
+      properties:
+        quizId:
+          type: integer
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionAnswer"
+      required:
+        - quizId
+        - answers
+
+    QuestionAnswer:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        selectedOption:
+          type: integer
+      required:
+        - questionId
+        - selectedOption
+
+    QuizAttemptResult:
+      type: object
+      properties:
+        quizId:
+          type: integer
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentage:
+          type: number
+        questionResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionResult"
+      required:
+        - quizId
+        - score
+        - totalQuestions
+        - percentage
+        - questionResults
+
+    QuestionResult:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        isCorrect:
+          type: boolean
+        selectedOption:
+          type: integer
+        correctOption:
+          type: integer
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+      required:
+        - questionId
+        - isCorrect
+        - selectedOption
+        - correctOption
+        - explanation
+        - funFact
+
+    QuizStats:
+      type: object
+      properties:
+        quizId:
+          type: integer
+        totalAttempts:
+          type: integer
+        averageScore:
+          type: number
+        averagePercentage:
+          type: number
+      required:
+        - quizId
+        - totalAttempts
+        - averageScore
+        - averagePercentage
