@@ -1,12 +1,14 @@
-import { useListQuizzes } from "@workspace/api-client-react";
+import { useListQuizzes, useGetUserProgress } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { MapPin, Globe2, Loader2, Play } from "lucide-react";
+import { MapPin, Globe2, Loader2, Play, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Show } from "@clerk/react";
 
 export default function Home() {
   const { data: quizzes, isLoading, error } = useListQuizzes();
+  const { data: progress } = useGetUserProgress();
 
   if (isLoading) {
     return (
@@ -26,6 +28,14 @@ export default function Home() {
       </div>
     );
   }
+
+  const getQuizProgress = (quizId: number) => {
+    if (!progress || !progress.recentAttempts) return null;
+    const attempts = progress.recentAttempts.filter(a => a.quizId === quizId);
+    if (attempts.length === 0) return null;
+    const bestAttempt = attempts.reduce((prev, current) => (prev.score > current.score) ? prev : current);
+    return bestAttempt;
+  };
 
   return (
     <div className="container max-w-6xl py-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -54,45 +64,58 @@ export default function Home() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {quizzes?.map((quiz, i) => (
-            <Card 
-              key={quiz.id} 
-              className="group flex flex-col overflow-hidden transition-all hover:shadow-md hover:border-primary/50"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
-              <CardHeader>
-                <div className="mb-2 flex items-center justify-between">
-                  <Badge variant={
-                    quiz.difficulty === 'hard' ? 'destructive' :
-                    quiz.difficulty === 'medium' ? 'default' : 'secondary'
-                  }>
-                    {quiz.difficulty}
-                  </Badge>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'}
-                  </span>
-                </div>
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                  {quiz.title}
-                </CardTitle>
-                <CardDescription className="line-clamp-2">
-                  {quiz.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <Badge variant="outline" className="bg-muted">
-                  {quiz.category}
-                </Badge>
-              </CardContent>
-              <CardFooter className="pt-4 border-t bg-muted/20">
-                <Button className="w-full" asChild>
-                  <Link href={`/quiz/${quiz.id}`}>
-                    <Play className="mr-2 h-4 w-4" /> Start Adventure
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+          {quizzes?.map((quiz, i) => {
+            const quizProgress = getQuizProgress(quiz.id);
+            return (
+              <Card 
+                key={quiz.id} 
+                className="group flex flex-col overflow-hidden transition-all hover:shadow-md hover:border-primary/50 relative"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <CardHeader>
+                  <div className="mb-2 flex items-center justify-between">
+                    <Badge variant={
+                      quiz.difficulty === 'hard' ? 'destructive' :
+                      quiz.difficulty === 'medium' ? 'default' : 'secondary'
+                    }>
+                      {quiz.difficulty}
+                    </Badge>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'}
+                    </span>
+                  </div>
+                  <CardTitle className="text-xl group-hover:text-primary transition-colors pr-8">
+                    {quiz.title}
+                  </CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {quiz.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline" className="bg-muted">
+                      {quiz.category}
+                    </Badge>
+                    <Show when="signed-in">
+                      {quizProgress && (
+                        <div className="flex items-center text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
+                          <CheckCircle2 className="w-4 h-4 mr-1" />
+                          {Math.round(quizProgress.percentage)}% Best
+                        </div>
+                      )}
+                    </Show>
+                  </div>
+                </CardContent>
+                <CardFooter className="pt-4 border-t bg-muted/20">
+                  <Button className="w-full" variant={quizProgress ? "secondary" : "default"} asChild>
+                    <Link href={`/quiz/${quiz.id}`}>
+                      <Play className="mr-2 h-4 w-4" /> {quizProgress ? "Retake Adventure" : "Start Adventure"}
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

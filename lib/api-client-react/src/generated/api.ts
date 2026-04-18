@@ -29,6 +29,8 @@ import type {
   SubmitQuizAttemptBody,
   UpdateQuestionBody,
   UpdateQuizBody,
+  UserProgress,
+  UserQuizProgress,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1122,6 +1124,170 @@ export function useGetQuizStats<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetQuizStatsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get the current user's quiz attempt history and stats
+ */
+export const getGetUserProgressUrl = () => {
+  return `/api/user/progress`;
+};
+
+export const getUserProgress = async (
+  options?: RequestInit,
+): Promise<UserProgress> => {
+  return customFetch<UserProgress>(getGetUserProgressUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetUserProgressQueryKey = () => {
+  return [`/api/user/progress`] as const;
+};
+
+export const getGetUserProgressQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUserProgress>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getUserProgress>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetUserProgressQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserProgress>>> = ({
+    signal,
+  }) => getUserProgress({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUserProgress>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetUserProgressQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUserProgress>>
+>;
+export type GetUserProgressQueryError = ErrorType<void>;
+
+/**
+ * @summary Get the current user's quiz attempt history and stats
+ */
+
+export function useGetUserProgress<
+  TData = Awaited<ReturnType<typeof getUserProgress>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getUserProgress>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUserProgressQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get the current user's history for a specific quiz
+ */
+export const getGetUserQuizProgressUrl = (quizId: number) => {
+  return `/api/user/progress/${quizId}`;
+};
+
+export const getUserQuizProgress = async (
+  quizId: number,
+  options?: RequestInit,
+): Promise<UserQuizProgress> => {
+  return customFetch<UserQuizProgress>(getGetUserQuizProgressUrl(quizId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetUserQuizProgressQueryKey = (quizId: number) => {
+  return [`/api/user/progress/${quizId}`] as const;
+};
+
+export const getGetUserQuizProgressQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUserQuizProgress>>,
+  TError = ErrorType<void>,
+>(
+  quizId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getUserQuizProgress>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetUserQuizProgressQueryKey(quizId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getUserQuizProgress>>
+  > = ({ signal }) =>
+    getUserQuizProgress(quizId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!quizId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUserQuizProgress>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetUserQuizProgressQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUserQuizProgress>>
+>;
+export type GetUserQuizProgressQueryError = ErrorType<void>;
+
+/**
+ * @summary Get the current user's history for a specific quiz
+ */
+
+export function useGetUserQuizProgress<
+  TData = Awaited<ReturnType<typeof getUserQuizProgress>>,
+  TError = ErrorType<void>,
+>(
+  quizId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getUserQuizProgress>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUserQuizProgressQueryOptions(quizId, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

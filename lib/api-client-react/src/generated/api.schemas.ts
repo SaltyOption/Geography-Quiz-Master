@@ -128,3 +128,31 @@ export interface QuizStats {
   averageScore: number;
   averagePercentage: number;
 }
+
+export interface UserAttemptSummary {
+  id: number;
+  quizId: number;
+  quizTitle: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  completedAt: string;
+}
+
+export interface UserProgress {
+  totalAttempts: number;
+  totalQuizzesTaken: number;
+  averagePercentage: number;
+  bestPercentage: number;
+  recentAttempts: UserAttemptSummary[];
+}
+
+export interface UserQuizProgress {
+  quizId: number;
+  attempts: number;
+  bestScore: number;
+  bestPercentage: number;
+  /** @nullable */
+  lastAttemptAt: string | null;
+  history: UserAttemptSummary[];
+}

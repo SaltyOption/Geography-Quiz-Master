@@ -16,6 +16,8 @@ tags:
     description: Question management
   - name: quiz-attempts
     description: Quiz attempt and scoring
+  - name: user-progress
+    description: User progress tracking
 paths:
   /healthz:
     get:
@@ -270,6 +272,42 @@ paths:
                 $ref: "#/components/schemas/QuizStats"
         "404":
           description: Not found
+
+  /user/progress:
+    get:
+      operationId: getUserProgress
+      tags: [user-progress]
+      summary: Get the current user's quiz attempt history and stats
+      responses:
+        "200":
+          description: User progress summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProgress"
+        "401":
+          description: Unauthorized
+
+  /user/progress/{quizId}:
+    get:
+      operationId: getUserQuizProgress
+      tags: [user-progress]
+      summary: Get the current user's history for a specific quiz
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User quiz history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserQuizProgress"
+        "401":
+          description: Unauthorized
 
 components:
   schemas:
@@ -564,3 +602,76 @@ components:
         - totalAttempts
         - averageScore
         - averagePercentage
+
+    UserProgress:
+      type: object
+      properties:
+        totalAttempts:
+          type: integer
+        totalQuizzesTaken:
+          type: integer
+        averagePercentage:
+          type: number
+        bestPercentage:
+          type: number
+        recentAttempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserAttemptSummary"
+      required:
+        - totalAttempts
+        - totalQuizzesTaken
+        - averagePercentage
+        - bestPercentage
+        - recentAttempts
+
+    UserAttemptSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        quizId:
+          type: integer
+        quizTitle:
+          type: string
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentage:
+          type: number
+        completedAt:
+          type: string
+      required:
+        - id
+        - quizId
+        - quizTitle
+        - score
+        - totalQuestions
+        - percentage
+        - completedAt
+
+    UserQuizProgress:
+      type: object
+      properties:
+        quizId:
+          type: integer
+        attempts:
+          type: integer
+        bestScore:
+          type: integer
+        bestPercentage:
+          type: number
+        lastAttemptAt:
+          type: ["string", "null"]
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserAttemptSummary"
+      required:
+        - quizId
+        - attempts
+        - bestScore
+        - bestPercentage
+        - lastAttemptAt
+        - history

@@ -243,3 +243,50 @@ export const GetQuizStatsResponse = zod.object({
   averageScore: zod.number(),
   averagePercentage: zod.number(),
 });
+
+/**
+ * @summary Get the current user's quiz attempt history and stats
+ */
+export const GetUserProgressResponse = zod.object({
+  totalAttempts: zod.number(),
+  totalQuizzesTaken: zod.number(),
+  averagePercentage: zod.number(),
+  bestPercentage: zod.number(),
+  recentAttempts: zod.array(
+    zod.object({
+      id: zod.number(),
+      quizId: zod.number(),
+      quizTitle: zod.string(),
+      score: zod.number(),
+      totalQuestions: zod.number(),
+      percentage: zod.number(),
+      completedAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get the current user's history for a specific quiz
+ */
+export const GetUserQuizProgressParams = zod.object({
+  quizId: zod.coerce.number(),
+});
+
+export const GetUserQuizProgressResponse = zod.object({
+  quizId: zod.number(),
+  attempts: zod.number(),
+  bestScore: zod.number(),
+  bestPercentage: zod.number(),
+  lastAttemptAt: zod.string().nullable(),
+  history: zod.array(
+    zod.object({
+      id: zod.number(),
+      quizId: zod.number(),
+      quizTitle: zod.string(),
+      score: zod.number(),
+      totalQuestions: zod.number(),
+      percentage: zod.number(),
+      completedAt: zod.string(),
+    }),
+  ),
+});
