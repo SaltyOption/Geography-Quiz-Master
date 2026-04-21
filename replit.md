@@ -2,7 +2,7 @@
 
 ## Overview
 
-AtlasQuest — a full-stack geography quiz platform. Visitors can take geography quizzes and track their progress. Admins can manage quiz content. Users can create accounts to save their history.
+World Geography Trivia — a full-stack geography quiz platform. Visitors can take geography quizzes and track their progress. Admins can manage quiz content. Users can create accounts to save their history.
 
 ## Stack
 

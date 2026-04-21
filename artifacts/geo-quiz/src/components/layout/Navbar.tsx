@@ -17,7 +17,7 @@ export function Navbar() {
             <Compass className="h-5 w-5" />
           </div>
           <span className="font-serif text-xl font-bold tracking-tight text-foreground">
-            Atlas<span className="text-primary">Quest</span>
+            World Geography<span className="text-primary"> Trivia</span>
           </span>
         </Link>
         

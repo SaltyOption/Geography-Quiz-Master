@@ -117,13 +117,13 @@ function ClerkProviderWithRoutes() {
       localization={{
         signIn: {
           start: {
-            title: "Welcome back to AtlasQuest",
+            title: "Welcome back to World Geography Trivia",
             subtitle: "Sign in to continue your adventure",
           },
         },
         signUp: {
           start: {
-            title: "Join AtlasQuest",
+            title: "Join World Geography Trivia",
             subtitle: "Start exploring the world today",
           },
         },
