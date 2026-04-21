@@ -78,7 +78,7 @@ export default function Home() {
                       quiz.difficulty === 'hard' ? 'destructive' :
                       quiz.difficulty === 'medium' ? 'default' : 'secondary'
                     }>
-                      {quiz.difficulty}
+                      {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
                     </Badge>
                     <span className="text-xs font-medium text-muted-foreground">
                       {quiz.questionCount} {quiz.questionCount === 1 ? 'Question' : 'Questions'}
