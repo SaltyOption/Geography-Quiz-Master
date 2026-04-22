@@ -55,16 +55,23 @@ function CategoryTreeFilter({
               <button
                 type="button"
                 onClick={() => onSelect(isSelected ? null : node.id)}
-                className="flex flex-1 items-center justify-between gap-2 truncate text-left"
+                className="flex flex-1 items-center gap-2 truncate text-left"
+                title="Filter on this page"
               >
                 <span className="truncate">{node.name}</span>
+              </button>
+              <Link
+                href={`/category/${node.slug}`}
+                className="shrink-0"
+                title={`Open ${node.name} page`}
+              >
                 <Badge
                   variant={isSelected ? "default" : "outline"}
-                  className="shrink-0 text-xs px-1.5 py-0"
+                  className="shrink-0 text-xs px-1.5 py-0 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                 >
                   {node.quizCount}
                 </Badge>
-              </button>
+              </Link>
             </div>
             {hasChildren && isExpanded && (
               <CategoryTreeFilter
@@ -294,9 +301,11 @@ export default function Home() {
                       <div className="flex flex-wrap items-center gap-2">
                         {quiz.categories.length > 0 ? (
                           quiz.categories.map((c) => (
-                            <Badge key={c.id} variant="outline" className="bg-muted">
-                              {c.name}
-                            </Badge>
+                            <Link key={c.id} href={`/category/${c.slug}`}>
+                              <Badge variant="outline" className="bg-muted hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer">
+                                {c.name}
+                              </Badge>
+                            </Link>
                           ))
                         ) : (
                           <Badge variant="outline" className="bg-muted text-muted-foreground">

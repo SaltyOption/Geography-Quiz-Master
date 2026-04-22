@@ -12,6 +12,7 @@ export interface HealthStatus {
 export interface Category {
   id: number;
   name: string;
+  slug: string;
   /** @nullable */
   parentId: number | null;
   createdAt: string;
@@ -86,20 +87,34 @@ export interface UpdateQuizBody {
 export interface CategoryNode {
   id: number;
   name: string;
+  slug: string;
   /** @nullable */
   parentId: number | null;
   quizCount: number;
   children: CategoryNode[];
 }
 
+export interface CategoryWithQuizzes {
+  category: Category;
+  /** Path from root to (but not including) this category. */
+  ancestors: Category[];
+  /** All descendant categories (any depth). */
+  descendants: Category[];
+  /** Quizzes in this category or any of its descendants. */
+  quizzes: QuizSummary[];
+}
+
 export interface CreateCategoryBody {
   name: string;
+  /** Optional. Auto-generated from name if omitted. */
+  slug?: string;
   /** @nullable */
   parentId?: number | null;
 }
 
 export interface UpdateCategoryBody {
   name?: string;
+  slug?: string;
   /** @nullable */
   parentId?: number | null;
 }

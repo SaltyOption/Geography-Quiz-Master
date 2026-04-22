@@ -19,6 +19,7 @@ import type {
 import type {
   Category,
   CategoryNode,
+  CategoryWithQuizzes,
   CreateCategoryBody,
   CreateQuestionBody,
   CreateQuizBody,
@@ -274,6 +275,93 @@ export function useGetCategoryTree<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCategoryTreeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a category and its quizzes (including descendants) by slug
+ */
+export const getGetCategoryBySlugUrl = (slug: string) => {
+  return `/api/categories/by-slug/${slug}`;
+};
+
+export const getCategoryBySlug = async (
+  slug: string,
+  options?: RequestInit,
+): Promise<CategoryWithQuizzes> => {
+  return customFetch<CategoryWithQuizzes>(getGetCategoryBySlugUrl(slug), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCategoryBySlugQueryKey = (slug: string) => {
+  return [`/api/categories/by-slug/${slug}`] as const;
+};
+
+export const getGetCategoryBySlugQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCategoryBySlug>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCategoryBySlug>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCategoryBySlugQueryKey(slug);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCategoryBySlug>>
+  > = ({ signal }) => getCategoryBySlug(slug, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!slug,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCategoryBySlug>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCategoryBySlugQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCategoryBySlug>>
+>;
+export type GetCategoryBySlugQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a category and its quizzes (including descendants) by slug
+ */
+
+export function useGetCategoryBySlug<
+  TData = Awaited<ReturnType<typeof getCategoryBySlug>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCategoryBySlug>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCategoryBySlugQueryOptions(slug, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

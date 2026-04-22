@@ -63,6 +63,8 @@ Initial seeded structure:
 
 Admin can create/rename/delete categories and reparent freely at `/admin/categories`. Quizzes are assigned via multi-select on the create/edit quiz forms. Home page sidebar filters quizzes by category (selecting a parent includes all descendants).
 
+Each category also has a unique `slug` and a shareable landing page at `/category/{slug}` (e.g. `/category/europe`, `/category/by-region`). Slugs are auto-generated from the name on create (and de-duplicated with `-2`, `-3` suffixes). The landing page shows breadcrumbs (root → ... → current), a list of direct subcategories, and all quizzes in this category or any descendant. Category badges throughout the app link to these pages.
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck

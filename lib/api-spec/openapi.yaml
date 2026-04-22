@@ -68,6 +68,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/CategoryNode"
 
+  /categories/by-slug/{slug}:
+    get:
+      operationId: getCategoryBySlug
+      tags: [categories]
+      summary: Get a category and its quizzes (including descendants) by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Category with ancestors, descendants, and quizzes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryWithQuizzes"
+        "404":
+          description: Not found
+
   /categories/{id}:
     patch:
       operationId: updateCategory
@@ -547,6 +568,8 @@ components:
           type: integer
         name:
           type: string
+        slug:
+          type: string
         parentId:
           type: ["integer", "null"]
         createdAt:
@@ -556,6 +579,7 @@ components:
       required:
         - id
         - name
+        - slug
         - parentId
         - createdAt
         - updatedAt
@@ -566,6 +590,8 @@ components:
         id:
           type: integer
         name:
+          type: string
+        slug:
           type: string
         parentId:
           type: ["integer", "null"]
@@ -578,15 +604,45 @@ components:
       required:
         - id
         - name
+        - slug
         - parentId
         - quizCount
         - children
+
+    CategoryWithQuizzes:
+      type: object
+      properties:
+        category:
+          $ref: "#/components/schemas/Category"
+        ancestors:
+          type: array
+          description: "Path from root to (but not including) this category."
+          items:
+            $ref: "#/components/schemas/Category"
+        descendants:
+          type: array
+          description: "All descendant categories (any depth)."
+          items:
+            $ref: "#/components/schemas/Category"
+        quizzes:
+          type: array
+          description: "Quizzes in this category or any of its descendants."
+          items:
+            $ref: "#/components/schemas/QuizSummary"
+      required:
+        - category
+        - ancestors
+        - descendants
+        - quizzes
 
     CreateCategoryBody:
       type: object
       properties:
         name:
           type: string
+        slug:
+          type: string
+          description: "Optional. Auto-generated from name if omitted."
         parentId:
           type: ["integer", "null"]
       required:
@@ -596,6 +652,8 @@ components:
       type: object
       properties:
         name:
+          type: string
+        slug:
           type: string
         parentId:
           type: ["integer", "null"]

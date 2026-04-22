@@ -13,6 +13,7 @@ import * as zod from "zod";
 export const ListCategoriesResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
+  slug: zod.string(),
   parentId: zod.number().nullable(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -24,6 +25,10 @@ export const ListCategoriesResponse = zod.array(ListCategoriesResponseItem);
  */
 export const CreateCategoryBody = zod.object({
   name: zod.string(),
+  slug: zod
+    .string()
+    .optional()
+    .describe("Optional. Auto-generated from name if omitted."),
   parentId: zod.number().nullish(),
 });
 
@@ -33,11 +38,77 @@ export const CreateCategoryBody = zod.object({
 export const GetCategoryTreeResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
+  slug: zod.string(),
   parentId: zod.number().nullable(),
   quizCount: zod.number(),
   children: zod.array(zod.unknown()),
 });
 export const GetCategoryTreeResponse = zod.array(GetCategoryTreeResponseItem);
+
+/**
+ * @summary Get a category and its quizzes (including descendants) by slug
+ */
+export const GetCategoryBySlugParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetCategoryBySlugResponse = zod.object({
+  category: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    slug: zod.string(),
+    parentId: zod.number().nullable(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  }),
+  ancestors: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        name: zod.string(),
+        slug: zod.string(),
+        parentId: zod.number().nullable(),
+        createdAt: zod.string(),
+        updatedAt: zod.string(),
+      }),
+    )
+    .describe("Path from root to (but not including) this category."),
+  descendants: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        name: zod.string(),
+        slug: zod.string(),
+        parentId: zod.number().nullable(),
+        createdAt: zod.string(),
+        updatedAt: zod.string(),
+      }),
+    )
+    .describe("All descendant categories (any depth)."),
+  quizzes: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        title: zod.string(),
+        description: zod.string(),
+        category: zod.string(),
+        difficulty: zod.string(),
+        questionCount: zod.number(),
+        categories: zod.array(
+          zod.object({
+            id: zod.number(),
+            name: zod.string(),
+            slug: zod.string(),
+            parentId: zod.number().nullable(),
+            createdAt: zod.string(),
+            updatedAt: zod.string(),
+          }),
+        ),
+        createdAt: zod.string(),
+      }),
+    )
+    .describe("Quizzes in this category or any of its descendants."),
+});
 
 /**
  * @summary Update a category
@@ -48,12 +119,14 @@ export const UpdateCategoryParams = zod.object({
 
 export const UpdateCategoryBody = zod.object({
   name: zod.string().optional(),
+  slug: zod.string().optional(),
   parentId: zod.number().nullish(),
 });
 
 export const UpdateCategoryResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+  slug: zod.string(),
   parentId: zod.number().nullable(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -88,6 +161,7 @@ export const ListQuizzesResponseItem = zod.object({
     zod.object({
       id: zod.number(),
       name: zod.string(),
+      slug: zod.string(),
       parentId: zod.number().nullable(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
@@ -125,6 +199,7 @@ export const GetQuizResponse = zod.object({
     zod.object({
       id: zod.number(),
       name: zod.string(),
+      slug: zod.string(),
       parentId: zod.number().nullable(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
