@@ -1,10 +1,32 @@
+import { useEffect, useState } from "react";
 import { useGetCategoryBySlug, useGetUserProgress } from "@workspace/api-client-react";
 import { Link, useRoute } from "wouter";
-import { Loader2, Play, CheckCircle2, ChevronRight, MapPin, FolderTree, ArrowLeft } from "lucide-react";
+import { Loader2, Play, CheckCircle2, ChevronRight, MapPin, FolderTree, ArrowLeft, Share2, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Show } from "@clerk/react";
+import { useToast } from "@/hooks/use-toast";
+
+function setMeta(name: string, content: string) {
+  let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute("name", name);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("content", content);
+}
+
+function setOg(property: string, content: string) {
+  let el = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute("property", property);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("content", content);
+}
 
 export default function CategoryPage() {
   const [, params] = useRoute("/category/:slug");
@@ -13,6 +35,66 @@ export default function CategoryPage() {
     query: { enabled: !!slug },
   });
   const { data: progress } = useGetUserProgress();
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+
+  // SEO meta tags
+  useEffect(() => {
+    if (!data) return;
+    const { category, quizzes, ancestors } = data;
+    const path = ancestors.map((a) => a.name).concat(category.name).join(" › ");
+    const title = `${category.name} — World Geography Trivia`;
+    const description =
+      quizzes.length > 0
+        ? `Explore ${quizzes.length} ${quizzes.length === 1 ? "quiz" : "quizzes"} in ${path}. Test your knowledge of ${category.name.toLowerCase()} on World Geography Trivia.`
+        : `Browse the ${category.name} category on World Geography Trivia.`;
+
+    const prevTitle = document.title;
+    document.title = title;
+    setMeta("description", description);
+    setOg("og:title", title);
+    setOg("og:description", description);
+    setOg("og:type", "website");
+    setOg("og:url", window.location.href);
+    setMeta("twitter:card", "summary");
+    setMeta("twitter:title", title);
+    setMeta("twitter:description", description);
+
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [data]);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = data ? `${data.category.name} — World Geography Trivia` : "World Geography Trivia";
+    const text = data
+      ? `Check out the ${data.category.name} category on World Geography Trivia`
+      : "Check out this category";
+
+    try {
+      const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+      if (typeof nav.share === "function") {
+        await nav.share({ title, text, url });
+        return;
+      }
+    } catch {
+      // user cancelled or share failed; fall through to clipboard
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast({ title: "Link copied!", description: "The category link is in your clipboard." });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Could not copy link",
+        description: "Please copy it manually from the address bar.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -78,11 +160,24 @@ export default function CategoryPage() {
               : ""}
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to all quizzes
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={handleShare} variant="outline">
+            {copied ? (
+              <>
+                <Check className="mr-2 h-4 w-4 text-emerald-500" /> Copied
+              </>
+            ) : (
+              <>
+                <Share2 className="mr-2 h-4 w-4" /> Share
+              </>
+            )}
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to categories
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {directChildren.length > 0 && (
