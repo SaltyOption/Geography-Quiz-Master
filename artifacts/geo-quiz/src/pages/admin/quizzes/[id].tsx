@@ -1,10 +1,12 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
 import { 
   useGetQuiz, 
   useUpdateQuiz, 
   useDeleteQuestion,
   getGetQuizQueryKey,
-  getListQuizzesQueryKey
+  getListQuizzesQueryKey,
+  getGetCategoryTreeQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -20,6 +22,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
 
 const formSchema = z.object({
   title: z.string().min(3).max(100),
@@ -41,6 +45,13 @@ export default function AdminEditQuiz() {
   const updateQuiz = useUpdateQuiz();
   const deleteQuestion = useDeleteQuestion();
 
+  const [categoryIds, setCategoryIds] = useState<number[]>([]);
+  useEffect(() => {
+    if (quiz) {
+      setCategoryIds(quiz.categories.map((c) => c.id));
+    }
+  }, [quiz?.id]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     values: quiz ? {
@@ -53,9 +64,10 @@ export default function AdminEditQuiz() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await updateQuiz.mutateAsync({ id: quizId, data: values });
+      await updateQuiz.mutateAsync({ id: quizId, data: { ...values, categoryIds } });
       queryClient.invalidateQueries({ queryKey: getGetQuizQueryKey(quizId) });
       queryClient.invalidateQueries({ queryKey: getListQuizzesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetCategoryTreeQueryKey() });
       toast({ title: "Quiz details updated" });
     } catch (error) {
       toast({ title: "Failed to update quiz", variant: "destructive" });
@@ -123,12 +135,16 @@ export default function AdminEditQuiz() {
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Category</FormLabel>
+                        <FormLabel>Primary Category Label</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <div className="space-y-2">
+                    <Label>Categories</Label>
+                    <CategoryMultiSelect selectedIds={categoryIds} onChange={setCategoryIds} />
+                  </div>
                   <FormField
                     control={form.control}
                     name="difficulty"

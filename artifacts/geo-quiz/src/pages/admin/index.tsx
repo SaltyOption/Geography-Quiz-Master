@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useListQuizzes, useDeleteQuiz, getListQuizzesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Loader2, BarChart2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, BarChart2, FolderTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,11 +48,18 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-1">Manage quizzes, questions, and content.</p>
         </div>
-        <Button asChild>
-          <Link href="/admin/quizzes/new">
-            <Plus className="mr-2 h-4 w-4" /> Create Quiz
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/categories">
+              <FolderTree className="mr-2 h-4 w-4" /> Manage Categories
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/quizzes/new">
+              <Plus className="mr-2 h-4 w-4" /> Create Quiz
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -76,15 +83,21 @@ export default function AdminDashboard() {
           {quizzes?.map((quiz) => (
             <Card key={quiz.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <h2 className="text-xl font-bold">{quiz.title}</h2>
-                  <Badge variant="outline">{quiz.category}</Badge>
                   <Badge variant={
                     quiz.difficulty === 'hard' ? 'destructive' :
                     quiz.difficulty === 'medium' ? 'default' : 'secondary'
                   }>
                     {quiz.difficulty}
                   </Badge>
+                  {quiz.categories.length > 0 ? (
+                    quiz.categories.map((c) => (
+                      <Badge key={c.id} variant="outline">{c.name}</Badge>
+                    ))
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground">Uncategorized</Badge>
+                  )}
                 </div>
                 <p className="text-muted-foreground line-clamp-1 max-w-2xl mb-2">{quiz.description}</p>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">

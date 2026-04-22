@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { useCreateQuiz, getListQuizzesQueryKey } from "@workspace/api-client-react";
+import { useCreateQuiz, getListQuizzesQueryKey, getGetCategoryTreeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -14,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
+import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100),
@@ -27,6 +30,7 @@ export default function AdminCreateQuiz() {
   const createQuiz = useCreateQuiz();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [categoryIds, setCategoryIds] = useState<number[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -40,8 +44,9 @@ export default function AdminCreateQuiz() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const quiz = await createQuiz.mutateAsync({ data: values });
+      const quiz = await createQuiz.mutateAsync({ data: { ...values, categoryIds } });
       queryClient.invalidateQueries({ queryKey: getListQuizzesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetCategoryTreeQueryKey() });
       toast({ title: "Quiz created successfully" });
       setLocation(`/admin/quizzes/${quiz.id}`);
     } catch (error) {
@@ -106,9 +111,9 @@ export default function AdminCreateQuiz() {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>Primary Category Label</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Europe, Continents, General" {...field} />
+                        <Input placeholder="e.g. Europe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -137,6 +142,14 @@ export default function AdminCreateQuiz() {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Categories</Label>
+                <CategoryMultiSelect selectedIds={categoryIds} onChange={setCategoryIds} />
+                <p className="text-xs text-muted-foreground">
+                  Pick one or more categories to organize this quiz in the hierarchy.
+                </p>
               </div>
 
               <div className="flex justify-end gap-4 pt-4 border-t">

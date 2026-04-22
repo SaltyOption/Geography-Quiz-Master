@@ -18,7 +18,98 @@ tags:
     description: Quiz attempt and scoring
   - name: user-progress
     description: User progress tracking
+  - name: categories
+    description: Category hierarchy management
 paths:
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all categories (flat)
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create a new category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryBody"
+      responses:
+        "201":
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /categories/tree:
+    get:
+      operationId: getCategoryTree
+      tags: [categories]
+      summary: Get the full category tree (nested)
+      responses:
+        "200":
+          description: Nested category tree
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryNode"
+
+  /categories/{id}:
+    patch:
+      operationId: updateCategory
+      tags: [categories]
+      summary: Update a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryBody"
+      responses:
+        "200":
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteCategory
+      tags: [categories]
+      summary: Delete a category (children's parent becomes null)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
   /healthz:
     get:
       operationId: healthCheck
@@ -334,6 +425,10 @@ components:
           type: string
         questionCount:
           type: integer
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
         createdAt:
           type: string
       required:
@@ -343,6 +438,7 @@ components:
         - category
         - difficulty
         - questionCount
+        - categories
         - createdAt
 
     Quiz:
@@ -384,6 +480,10 @@ components:
           type: string
         difficulty:
           type: string
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
         createdAt:
           type: string
         updatedAt:
@@ -398,6 +498,7 @@ components:
         - description
         - category
         - difficulty
+        - categories
         - createdAt
         - updatedAt
         - questions
@@ -413,6 +514,10 @@ components:
           type: string
         difficulty:
           type: string
+        categoryIds:
+          type: array
+          items:
+            type: integer
       required:
         - title
         - description
@@ -430,6 +535,70 @@ components:
           type: string
         difficulty:
           type: string
+        categoryIds:
+          type: array
+          items:
+            type: integer
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        parentId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - parentId
+        - createdAt
+        - updatedAt
+
+    CategoryNode:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        parentId:
+          type: ["integer", "null"]
+        quizCount:
+          type: integer
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryNode"
+      required:
+        - id
+        - name
+        - parentId
+        - quizCount
+        - children
+
+    CreateCategoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+        parentId:
+          type: ["integer", "null"]
+      required:
+        - name
+
+    UpdateCategoryBody:
+      type: object
+      properties:
+        name:
+          type: string
+        parentId:
+          type: ["integer", "null"]
 
     Question:
       type: object

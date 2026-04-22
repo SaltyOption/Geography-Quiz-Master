@@ -8,6 +8,65 @@
 import * as zod from "zod";
 
 /**
+ * @summary List all categories (flat)
+ */
+export const ListCategoriesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  parentId: zod.number().nullable(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListCategoriesResponse = zod.array(ListCategoriesResponseItem);
+
+/**
+ * @summary Create a new category
+ */
+export const CreateCategoryBody = zod.object({
+  name: zod.string(),
+  parentId: zod.number().nullish(),
+});
+
+/**
+ * @summary Get the full category tree (nested)
+ */
+export const GetCategoryTreeResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  parentId: zod.number().nullable(),
+  quizCount: zod.number(),
+  children: zod.array(zod.unknown()),
+});
+export const GetCategoryTreeResponse = zod.array(GetCategoryTreeResponseItem);
+
+/**
+ * @summary Update a category
+ */
+export const UpdateCategoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateCategoryBody = zod.object({
+  name: zod.string().optional(),
+  parentId: zod.number().nullish(),
+});
+
+export const UpdateCategoryResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  parentId: zod.number().nullable(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a category (children's parent becomes null)
+ */
+export const DeleteCategoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * Returns server health status
  * @summary Health check
  */
@@ -25,6 +84,15 @@ export const ListQuizzesResponseItem = zod.object({
   category: zod.string(),
   difficulty: zod.string(),
   questionCount: zod.number(),
+  categories: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      parentId: zod.number().nullable(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
   createdAt: zod.string(),
 });
 export const ListQuizzesResponse = zod.array(ListQuizzesResponseItem);
@@ -37,6 +105,7 @@ export const CreateQuizBody = zod.object({
   description: zod.string(),
   category: zod.string(),
   difficulty: zod.string(),
+  categoryIds: zod.array(zod.number()).optional(),
 });
 
 /**
@@ -52,6 +121,15 @@ export const GetQuizResponse = zod.object({
   description: zod.string(),
   category: zod.string(),
   difficulty: zod.string(),
+  categories: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      parentId: zod.number().nullable(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+    }),
+  ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
   questions: zod.array(
@@ -83,6 +161,7 @@ export const UpdateQuizBody = zod.object({
   description: zod.string().optional(),
   category: zod.string().optional(),
   difficulty: zod.string().optional(),
+  categoryIds: zod.array(zod.number()).optional(),
 });
 
 export const UpdateQuizResponse = zod.object({

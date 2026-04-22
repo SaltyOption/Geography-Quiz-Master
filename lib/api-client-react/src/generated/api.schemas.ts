@@ -9,6 +9,15 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  /** @nullable */
+  parentId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface QuizSummary {
   id: number;
   title: string;
@@ -16,6 +25,7 @@ export interface QuizSummary {
   category: string;
   difficulty: string;
   questionCount: number;
+  categories: Category[];
   createdAt: string;
 }
 
@@ -51,6 +61,7 @@ export interface QuizWithQuestions {
   description: string;
   category: string;
   difficulty: string;
+  categories: Category[];
   createdAt: string;
   updatedAt: string;
   questions: Question[];
@@ -61,6 +72,7 @@ export interface CreateQuizBody {
   description: string;
   category: string;
   difficulty: string;
+  categoryIds?: number[];
 }
 
 export interface UpdateQuizBody {
@@ -68,6 +80,28 @@ export interface UpdateQuizBody {
   description?: string;
   category?: string;
   difficulty?: string;
+  categoryIds?: number[];
+}
+
+export interface CategoryNode {
+  id: number;
+  name: string;
+  /** @nullable */
+  parentId: number | null;
+  quizCount: number;
+  children: CategoryNode[];
+}
+
+export interface CreateCategoryBody {
+  name: string;
+  /** @nullable */
+  parentId?: number | null;
+}
+
+export interface UpdateCategoryBody {
+  name?: string;
+  /** @nullable */
+  parentId?: number | null;
 }
 
 export interface CreateQuestionBody {

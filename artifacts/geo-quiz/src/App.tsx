@@ -11,6 +11,7 @@ import Home from "@/pages/home";
 import QuizPage from "@/pages/quiz/[id]";
 import QuizResultsPage from "@/pages/quiz/[id]/results";
 import AdminDashboard from "@/pages/admin/index";
+import AdminCategories from "@/pages/admin/categories";
 import AdminCreateQuiz from "@/pages/admin/quizzes/new";
 import AdminEditQuiz from "@/pages/admin/quizzes/[id]";
 import AdminCreateQuestion from "@/pages/admin/quizzes/[id]/questions/new";
@@ -146,6 +147,7 @@ function ClerkProviderWithRoutes() {
               <Route path="/quiz/:id/results" component={QuizResultsPage} />
               
               <Route path="/admin" component={AdminDashboard} />
+              <Route path="/admin/categories" component={AdminCategories} />
               <Route path="/admin/quizzes/new" component={AdminCreateQuiz} />
               <Route path="/admin/quizzes/:id" component={AdminEditQuiz} />
               <Route path="/admin/quizzes/:id/questions/new" component={AdminCreateQuestion} />

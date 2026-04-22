@@ -49,9 +49,19 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 
 ## Database Schema
 
-- `quizzes` — id, title, description, category, difficulty, timestamps
+- `quizzes` — id, title, description, category (legacy text label), difficulty, timestamps
 - `questions` — id, quiz_id, text, options[], correct_option, explanation, fun_fact, image_url, order_index, timestamps
 - `quiz_attempts` — id, quiz_id, user_id (nullable), score, total_questions, answers (jsonb), created_at
+- `categories` — id, name, parent_id (self-ref, ON DELETE SET NULL), timestamps. Forms an unlimited-depth tree.
+- `quiz_categories` — composite PK (quiz_id, category_id), both ON DELETE CASCADE. Many-to-many join table; quizzes can belong to multiple categories.
+
+## Category Hierarchy
+
+Initial seeded structure:
+- By Region → Africa, Antarctica, Europe, Middle East
+- By Topic → Capitals, Physical Geography, Ancient Sites
+
+Admin can create/rename/delete categories and reparent freely at `/admin/categories`. Quizzes are assigned via multi-select on the create/edit quiz forms. Home page sidebar filters quizzes by category (selecting a parent includes all descendants).
 
 ## Key Commands
 
