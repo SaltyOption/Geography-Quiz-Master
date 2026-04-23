@@ -20,6 +20,8 @@ tags:
     description: User progress tracking
   - name: categories
     description: Category hierarchy management
+  - name: me
+    description: Current user identity and admin status
 paths:
   /categories:
     get:
@@ -130,6 +132,19 @@ paths:
           description: Deleted
         "404":
           description: Not found
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [me]
+      summary: Get current user identity and admin status
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
 
   /healthz:
     get:
@@ -423,6 +438,17 @@ paths:
 
 components:
   schemas:
+    Me:
+      type: object
+      properties:
+        userId:
+          type: ["string", "null"]
+        isAdmin:
+          type: boolean
+      required:
+        - userId
+        - isAdmin
+
     HealthStatus:
       type: object
       properties:

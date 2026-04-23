@@ -2,12 +2,15 @@ import { Link, useLocation } from "wouter";
 import { Compass, Settings, LogOut, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Show, useUser, useClerk } from "@clerk/react";
+import { useGetMe } from "@workspace/api-client-react";
 
 export function Navbar() {
   const [location] = useLocation();
-  const isAdmin = location.startsWith("/admin");
+  const onAdminPage = location.startsWith("/admin");
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { data: me } = useGetMe();
+  const isAdmin = me?.isAdmin ?? false;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -22,18 +25,18 @@ export function Navbar() {
         </Link>
         
         <nav className="flex items-center space-x-2">
-          {isAdmin ? (
+          {onAdminPage ? (
             <Button variant="ghost" asChild>
               <Link href="/">Back to Quizzes</Link>
             </Button>
-          ) : (
+          ) : isAdmin ? (
             <Button variant="ghost" size="sm" asChild>
               <Link href="/admin">
                 <Settings className="mr-2 h-4 w-4" />
                 Admin
               </Link>
             </Button>
-          )}
+          ) : null}
 
           <div className="w-px h-6 bg-border mx-2" />
 

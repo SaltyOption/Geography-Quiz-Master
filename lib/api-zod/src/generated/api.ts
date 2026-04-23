@@ -147,6 +147,14 @@ export const DeleteCategoryParams = zod.object({
 });
 
 /**
+ * @summary Get current user identity and admin status
+ */
+export const GetMeResponse = zod.object({
+  userId: zod.string().nullable(),
+  isAdmin: zod.boolean(),
+});
+
+/**
  * Returns server health status
  * @summary Health check
  */

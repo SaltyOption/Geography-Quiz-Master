@@ -10,6 +10,7 @@ import {
   DeleteQuestionParams,
   ListQuestionsParams,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
 
@@ -44,7 +45,7 @@ router.get("/quizzes/:id/questions", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/quizzes/:id/questions", async (req, res): Promise<void> => {
+router.post("/quizzes/:id/questions", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = CreateQuestionParams.safeParse({ id: rawId });
   if (!params.success) {
@@ -117,7 +118,7 @@ router.get("/questions/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.patch("/questions/:id", async (req, res): Promise<void> => {
+router.patch("/questions/:id", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = UpdateQuestionParams.safeParse({ id: rawId });
   if (!params.success) {
@@ -157,7 +158,7 @@ router.patch("/questions/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.delete("/questions/:id", async (req, res): Promise<void> => {
+router.delete("/questions/:id", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = DeleteQuestionParams.safeParse({ id: rawId });
   if (!params.success) {

@@ -5,6 +5,12 @@
  * API specification for Geography Quiz platform
  * OpenAPI spec version: 0.1.0
  */
+export interface Me {
+  /** @nullable */
+  userId: string | null;
+  isAdmin: boolean;
+}
+
 export interface HealthStatus {
   status: string;
 }

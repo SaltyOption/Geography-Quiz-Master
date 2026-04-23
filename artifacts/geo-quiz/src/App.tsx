@@ -17,6 +17,7 @@ import AdminCreateQuiz from "@/pages/admin/quizzes/new";
 import AdminEditQuiz from "@/pages/admin/quizzes/[id]";
 import AdminCreateQuestion from "@/pages/admin/quizzes/[id]/questions/new";
 import { Navbar } from "@/components/layout/Navbar";
+import { AdminGuard } from "@/components/AdminGuard";
 
 import SignInPage from "@/pages/sign-in";
 import SignUpPage from "@/pages/sign-up";
@@ -148,11 +149,21 @@ function ClerkProviderWithRoutes() {
               <Route path="/quiz/:id" component={QuizPage} />
               <Route path="/quiz/:id/results" component={QuizResultsPage} />
               
-              <Route path="/admin" component={AdminDashboard} />
-              <Route path="/admin/categories" component={AdminCategories} />
-              <Route path="/admin/quizzes/new" component={AdminCreateQuiz} />
-              <Route path="/admin/quizzes/:id" component={AdminEditQuiz} />
-              <Route path="/admin/quizzes/:id/questions/new" component={AdminCreateQuestion} />
+              <Route path="/admin">
+                <AdminGuard><AdminDashboard /></AdminGuard>
+              </Route>
+              <Route path="/admin/categories">
+                <AdminGuard><AdminCategories /></AdminGuard>
+              </Route>
+              <Route path="/admin/quizzes/new">
+                <AdminGuard><AdminCreateQuiz /></AdminGuard>
+              </Route>
+              <Route path="/admin/quizzes/:id">
+                <AdminGuard><AdminEditQuiz /></AdminGuard>
+              </Route>
+              <Route path="/admin/quizzes/:id/questions/new">
+                <AdminGuard><AdminCreateQuestion /></AdminGuard>
+              </Route>
               
               <Route component={NotFound} />
             </Switch>

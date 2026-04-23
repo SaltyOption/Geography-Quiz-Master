@@ -79,6 +79,14 @@ The home page is a category browser only (no quizzes shown directly) — it grou
 - `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` — Clerk auth keys
 - `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` — PostgreSQL
 
+## Admin Access
+
+- Admin write endpoints (`POST/PATCH/DELETE` on quizzes, questions, categories) and the `/admin/*` UI are restricted via the `requireAdmin` middleware. It rejects unauthenticated requests with `401` and signed-in non-admins with `403`.
+- Admin identity is configured via the `ADMIN_USER_IDS` env var: a comma-separated list of Clerk user IDs. If unset/empty, no one is an admin (fail-closed).
+- Set `ADMIN_USER_IDS` in the workspace Secrets pane so it's available in both development and the deployed app.
+- Bootstrap UX: visit `/admin` while signed in but not yet an admin — the page displays your Clerk user ID so you can copy it into `ADMIN_USER_IDS`, then refresh.
+- The client uses `GET /api/me` (`useGetMe`) to decide whether to show the Admin nav link and to gate `/admin/*` routes. The server is the security boundary; the client guard is UX only.
+
 ## Seeded Data
 
 4 quizzes with 8-9 questions each:

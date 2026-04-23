@@ -16,6 +16,7 @@ import {
   DeleteQuizParams,
   GetQuizStatsParams,
 } from "@workspace/api-zod";
+import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
 
@@ -98,7 +99,7 @@ router.get("/quizzes", async (_req, res): Promise<void> => {
   res.json(result);
 });
 
-router.post("/quizzes", async (req, res): Promise<void> => {
+router.post("/quizzes", requireAdmin, async (req, res): Promise<void> => {
   const parsed = CreateQuizBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -171,7 +172,7 @@ router.get("/quizzes/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.patch("/quizzes/:id", async (req, res): Promise<void> => {
+router.patch("/quizzes/:id", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = UpdateQuizParams.safeParse({ id: rawId });
   if (!params.success) {
@@ -218,7 +219,7 @@ router.patch("/quizzes/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.delete("/quizzes/:id", async (req, res): Promise<void> => {
+router.delete("/quizzes/:id", requireAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = DeleteQuizParams.safeParse({ id: rawId });
   if (!params.success) {
