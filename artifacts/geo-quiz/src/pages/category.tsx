@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useGetCategoryBySlug, useGetUserProgress } from "@workspace/api-client-react";
+import { getGetCategoryBySlugQueryKey, useGetCategoryBySlug, useGetUserProgress } from "@workspace/api-client-react";
 import { Link, useRoute } from "wouter";
 import { Loader2, Play, CheckCircle2, ChevronRight, MapPin, FolderTree, ArrowLeft, Share2, Check } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +32,7 @@ export default function CategoryPage() {
   const [, params] = useRoute("/category/:slug");
   const slug = params?.slug ?? "";
   const { data, isLoading, error } = useGetCategoryBySlug(slug, {
-    query: { enabled: !!slug },
+    query: { queryKey: getGetCategoryBySlugQueryKey(slug), enabled: !!slug },
   });
   const { data: progress } = useGetUserProgress();
   const { toast } = useToast();

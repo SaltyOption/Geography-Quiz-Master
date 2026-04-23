@@ -136,6 +136,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <TooltipProvider>
         <div className="flex flex-col min-h-[100dvh]">
           <Navbar />
           <main className="flex-1">
@@ -170,7 +171,7 @@ function ClerkProviderWithRoutes() {
           </main>
         </div>
         <Toaster />
-        <TooltipProvider />
+        </TooltipProvider>
       </QueryClientProvider>
     </ClerkProvider>
   );
