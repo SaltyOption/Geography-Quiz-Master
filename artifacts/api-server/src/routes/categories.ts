@@ -15,6 +15,7 @@ const serializeCategory = (c: typeof categoriesTable.$inferSelect) => ({
   name: c.name,
   slug: c.slug,
   parentId: c.parentId,
+  imageUrl: c.imageUrl,
   createdAt: c.createdAt.toISOString(),
   updatedAt: c.updatedAt.toISOString(),
 });
@@ -56,7 +57,7 @@ router.get("/categories/tree", async (_req, res): Promise<void> => {
     .groupBy(quizCategoriesTable.categoryId);
   const countMap = new Map(counts.map((c) => [c.categoryId, c.count]));
 
-  type Node = { id: number; name: string; slug: string; parentId: number | null; quizCount: number; children: Node[] };
+  type Node = { id: number; name: string; slug: string; parentId: number | null; imageUrl: string | null; quizCount: number; children: Node[] };
   const nodes: Map<number, Node> = new Map();
   for (const c of categories) {
     nodes.set(c.id, {
@@ -64,6 +65,7 @@ router.get("/categories/tree", async (_req, res): Promise<void> => {
       name: c.name,
       slug: c.slug,
       parentId: c.parentId,
+      imageUrl: c.imageUrl,
       quizCount: countMap.get(c.id) ?? 0,
       children: [],
     });

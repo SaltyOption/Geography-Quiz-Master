@@ -15,6 +15,8 @@ export interface Category {
   slug: string;
   /** @nullable */
   parentId: number | null;
+  /** @nullable */
+  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -90,6 +92,8 @@ export interface CategoryNode {
   slug: string;
   /** @nullable */
   parentId: number | null;
+  /** @nullable */
+  imageUrl: string | null;
   quizCount: number;
   children: CategoryNode[];
 }

@@ -150,9 +150,24 @@ export default function CategoryPage() {
         <span className="font-semibold text-foreground">{category.name}</span>
       </nav>
 
+      {category.imageUrl && (
+        <div className="relative mb-6 h-48 w-full overflow-hidden rounded-2xl sm:h-64 md:h-72">
+          <img
+            src={category.imageUrl.startsWith("/") ? `${import.meta.env.BASE_URL}${category.imageUrl.slice(1)}` : category.imageUrl}
+            alt={category.name}
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-6">
+            <h1 className="text-4xl font-bold tracking-tight text-foreground drop-shadow-sm sm:text-5xl">{category.name}</h1>
+          </div>
+        </div>
+      )}
       <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">{category.name}</h1>
+          {!category.imageUrl && (
+            <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">{category.name}</h1>
+          )}
           <p className="mt-2 text-muted-foreground">
             {quizzes.length} {quizzes.length === 1 ? "quiz" : "quizzes"}
             {descendants.length > 0

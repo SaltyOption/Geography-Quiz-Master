@@ -572,6 +572,8 @@ components:
           type: string
         parentId:
           type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
         createdAt:
           type: string
         updatedAt:
@@ -581,6 +583,7 @@ components:
         - name
         - slug
         - parentId
+        - imageUrl
         - createdAt
         - updatedAt
 
@@ -595,6 +598,8 @@ components:
           type: string
         parentId:
           type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
         quizCount:
           type: integer
         children:
@@ -606,6 +611,7 @@ components:
         - name
         - slug
         - parentId
+        - imageUrl
         - quizCount
         - children
 

@@ -1,0 +1,68 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "V1MUpsL5ctxZsW8nPmZ6o"
+uri = "file://artifacts/geo-quiz/public/regions/europe.png"
+type = "image"
+title = "europe hero"
+
+[[generated]]
+id = "QRzOr4UOWHW6_bQNJ9XNk"
+uri = "file://artifacts/geo-quiz/public/regions/africa.png"
+type = "image"
+title = "africa hero"
+
+[[generated]]
+id = "0P9Gzv-wifQSb-c-xzrtU"
+uri = "file://artifacts/geo-quiz/public/regions/antarctica.png"
+type = "image"
+title = "antarctica hero"
+
+[[generated]]
+id = "KFoU3edsl7xM1z4e0O-Pf"
+uri = "file://artifacts/geo-quiz/public/regions/middle-east.png"
+type = "image"
+title = "middle-east hero"
+
+[[generated]]
+id = "MsAdfgr-u3b4rnzyTZUI8"
+uri = "file://artifacts/geo-quiz/public/regions/east-asia.png"
+type = "image"
+title = "east-asia hero"
+
+[[generated]]
+id = "A6UagLRbzBIB2wUioTF7Q"
+uri = "file://artifacts/geo-quiz/public/regions/south-east-asia.png"
+type = "image"
+title = "south-east-asia hero"
+
+[[generated]]
+id = "AISapBxMMwSaCev-yl2tZ"
+uri = "file://artifacts/geo-quiz/public/regions/oceania.png"
+type = "image"
+title = "oceania hero"
+
+[[generated]]
+id = "e3z7chutYbJ6BstkLsqE9"
+uri = "file://artifacts/geo-quiz/public/regions/north-america.png"
+type = "image"
+title = "north-america hero"
+
+[[generated]]
+id = "ETkIewxXVIXbRJUN8Jc5p"
+uri = "file://artifacts/geo-quiz/public/regions/central-america.png"
+type = "image"
+title = "central-america hero"
+
+[[generated]]
+id = "rHF-n0p-RsVGwRlxyTuuU"
+uri = "file://artifacts/geo-quiz/public/regions/south-america.png"
+type = "image"
+title = "south-america hero"
+
+[[generated]]
+id = "NvQ5whWvJOtakNXkrNrvs"
+uri = "file://artifacts/geo-quiz/public/regions/caribbean.png"
+type = "image"
+title = "caribbean hero"

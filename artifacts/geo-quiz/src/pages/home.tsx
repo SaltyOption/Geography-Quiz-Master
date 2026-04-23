@@ -20,9 +20,24 @@ function countAll(node: CategoryNode): { quizzes: number; subcategories: number 
 
 function CategoryCard({ node }: { node: CategoryNode }) {
   const totals = countAll(node);
+  const baseUrl = import.meta.env.BASE_URL;
+  const imgSrc = node.imageUrl
+    ? (node.imageUrl.startsWith("/") ? `${baseUrl}${node.imageUrl.slice(1)}` : node.imageUrl)
+    : null;
   return (
     <Link href={`/category/${node.slug}`}>
-      <Card className="group h-full cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
+      <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
+        {imgSrc && (
+          <div className="relative h-32 w-full overflow-hidden bg-muted">
+            <img
+              src={imgSrc}
+              alt={node.name}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />
+          </div>
+        )}
         <CardHeader>
           <div className="mb-2 flex items-start justify-between gap-2">
             <div className="rounded-lg bg-primary/10 p-2 text-primary">

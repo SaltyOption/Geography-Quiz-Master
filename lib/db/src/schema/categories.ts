@@ -8,6 +8,7 @@ export const categoriesTable = pgTable("categories", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   parentId: integer("parent_id").references((): AnyPgColumn => categoriesTable.id, { onDelete: "set null" }),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
