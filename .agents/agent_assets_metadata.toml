@@ -66,3 +66,21 @@ id = "NvQ5whWvJOtakNXkrNrvs"
 uri = "file://artifacts/geo-quiz/public/regions/caribbean.png"
 type = "image"
 title = "caribbean hero"
+
+[[generated]]
+id = "HAIfhDxliSuW2vpnjaD8e"
+uri = "file://artifacts/geo-quiz/public/regions/capitals.png"
+type = "image"
+title = "capitals hero"
+
+[[generated]]
+id = "G8JOx2L-CaVmHQbege4qf"
+uri = "file://artifacts/geo-quiz/public/regions/physical-geography.png"
+type = "image"
+title = "physical-geography hero"
+
+[[generated]]
+id = "odHJEskZfkkrDlKEmXVpG"
+uri = "file://artifacts/geo-quiz/public/regions/ancient-sites.png"
+type = "image"
+title = "ancient-sites hero"
