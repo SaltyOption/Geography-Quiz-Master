@@ -32,8 +32,15 @@ export function SignUpBanner() {
             <p>
               <span className="font-medium">Join the adventure</span>
               <span className="text-muted-foreground">
-                {" "}— create a free account to save your scores and track your quiz history.
+                {" "}— create a free account to save your scores and track your quiz history. We don't sell your information.{" "}
               </span>
+              <Link
+                href="/privacy"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                data-testid="link-banner-privacy"
+              >
+                Privacy
+              </Link>
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">

@@ -30,6 +30,17 @@ export function SignUpResultsPrompt() {
                 <History className="h-3.5 w-3.5 text-primary" /> Track your quiz history
               </li>
             </ul>
+            <p className="pt-1 text-xs text-muted-foreground">
+              We never sell your information.{" "}
+              <Link
+                href="/privacy"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                data-testid="link-results-privacy"
+              >
+                Read our privacy promise
+              </Link>
+              .
+            </p>
           </div>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
             <Button asChild size="lg" data-testid="button-results-signup">
