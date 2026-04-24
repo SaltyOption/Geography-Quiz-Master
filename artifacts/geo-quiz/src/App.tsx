@@ -19,6 +19,7 @@ import AdminCreateQuiz from "@/pages/admin/quizzes/new";
 import AdminEditQuiz from "@/pages/admin/quizzes/[id]";
 import AdminCreateQuestion from "@/pages/admin/quizzes/[id]/questions/new";
 import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 import { AdminGuard } from "@/components/AdminGuard";
 
 import SignInPage from "@/pages/sign-in";
@@ -173,6 +174,7 @@ function ClerkProviderWithRoutes() {
               <Route component={NotFound} />
             </Switch>
           </main>
+          <Footer />
         </div>
         <Toaster />
         </TooltipProvider>
