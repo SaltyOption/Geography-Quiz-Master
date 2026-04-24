@@ -1,4 +1,4 @@
-import { useGetCategoryTree, type CategoryNode } from "@workspace/api-client-react";
+import { useGetCategoryTree, useListQuizzes, type CategoryNode } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Globe2, Loader2, FolderTree, ChevronRight, BookOpen } from "lucide-react";
 import { SignUpBanner } from "@/components/SignUpBanner";
@@ -77,6 +77,7 @@ function CategoryCard({ node }: { node: CategoryNode }) {
 
 export default function Home() {
   const { data: tree, isLoading, error } = useGetCategoryTree();
+  const { data: quizzes } = useListQuizzes();
 
   if (isLoading) {
     return (
@@ -98,7 +99,7 @@ export default function Home() {
   }
 
   const roots = tree ?? [];
-  const totalQuizzes = roots.reduce((sum, r) => sum + countAll(r).quizzes, 0);
+  const totalQuizzes = quizzes?.length ?? 0;
 
   return (
     <>
