@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useListQuizzes, useDeleteQuiz, getListQuizzesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Loader2, BarChart2, FolderTree } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, BarChart2, FolderTree, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +52,11 @@ export default function AdminDashboard() {
           <Button variant="outline" asChild>
             <Link href="/admin/categories">
               <FolderTree className="mr-2 h-4 w-4" /> Manage Categories
+            </Link>
+          </Button>
+          <Button variant="outline" asChild data-testid="link-bulk-import">
+            <Link href="/admin/import">
+              <Upload className="mr-2 h-4 w-4" /> Bulk Import
             </Link>
           </Button>
           <Button asChild>

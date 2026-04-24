@@ -89,6 +89,63 @@ export interface CreateQuizBody {
   categoryIds?: number[];
 }
 
+export type BulkImportItemOptions = {
+  /** @minLength 1 */
+  A: string;
+  /** @minLength 1 */
+  B: string;
+  /** @minLength 1 */
+  C: string;
+  /** @minLength 1 */
+  D: string;
+};
+
+export type BulkImportItemCorrectAnswer =
+  (typeof BulkImportItemCorrectAnswer)[keyof typeof BulkImportItemCorrectAnswer];
+
+export const BulkImportItemCorrectAnswer = {
+  A: "A",
+  B: "B",
+  C: "C",
+  D: "D",
+} as const;
+
+export interface BulkImportItem {
+  /** @minLength 1 */
+  topic: string;
+  /** @minLength 1 */
+  question: string;
+  options: BulkImportItemOptions;
+  correct_answer: BulkImportItemCorrectAnswer;
+  /** @minLength 1 */
+  explanation: string;
+  /** @nullable */
+  fun_fact?: string | null;
+  /** @nullable */
+  difficulty?: string | null;
+  /** @nullable */
+  image_url?: string | null;
+}
+
+export interface BulkImportBody {
+  items: BulkImportItem[];
+  categoryIds?: number[];
+}
+
+export interface BulkImportTopicResult {
+  topic: string;
+  quizId: number;
+  created: boolean;
+  questionsAdded: number;
+}
+
+export interface BulkImportResult {
+  quizzesCreated: number;
+  quizzesUpdated: number;
+  questionsAdded: number;
+  topics: BulkImportTopicResult[];
+}
+
 export interface UpdateQuizBody {
   title?: string;
   description?: string;

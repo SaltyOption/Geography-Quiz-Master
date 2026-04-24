@@ -87,6 +87,15 @@ The home page is a category browser only (no quizzes shown directly) — it grou
 - Bootstrap UX: visit `/admin` while signed in but not yet an admin — the page displays your Clerk user ID so you can copy it into `ADMIN_USER_IDS`, then refresh.
 - The client uses `GET /api/me` (`useGetMe`) to decide whether to show the Admin nav link and to gate `/admin/*` routes. The server is the security boundary; the client guard is UX only.
 
+## Bulk Import
+
+- Admin page at `/admin/import` lets admins paste or upload a JSON array of question objects.
+- Endpoint: `POST /api/quizzes/bulk-import` (admin-only). Accepts either `{ items: BulkImportItem[], categoryIds?: number[] }` or a bare array of items.
+- Items are grouped by their `topic` field. Each topic becomes (or maps to) a quiz with `title = topic`. New quizzes are created with `description = "A quiz on {topic}"`, `category = topic`, and `difficulty` = the most common value among that topic's questions (default `Medium`). Optional `categoryIds` are attached only to newly created quizzes.
+- Question fields: `question`, `options{A,B,C,D}`, `correct_answer` ("A"|"B"|"C"|"D"), `explanation`, optional `fun_fact`, `difficulty`, `image_url`. Letters map to options index 0–3.
+- Order indices continue from `max(orderIndex) + 1` of the existing quiz, so re-importing the same topic appends questions.
+- The whole import runs inside a single DB transaction — if any insert fails, no quizzes or questions are created.
+
 ## Seeded Data
 
 4 quizzes with 8-9 questions each:

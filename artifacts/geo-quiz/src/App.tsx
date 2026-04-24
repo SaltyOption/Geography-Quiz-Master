@@ -15,6 +15,7 @@ import DailyQuizPage from "@/pages/daily";
 import PrivacyPage from "@/pages/privacy";
 import AdminDashboard from "@/pages/admin/index";
 import AdminCategories from "@/pages/admin/categories";
+import AdminImport from "@/pages/admin/import";
 import AdminCreateQuiz from "@/pages/admin/quizzes/new";
 import AdminEditQuiz from "@/pages/admin/quizzes/[id]";
 import AdminCreateQuestion from "@/pages/admin/quizzes/[id]/questions/new";
@@ -160,6 +161,9 @@ function ClerkProviderWithRoutes() {
               </Route>
               <Route path="/admin/categories">
                 <AdminGuard><AdminCategories /></AdminGuard>
+              </Route>
+              <Route path="/admin/import">
+                <AdminGuard><AdminImport /></AdminGuard>
               </Route>
               <Route path="/admin/quizzes/new">
                 <AdminGuard><AdminCreateQuiz /></AdminGuard>

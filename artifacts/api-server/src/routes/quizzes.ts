@@ -15,6 +15,7 @@ import {
   UpdateQuizParams,
   DeleteQuizParams,
   GetQuizStatsParams,
+  BulkImportQuizzesBody,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -123,6 +124,133 @@ router.post("/quizzes", requireAdmin, async (req, res): Promise<void> => {
     createdAt: quiz.createdAt.toISOString(),
     updatedAt: quiz.updatedAt.toISOString(),
   });
+});
+
+router.post("/quizzes/bulk-import", requireAdmin, async (req, res): Promise<void> => {
+  // Accept either an envelope { items, categoryIds } or a bare array of items.
+  const body = Array.isArray(req.body) ? { items: req.body } : req.body;
+  const parsed = BulkImportQuizzesBody.safeParse(body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { items, categoryIds } = parsed.data;
+  if (items.length === 0) {
+    res.json({ quizzesCreated: 0, quizzesUpdated: 0, questionsAdded: 0, topics: [] });
+    return;
+  }
+
+  // Normalize topic whitespace and group items by normalized topic, preserving first-seen order.
+  const byTopic = new Map<string, typeof items>();
+  for (const item of items) {
+    const topic = item.topic.trim();
+    const arr = byTopic.get(topic) ?? [];
+    arr.push({ ...item, topic });
+    byTopic.set(topic, arr);
+  }
+
+  try {
+    const summary = await db.transaction(async (tx) => {
+      const topicResults: Array<{
+        topic: string;
+        quizId: number;
+        created: boolean;
+        questionsAdded: number;
+      }> = [];
+      let quizzesCreated = 0;
+      let quizzesUpdated = 0;
+      let questionsAdded = 0;
+
+      for (const [topic, topicItems] of byTopic) {
+        // Most common difficulty among the topic's questions, defaulting to "Medium".
+        const diffCounts = new Map<string, number>();
+        for (const i of topicItems) {
+          const d = (i.difficulty ?? "Medium").trim() || "Medium";
+          diffCounts.set(d, (diffCounts.get(d) ?? 0) + 1);
+        }
+        const difficulty =
+          [...diffCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Medium";
+
+        // Find existing quiz by exact title; otherwise create one.
+        const [existing] = await tx
+          .select()
+          .from(quizzesTable)
+          .where(eq(quizzesTable.title, topic))
+          .limit(1);
+
+        let quizId: number;
+        let created = false;
+        if (existing) {
+          quizId = existing.id;
+          quizzesUpdated += 1;
+        } else {
+          const [inserted] = await tx
+            .insert(quizzesTable)
+            .values({
+              title: topic,
+              description: `A quiz on ${topic}`,
+              category: topic,
+              difficulty,
+            })
+            .returning();
+          quizId = inserted.id;
+          created = true;
+          quizzesCreated += 1;
+          if (categoryIds && categoryIds.length > 0) {
+            // Inline category attach inside the transaction.
+            const validCats = await tx
+              .select({ id: categoriesTable.id })
+              .from(categoriesTable)
+              .where(inArray(categoriesTable.id, categoryIds));
+            const validIds = new Set(validCats.map((c) => c.id));
+            const toInsert = categoryIds.filter((id) => validIds.has(id));
+            if (toInsert.length > 0) {
+              await tx
+                .insert(quizCategoriesTable)
+                .values(toInsert.map((categoryId) => ({ quizId, categoryId })));
+            }
+          }
+        }
+
+        // Determine starting orderIndex for new questions (append after existing).
+        const [maxRow] = await tx
+          .select({ max: sql<number | null>`max(${questionsTable.orderIndex})` })
+          .from(questionsTable)
+          .where(eq(questionsTable.quizId, quizId));
+        let nextOrder = (maxRow?.max ?? -1) + 1;
+
+        const rows = topicItems.map((item) => {
+          const opts = [item.options.A, item.options.B, item.options.C, item.options.D];
+          const correctIndex = ["A", "B", "C", "D"].indexOf(item.correct_answer);
+          return {
+            quizId,
+            text: item.question,
+            options: opts,
+            correctOption: correctIndex,
+            explanation: item.explanation,
+            funFact: item.fun_fact ?? null,
+            imageUrl: item.image_url ?? null,
+            orderIndex: nextOrder++,
+          };
+        });
+
+        if (rows.length > 0) {
+          await tx.insert(questionsTable).values(rows);
+          questionsAdded += rows.length;
+        }
+
+        topicResults.push({ topic, quizId, created, questionsAdded: rows.length });
+      }
+
+      return { quizzesCreated, quizzesUpdated, questionsAdded, topics: topicResults };
+    });
+
+    res.json(summary);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Bulk import failed";
+    res.status(500).json({ error: `Import failed (no changes were saved): ${message}` });
+  }
 });
 
 router.get("/quizzes/:id", async (req, res): Promise<void> => {

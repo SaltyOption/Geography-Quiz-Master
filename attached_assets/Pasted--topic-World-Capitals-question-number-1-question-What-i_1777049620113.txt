@@ -1,0 +1,323 @@
+[
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 1,
+
+    "question": "What is the capital city of Australia?",
+
+    "options": {
+
+      "A": "Canberra",
+
+      "B": "Sydney",
+
+      "C": "Melbourne",
+
+      "D": "Brisbane"
+
+    },
+
+    "correct_answer": "A",
+
+    "answer_text": "Canberra",
+
+    "explanation": "Canberra is Australia’s capital. It was selected as a compromise between Sydney and Melbourne and officially became the seat of government in 1927.",
+
+    "fun_fact": "Although Sydney and Melbourne are much larger and more famous internationally, neither is the capital of Australia.",
+
+    "difficulty": "Easy"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 2,
+
+    "question": "What is the capital city of Brazil?",
+
+    "options": {
+
+      "A": "Rio de Janeiro",
+
+      "B": "São Paulo",
+
+      "C": "Brasília",
+
+      "D": "Salvador"
+
+    },
+
+    "correct_answer": "C",
+
+    "answer_text": "Brasília",
+
+    "explanation": "Brasília became Brazil’s capital in 1960. It was purpose-built to help encourage development in the country’s interior rather than along the coast.",
+
+    "fun_fact": "The city is famous for its modernist design, and much of its core layout was planned in the shape of an airplane.",
+
+    "difficulty": "Easy"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 3,
+
+    "question": "What is the capital city of Canada?",
+
+    "options": {
+
+      "A": "Toronto",
+
+      "B": "Ottawa",
+
+      "C": "Montreal",
+
+      "D": "Vancouver"
+
+    },
+
+    "correct_answer": "B",
+
+    "answer_text": "Ottawa",
+
+    "explanation": "Ottawa is Canada’s capital city. Queen Victoria chose it in 1857, partly because it was located away from the U.S. border and between English- and French-speaking regions.",
+
+    "fun_fact": "Ottawa sits on the border of Ontario and Quebec, right across the river from Gatineau.",
+
+    "difficulty": "Easy"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 4,
+
+    "question": "What is the capital city of Japan?",
+
+    "options": {
+
+      "A": "Osaka",
+
+      "B": "Kyoto",
+
+      "C": "Tokyo",
+
+      "D": "Sapporo"
+
+    },
+
+    "correct_answer": "C",
+
+    "answer_text": "Tokyo",
+
+    "explanation": "Tokyo is Japan’s capital and one of the world’s largest metropolitan areas. It became the imperial capital in 1868 when the emperor moved there from Kyoto.",
+
+    "fun_fact": "The name Tokyo means Eastern Capital, reflecting its location east of Kyoto, the former imperial capital.",
+
+    "difficulty": "Easy"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 5,
+
+    "question": "What is the capital city of Morocco?",
+
+    "options": {
+
+      "A": "Casablanca",
+
+      "B": "Marrakesh",
+
+      "C": "Fez",
+
+      "D": "Rabat"
+
+    },
+
+    "correct_answer": "D",
+
+    "answer_text": "Rabat",
+
+    "explanation": "Rabat is the capital of Morocco. It sits on the Atlantic coast and serves as the country’s political and administrative center.",
+
+    "fun_fact": "Many people assume Casablanca is the capital because it is larger and more internationally famous, but the capital is Rabat.",
+
+    "difficulty": "Easy"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 6,
+
+    "question": "What is the capital city of Turkey?",
+
+    "options": {
+
+      "A": "Istanbul",
+
+      "B": "Ankara",
+
+      "C": "Izmir",
+
+      "D": "Bursa"
+
+    },
+
+    "correct_answer": "B",
+
+    "answer_text": "Ankara",
+
+    "explanation": "Ankara is the capital of Turkey. It became the capital in 1923 after the founding of the Republic, replacing Istanbul in that role.",
+
+    "fun_fact": "Istanbul is Turkey’s largest and best-known city, but Ankara is the political heart of the country.",
+
+    "difficulty": "Easy"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 7,
+
+    "question": "What is the capital city of Switzerland?",
+
+    "options": {
+
+      "A": "Zurich",
+
+      "B": "Geneva",
+
+      "C": "Bern",
+
+      "D": "Basel"
+
+    },
+
+    "correct_answer": "C",
+
+    "answer_text": "Bern",
+
+    "explanation": "Bern functions as Switzerland’s federal city and is widely recognized as the country’s capital. It is home to the Swiss government and parliament.",
+
+    "fun_fact": "Switzerland often refers to Bern as its federal city rather than formally calling it a capital, which makes it a favorite trivia question.",
+
+    "difficulty": "Medium"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 8,
+
+    "question": "What is the capital city of Kazakhstan?",
+
+    "options": {
+
+      "A": "Almaty",
+
+      "B": "Astana",
+
+      "C": "Shymkent",
+
+      "D": "Aktobe"
+
+    },
+
+    "correct_answer": "B",
+
+    "answer_text": "Astana",
+
+    "explanation": "Astana is the capital of Kazakhstan. The capital was moved there from Almaty in 1997 to better reflect the country’s central geography and strategic priorities.",
+
+    "fun_fact": "The city has changed names more than once in recent years, but Astana is once again its official name.",
+
+    "difficulty": "Medium"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 9,
+
+    "question": "What is the capital city of Nigeria?",
+
+    "options": {
+
+      "A": "Abuja",
+
+      "B": "Lagos",
+
+      "C": "Kano",
+
+      "D": "Port Harcourt"
+
+    },
+
+    "correct_answer": "A",
+
+    "answer_text": "Abuja",
+
+    "explanation": "Abuja is Nigeria’s capital city. It officially became the capital in 1991, replacing Lagos, and was chosen for its more central location.",
+
+    "fun_fact": "Lagos remains Nigeria’s largest city and one of Africa’s biggest urban areas, which is why many people mistake it for the capital.",
+
+    "difficulty": "Easy"
+
+  },
+
+  {
+
+    "topic": "World Capitals",
+
+    "question_number": 10,
+
+    "question": "What is the capital city of Iceland?",
+
+    "options": {
+
+      "A": "Akureyri",
+
+      "B": "Keflavik",
+
+      "C": "Selfoss",
+
+      "D": "Reykjavik"
+
+    },
+
+    "correct_answer": "D",
+
+    "answer_text": "Reykjavik",
+
+    "explanation": "Reykjavik is the capital of Iceland and the world’s northernmost capital of a sovereign state. It is the country’s cultural, economic, and political center.",
+
+    "fun_fact": "Most of Iceland’s population lives in or near Reykjavik, making it by far the country’s largest urban area.",
+
+    "difficulty": "Easy"
+
+  }
+
+]

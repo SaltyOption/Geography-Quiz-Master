@@ -208,6 +208,45 @@ export const CreateQuizBody = zod.object({
 });
 
 /**
+ * @summary Bulk import quizzes and questions from a flat list grouped by topic
+ */
+
+export const BulkImportQuizzesBody = zod.object({
+  items: zod.array(
+    zod.object({
+      topic: zod.string().min(1),
+      question: zod.string().min(1),
+      options: zod.object({
+        A: zod.string().min(1),
+        B: zod.string().min(1),
+        C: zod.string().min(1),
+        D: zod.string().min(1),
+      }),
+      correct_answer: zod.enum(["A", "B", "C", "D"]),
+      explanation: zod.string().min(1),
+      fun_fact: zod.string().nullish(),
+      difficulty: zod.string().nullish(),
+      image_url: zod.string().nullish(),
+    }),
+  ),
+  categoryIds: zod.array(zod.number()).optional(),
+});
+
+export const BulkImportQuizzesResponse = zod.object({
+  quizzesCreated: zod.number(),
+  quizzesUpdated: zod.number(),
+  questionsAdded: zod.number(),
+  topics: zod.array(
+    zod.object({
+      topic: zod.string(),
+      quizId: zod.number(),
+      created: zod.boolean(),
+      questionsAdded: zod.number(),
+    }),
+  ),
+});
+
+/**
  * @summary Get a quiz with its questions
  */
 export const GetQuizParams = zod.object({

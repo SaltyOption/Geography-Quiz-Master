@@ -17,6 +17,8 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  BulkImportBody,
+  BulkImportResult,
   Category,
   CategoryNode,
   CategoryWithQuizzes,
@@ -917,6 +919,92 @@ export const useCreateQuiz = <
   TContext
 > => {
   return useMutation(getCreateQuizMutationOptions(options));
+};
+
+/**
+ * @summary Bulk import quizzes and questions from a flat list grouped by topic
+ */
+export const getBulkImportQuizzesUrl = () => {
+  return `/api/quizzes/bulk-import`;
+};
+
+export const bulkImportQuizzes = async (
+  bulkImportBody: BulkImportBody,
+  options?: RequestInit,
+): Promise<BulkImportResult> => {
+  return customFetch<BulkImportResult>(getBulkImportQuizzesUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bulkImportBody),
+  });
+};
+
+export const getBulkImportQuizzesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkImportQuizzes>>,
+    TError,
+    { data: BodyType<BulkImportBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bulkImportQuizzes>>,
+  TError,
+  { data: BodyType<BulkImportBody> },
+  TContext
+> => {
+  const mutationKey = ["bulkImportQuizzes"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bulkImportQuizzes>>,
+    { data: BodyType<BulkImportBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bulkImportQuizzes(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BulkImportQuizzesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bulkImportQuizzes>>
+>;
+export type BulkImportQuizzesMutationBody = BodyType<BulkImportBody>;
+export type BulkImportQuizzesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Bulk import quizzes and questions from a flat list grouped by topic
+ */
+export const useBulkImportQuizzes = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkImportQuizzes>>,
+    TError,
+    { data: BodyType<BulkImportBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bulkImportQuizzes>>,
+  TError,
+  { data: BodyType<BulkImportBody> },
+  TContext
+> => {
+  return useMutation(getBulkImportQuizzesMutationOptions(options));
 };
 
 /**
