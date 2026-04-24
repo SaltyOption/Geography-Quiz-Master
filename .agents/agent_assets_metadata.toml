@@ -90,3 +90,27 @@ id = "LUwetIRoZUjwUj935RJV-"
 uri = "file://artifacts/geo-quiz/public/regions/flags.png"
 type = "image"
 title = "world flags collage"
+
+[[generated]]
+id = "IoUOh8mLT8ma_sVkgrRr9"
+uri = "file://artifacts/geo-quiz/public/regions/countries.png"
+type = "image"
+title = "countries world map"
+
+[[generated]]
+id = "_e_IcCHVLnoN7Pw_CiIAn"
+uri = "file://artifacts/geo-quiz/public/regions/lakes-and-rivers.png"
+type = "image"
+title = "lakes and rivers"
+
+[[generated]]
+id = "0UaBe59BvY8tXM8MEXWNX"
+uri = "file://artifacts/geo-quiz/public/regions/landmarks.png"
+type = "image"
+title = "world landmarks collage"
+
+[[generated]]
+id = "WCGZdNyU4uNbf_2_5530l"
+uri = "file://artifacts/geo-quiz/public/regions/oceans-and-seas.png"
+type = "image"
+title = "oceans and seas"
