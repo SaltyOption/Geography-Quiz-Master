@@ -104,11 +104,16 @@ export default function QuizPage() {
             {currentQuestion.text}
           </h2>
           {currentQuestion.imageUrl && (
-            <div className="mt-6 overflow-hidden rounded-xl border bg-muted/50">
-              <img 
-                src={currentQuestion.imageUrl} 
-                alt="Question illustration" 
-                className="w-full object-cover max-h-64"
+            <div className="mt-6 flex justify-center overflow-hidden rounded-xl border bg-muted/50 p-4">
+              <img
+                src={
+                  currentQuestion.imageUrl.startsWith("/")
+                    ? `${import.meta.env.BASE_URL}${currentQuestion.imageUrl.slice(1)}`
+                    : currentQuestion.imageUrl
+                }
+                alt="Question illustration"
+                className="max-h-72 w-auto object-contain"
+                loading="eager"
               />
             </div>
           )}
