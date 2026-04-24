@@ -165,7 +165,7 @@ export default function Home() {
 
           <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
             <BookOpen className="mx-auto mb-2 h-5 w-5 text-primary/60" />
-            {totalQuizzes} {totalQuizzes === 1 ? "quiz" : "quizzes"} in total · Pick any category above to start playing
+            {totalQuizzes} {totalQuizzes === 1 ? "quiz" : "quizzes"} in total · Pick any category above to start an adventure
           </div>
         </div>
       )}
