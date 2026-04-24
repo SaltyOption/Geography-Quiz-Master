@@ -107,7 +107,11 @@ export default function Home() {
             Explore the <span className="text-primary">World</span>
           </h1>
           <p className="mt-4 max-w-[42rem] text-lg text-muted-foreground sm:text-xl">
-            Embark on a journey through continents, cultures, and landscapes. Pick a category below to start your adventure.
+            Embark on a journey through continents, cultures, and landscapes. Pick a category below to start your adventure or try our{" "}
+            <Link href="/daily" className="font-medium text-primary underline-offset-4 hover:underline" data-testid="link-daily-quiz">
+              daily quiz
+            </Link>
+            .
           </p>
         </div>
         <div className="flex justify-center md:justify-end">

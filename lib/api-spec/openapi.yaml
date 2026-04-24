@@ -146,6 +146,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/Me"
 
+  /daily-quiz:
+    get:
+      operationId: getDailyQuiz
+      tags: [quizzes]
+      summary: Get today's daily quiz selection
+      description: Returns the deterministic quiz of the day for the current UTC date.
+      responses:
+        "200":
+          description: Today's daily quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyQuiz"
+        "404":
+          description: No quizzes available
+
   /healthz:
     get:
       operationId: healthCheck
@@ -456,6 +472,17 @@ components:
           type: string
       required:
         - status
+
+    DailyQuiz:
+      type: object
+      properties:
+        quizId:
+          type: integer
+        date:
+          type: string
+      required:
+        - quizId
+        - date
 
     QuizSummary:
       type: object

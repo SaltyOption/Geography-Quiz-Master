@@ -15,6 +15,11 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface DailyQuiz {
+  quizId: number;
+  date: string;
+}
+
 export interface Category {
   id: number;
   name: string;

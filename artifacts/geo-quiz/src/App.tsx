@@ -11,6 +11,7 @@ import Home from "@/pages/home";
 import CategoryPage from "@/pages/category";
 import QuizPage from "@/pages/quiz/[id]";
 import QuizResultsPage from "@/pages/quiz/[id]/results";
+import DailyQuizPage from "@/pages/daily";
 import AdminDashboard from "@/pages/admin/index";
 import AdminCategories from "@/pages/admin/categories";
 import AdminCreateQuiz from "@/pages/admin/quizzes/new";
@@ -147,6 +148,7 @@ function ClerkProviderWithRoutes() {
               <Route path="/sign-up/*?" component={SignUpPage} />
               <Route path="/profile" component={UserPortal} />
               
+              <Route path="/daily" component={DailyQuizPage} />
               <Route path="/quiz/:id" component={QuizPage} />
               <Route path="/quiz/:id/results" component={QuizResultsPage} />
               

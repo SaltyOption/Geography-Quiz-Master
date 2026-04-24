@@ -23,6 +23,7 @@ import type {
   CreateCategoryBody,
   CreateQuestionBody,
   CreateQuizBody,
+  DailyQuiz,
   HealthStatus,
   Me,
   Question,
@@ -597,6 +598,82 @@ export function useGetMe<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns the deterministic quiz of the day for the current UTC date.
+ * @summary Get today's daily quiz selection
+ */
+export const getGetDailyQuizUrl = () => {
+  return `/api/daily-quiz`;
+};
+
+export const getDailyQuiz = async (
+  options?: RequestInit,
+): Promise<DailyQuiz> => {
+  return customFetch<DailyQuiz>(getGetDailyQuizUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDailyQuizQueryKey = () => {
+  return [`/api/daily-quiz`] as const;
+};
+
+export const getGetDailyQuizQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDailyQuiz>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDailyQuiz>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDailyQuizQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDailyQuiz>>> = ({
+    signal,
+  }) => getDailyQuiz({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDailyQuiz>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDailyQuizQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDailyQuiz>>
+>;
+export type GetDailyQuizQueryError = ErrorType<void>;
+
+/**
+ * @summary Get today's daily quiz selection
+ */
+
+export function useGetDailyQuiz<
+  TData = Awaited<ReturnType<typeof getDailyQuiz>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getDailyQuiz>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDailyQuizQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

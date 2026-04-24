@@ -6,11 +6,13 @@ import quizAttemptsRouter from "./quiz-attempts";
 import userProgressRouter from "./user-progress";
 import categoriesRouter from "./categories";
 import meRouter from "./me";
+import dailyQuizRouter from "./daily-quiz";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(meRouter);
+router.use(dailyQuizRouter);
 router.use(categoriesRouter);
 router.use(quizzesRouter);
 router.use(questionsRouter);

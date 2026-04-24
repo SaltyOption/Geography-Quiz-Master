@@ -155,6 +155,15 @@ export const GetMeResponse = zod.object({
 });
 
 /**
+ * Returns the deterministic quiz of the day for the current UTC date.
+ * @summary Get today's daily quiz selection
+ */
+export const GetDailyQuizResponse = zod.object({
+  quizId: zod.number(),
+  date: zod.string(),
+});
+
+/**
  * Returns server health status
  * @summary Health check
  */
