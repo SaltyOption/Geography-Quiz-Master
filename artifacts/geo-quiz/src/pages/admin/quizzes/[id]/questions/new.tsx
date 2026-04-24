@@ -1,10 +1,11 @@
+import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useCreateQuestion, getGetQuizQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Check, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { COUNTRIES, flagUrl, outlineUrl, pickRandomDistractors } from "@/lib/countries";
 
 const formSchema = z.object({
   text: z.string().min(5, "Question text is required"),
@@ -48,6 +51,45 @@ export default function AdminCreateQuestion() {
     name: "options",
   });
 
+  const [quickType, setQuickType] = useState<"flag" | "outline">("flag");
+  const [quickCountry, setQuickCountry] = useState<string>("");
+
+  const handleQuickFill = () => {
+    const country = COUNTRIES.find((c) => c.code === quickCountry);
+    if (!country) return;
+
+    const distractors = pickRandomDistractors(country.code, 3);
+    const correctIndex = Math.floor(Math.random() * 4);
+    const options = [...distractors.map((d) => d.name)];
+    options.splice(correctIndex, 0, country.name);
+
+    if (quickType === "flag") {
+      form.setValue("text", "Which country's flag is this?");
+      form.setValue("imageUrl", flagUrl(country.code));
+      form.setValue(
+        "explanation",
+        `This is the national flag of ${country.name}.`,
+      );
+    } else {
+      form.setValue("text", "Which country has this outline?");
+      form.setValue("imageUrl", outlineUrl(country.code));
+      form.setValue(
+        "explanation",
+        `This is the outline of ${country.name}.`,
+      );
+    }
+    form.setValue(
+      "options",
+      options.map((value) => ({ value })),
+    );
+    form.setValue("correctOption", correctIndex);
+    form.setValue("funFact", "");
+    toast({
+      title: "Question pre-filled",
+      description: `Edit the explanation and fun fact, then save.`,
+    });
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       const formattedValues = {
@@ -78,6 +120,56 @@ export default function AdminCreateQuestion() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Quiz
         </Link>
       </Button>
+
+      <Card className="mb-6 border-primary/30 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Wand2 className="h-5 w-5 text-primary" /> Quick fill from a country
+          </CardTitle>
+          <CardDescription>
+            Generate a flag or outline question instantly. The correct answer position and three distractors are randomised.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <FormLabel className="mb-2 block text-sm font-medium">Type</FormLabel>
+              <Select value={quickType} onValueChange={(v) => setQuickType(v as "flag" | "outline")}>
+                <SelectTrigger data-testid="select-quick-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="flag">Flag</SelectItem>
+                  <SelectItem value="outline">Country outline</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <FormLabel className="mb-2 block text-sm font-medium">Country</FormLabel>
+              <Select value={quickCountry} onValueChange={setQuickCountry}>
+                <SelectTrigger data-testid="select-quick-country">
+                  <SelectValue placeholder="Pick a country..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="button"
+              onClick={handleQuickFill}
+              disabled={!quickCountry}
+              data-testid="button-quick-fill"
+            >
+              <Wand2 className="mr-2 h-4 w-4" /> Fill form
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
