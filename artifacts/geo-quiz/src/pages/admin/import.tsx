@@ -44,57 +44,219 @@ interface ParseResult {
   warnings: string[];
 }
 
+type AnyRec = Record<string, unknown>;
+
+// Case-insensitive lookup that also accepts a few common aliases for each canonical key.
+const FIELD_ALIASES: Record<string, string[]> = {
+  topic: ["topic", "category", "quiz", "quiz_title", "quiztitle", "title", "subject"],
+  question: ["question", "question_text", "questiontext", "prompt", "text", "q"],
+  options: ["options", "choices", "answers", "answer_choices"],
+  correct_answer: [
+    "correct_answer",
+    "correctanswer",
+    "answer",
+    "correct",
+    "correct_option",
+    "correctoption",
+  ],
+  explanation: ["explanation", "explain", "rationale", "reason", "details"],
+  fun_fact: ["fun_fact", "funfact", "trivia", "did_you_know", "didyouknow"],
+  difficulty: ["difficulty", "level"],
+  image_url: ["image_url", "imageurl", "image", "img", "img_url", "picture", "photo"],
+};
+
+function pick(obj: AnyRec, key: keyof typeof FIELD_ALIASES): unknown {
+  const lowerMap: AnyRec = {};
+  for (const [k, v] of Object.entries(obj)) lowerMap[k.toLowerCase()] = v;
+  for (const alias of FIELD_ALIASES[key]) {
+    if (alias in lowerMap) return lowerMap[alias];
+  }
+  return undefined;
+}
+
+// Normalize options that may be either {A,B,C,D} or an array, with case-insensitive keys.
+function normalizeOptions(raw: unknown): { A: string; B: string; C: string; D: string } | null {
+  if (Array.isArray(raw) && raw.length >= 4) {
+    return {
+      A: String(raw[0] ?? "").trim(),
+      B: String(raw[1] ?? "").trim(),
+      C: String(raw[2] ?? "").trim(),
+      D: String(raw[3] ?? "").trim(),
+    };
+  }
+  if (raw && typeof raw === "object") {
+    const lower: AnyRec = {};
+    for (const [k, v] of Object.entries(raw as AnyRec)) lower[k.toLowerCase()] = v;
+    const A = String(lower.a ?? lower["1"] ?? "").trim();
+    const B = String(lower.b ?? lower["2"] ?? "").trim();
+    const C = String(lower.c ?? lower["3"] ?? "").trim();
+    const D = String(lower.d ?? lower["4"] ?? "").trim();
+    return { A, B, C, D };
+  }
+  return null;
+}
+
+// Map "A"/"B"/"C"/"D", "1"-"4", or 0/1/2/3 to a canonical letter.
+function normalizeCorrect(raw: unknown, opts: { A: string; B: string; C: string; D: string }): string | null {
+  if (typeof raw === "number") {
+    const letters = ["A", "B", "C", "D"];
+    if (raw >= 0 && raw <= 3) return letters[raw];
+    if (raw >= 1 && raw <= 4) return letters[raw - 1];
+    return null;
+  }
+  if (typeof raw !== "string") return null;
+  const t = raw.trim().toUpperCase();
+  if (["A", "B", "C", "D"].includes(t)) return t;
+  if (["1", "2", "3", "4"].includes(t)) return ["A", "B", "C", "D"][parseInt(t, 10) - 1];
+  // Allow matching the literal answer text against one of the options.
+  const letters: Array<keyof typeof opts> = ["A", "B", "C", "D"];
+  for (const L of letters) {
+    if (opts[L].trim().toLowerCase() === raw.trim().toLowerCase()) return L as string;
+  }
+  return null;
+}
+
+// Extract a flat array of question objects from many common JSON shapes.
+function extractItems(parsed: unknown): { items: AnyRec[] } | { error: string } {
+  let value: unknown = parsed;
+
+  // Top-level single quiz: { topic, questions: [...] } -> flatten by spreading topic into each question.
+  // Check this BEFORE generic envelope stripping so the topic isn't lost.
+  if (value && !Array.isArray(value) && typeof value === "object") {
+    const obj = value as AnyRec;
+    const topic = pick(obj, "topic");
+    const lower: AnyRec = {};
+    for (const [k, v] of Object.entries(obj)) lower[k.toLowerCase()] = v;
+    const qs = lower.questions;
+    if (topic && Array.isArray(qs)) {
+      return { items: (qs as AnyRec[]).map((q) => ({ topic, ...q })) };
+    }
+  }
+
+  // Strip top-level envelope keys: {items:[...]}, {questions:[...]}, {data:[...]}, {quizzes:[...]}, {results:[...]}.
+  if (value && !Array.isArray(value) && typeof value === "object") {
+    const obj = value as AnyRec;
+    const lower: AnyRec = {};
+    for (const [k, v] of Object.entries(obj)) lower[k.toLowerCase()] = v;
+    for (const key of ["items", "questions", "data", "quizzes", "results"]) {
+      if (Array.isArray(lower[key])) {
+        value = lower[key];
+        break;
+      }
+    }
+  }
+
+  if (!Array.isArray(value)) {
+    return {
+      error:
+        "Expected a JSON array of question objects, or an object with an `items`/`questions` array.",
+    };
+  }
+
+  // Array of grouped quizzes: [{ topic, questions: [...] }, ...] -> flatten.
+  const allHaveQuestionsArr =
+    value.length > 0 &&
+    value.every((e) => e && typeof e === "object" && Array.isArray((e as AnyRec).questions));
+  if (allHaveQuestionsArr) {
+    const flat: AnyRec[] = [];
+    for (const quiz of value as AnyRec[]) {
+      const topic = pick(quiz, "topic");
+      for (const q of quiz.questions as AnyRec[]) {
+        flat.push({ topic, ...q });
+      }
+    }
+    return { items: flat };
+  }
+
+  return { items: value as AnyRec[] };
+}
+
 function parseInput(raw: string): ParseResult {
   const warnings: string[] = [];
+
+  // Strip surrounding markdown ```json fences and BOM/whitespace.
+  let trimmed = raw.replace(/^\uFEFF/, "").trim();
+  const fenced = trimmed.match(/^```(?:json|JSON)?\s*([\s\S]*?)\s*```$/);
+  if (fenced) trimmed = fenced[1].trim();
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(trimmed);
   } catch (e) {
     return { ok: false, warnings, error: e instanceof Error ? e.message : "Invalid JSON" };
   }
-  const arr = Array.isArray(parsed) ? parsed : null;
-  if (!arr) {
-    return { ok: false, warnings, error: "Top-level value must be a JSON array of question objects." };
+
+  const extracted = extractItems(parsed);
+  if ("error" in extracted) {
+    return { ok: false, warnings, error: extracted.error };
   }
+  const arr = extracted.items;
+  if (!arr || arr.length === 0) {
+    return { ok: false, warnings, error: "No questions found in the file." };
+  }
+
   const items: BulkImportItem[] = [];
   for (let i = 0; i < arr.length; i++) {
-    const raw = arr[i] as Record<string, unknown>;
+    const row = arr[i];
     const where = `Item #${i + 1}`;
-    if (!raw || typeof raw !== "object") {
+    if (!row || typeof row !== "object") {
       return { ok: false, warnings, error: `${where}: not an object.` };
     }
-    const topic = String(raw.topic ?? "").trim();
-    const question = String(raw.question ?? "").trim();
-    const options = raw.options as Record<string, unknown> | undefined;
-    const correct = String(raw.correct_answer ?? "").trim().toUpperCase();
-    const explanation = String(raw.explanation ?? "").trim();
-    if (!topic) return { ok: false, warnings, error: `${where}: missing "topic".` };
-    if (!question) return { ok: false, warnings, error: `${where}: missing "question".` };
-    if (!options || typeof options !== "object") {
-      return { ok: false, warnings, error: `${where}: missing "options" object with A/B/C/D keys.` };
+    const keys = Object.keys(row);
+    const fieldsHint = keys.length ? ` Found fields: ${keys.join(", ")}.` : "";
+
+    const topic = String(pick(row, "topic") ?? "").trim();
+    const question = String(pick(row, "question") ?? "").trim();
+    const optionsRaw = pick(row, "options");
+    const options = normalizeOptions(optionsRaw);
+    const explanation = String(pick(row, "explanation") ?? "").trim();
+
+    if (!topic) {
+      return {
+        ok: false,
+        warnings,
+        error: `${where}: missing "topic".${fieldsHint}`,
+      };
     }
-    const A = String(options.A ?? "").trim();
-    const B = String(options.B ?? "").trim();
-    const C = String(options.C ?? "").trim();
-    const D = String(options.D ?? "").trim();
-    if (!A || !B || !C || !D) {
+    if (!question) {
+      return { ok: false, warnings, error: `${where}: missing "question".${fieldsHint}` };
+    }
+    if (!options) {
+      return {
+        ok: false,
+        warnings,
+        error: `${where}: missing "options" — expected an object with A/B/C/D keys, or an array of 4 strings.${fieldsHint}`,
+      };
+    }
+    if (!options.A || !options.B || !options.C || !options.D) {
       return { ok: false, warnings, error: `${where}: each of options.A/B/C/D must be a non-empty string.` };
     }
-    if (!["A", "B", "C", "D"].includes(correct)) {
-      return { ok: false, warnings, error: `${where}: "correct_answer" must be A, B, C, or D.` };
+
+    const correct = normalizeCorrect(pick(row, "correct_answer"), options);
+    if (!correct) {
+      return {
+        ok: false,
+        warnings,
+        error: `${where}: "correct_answer" must be A, B, C, or D (or 1-4, or match one of the option strings).`,
+      };
     }
     if (!explanation) {
-      return { ok: false, warnings, error: `${where}: missing "explanation".` };
+      return { ok: false, warnings, error: `${where}: missing "explanation".${fieldsHint}` };
     }
+
+    const fun = pick(row, "fun_fact");
+    const diff = pick(row, "difficulty");
+    const img = pick(row, "image_url");
+
     items.push({
       topic,
       question,
-      options: { A, B, C, D },
+      options,
       correct_answer: correct as "A" | "B" | "C" | "D",
       explanation,
-      fun_fact: raw.fun_fact ? String(raw.fun_fact) : null,
-      difficulty: raw.difficulty ? String(raw.difficulty) : null,
-      image_url: raw.image_url ? String(raw.image_url) : null,
+      fun_fact: fun ? String(fun) : null,
+      difficulty: diff ? String(diff) : null,
+      image_url: img ? String(img) : null,
     });
   }
   if (items.length === 0) {
@@ -178,10 +340,16 @@ export default function AdminImport() {
             <FileJson className="h-5 w-5 text-primary" /> Source JSON
           </CardTitle>
           <CardDescription>
-            Expected format: an array of objects with <code>topic</code>, <code>question</code>,{" "}
+            Each question needs <code>topic</code>, <code>question</code>,{" "}
             <code>options</code> (A/B/C/D), <code>correct_answer</code>, and{" "}
             <code>explanation</code>. <code>fun_fact</code>, <code>difficulty</code>, and{" "}
             <code>image_url</code> are optional.
+            <br />
+            Accepted shapes: a flat array of question objects, an envelope like{" "}
+            <code>{`{ "questions": [...] }`}</code>, or grouped by quiz like{" "}
+            <code>{`[{ "topic": "...", "questions": [...] }]`}</code>. Field names are
+            case-insensitive and a few aliases (e.g. <code>answer</code>,{" "}
+            <code>prompt</code>) are accepted.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
