@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, RotateCcw, Home, Award, Loader2 } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { SignUpResultsPrompt } from "@/components/SignUpResultsPrompt";
 
 export default function QuizResultsPage() {
   const { id } = useParams();
@@ -81,6 +82,8 @@ export default function QuizResultsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <SignUpResultsPrompt />
 
       <h2 className="text-2xl font-serif font-bold mb-6">Your Adventure Log</h2>
       

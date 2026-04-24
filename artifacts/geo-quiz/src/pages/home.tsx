@@ -1,6 +1,7 @@
 import { useGetCategoryTree, type CategoryNode } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Globe2, Loader2, FolderTree, ChevronRight, BookOpen } from "lucide-react";
+import { SignUpBanner } from "@/components/SignUpBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,7 +101,9 @@ export default function Home() {
   const totalQuizzes = roots.reduce((sum, r) => sum + countAll(r).quizzes, 0);
 
   return (
-    <div className="container max-w-7xl py-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <>
+      <SignUpBanner />
+      <div className="container max-w-7xl py-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-12 flex flex-col gap-4 text-center md:flex-row md:items-center md:justify-between md:text-left">
         <div>
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
@@ -174,5 +177,6 @@ export default function Home() {
         </div>
       )}
     </div>
+    </>
   );
 }
