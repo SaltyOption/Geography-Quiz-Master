@@ -84,3 +84,9 @@ id = "odHJEskZfkkrDlKEmXVpG"
 uri = "file://artifacts/geo-quiz/public/regions/ancient-sites.png"
 type = "image"
 title = "ancient-sites hero"
+
+[[generated]]
+id = "LUwetIRoZUjwUj935RJV-"
+uri = "file://artifacts/geo-quiz/public/regions/flags.png"
+type = "image"
+title = "world flags collage"
