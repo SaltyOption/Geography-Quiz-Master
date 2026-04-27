@@ -22,18 +22,25 @@ import type {
   Category,
   CategoryNode,
   CategoryWithQuizzes,
+  CourseDetail,
+  CourseImportBody,
+  CourseImportResult,
+  CourseSummary,
   CreateCategoryBody,
   CreateQuestionBody,
   CreateQuizBody,
   DailyQuiz,
   HealthStatus,
   Me,
+  ModuleAttemptResult,
+  ModuleDetail,
   Question,
   Quiz,
   QuizAttemptResult,
   QuizStats,
   QuizSummary,
   QuizWithQuestions,
+  SubmitModuleAttemptBody,
   SubmitQuizAttemptBody,
   UpdateCategoryBody,
   UpdateQuestionBody,
@@ -1934,6 +1941,441 @@ export function useGetUserProgress<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List all learning courses with per-user mastery progress (when signed in)
+ */
+export const getListCoursesUrl = () => {
+  return `/api/courses`;
+};
+
+export const listCourses = async (
+  options?: RequestInit,
+): Promise<CourseSummary[]> => {
+  return customFetch<CourseSummary[]>(getListCoursesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCoursesQueryKey = () => {
+  return [`/api/courses`] as const;
+};
+
+export const getListCoursesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCourses>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listCourses>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCoursesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCourses>>> = ({
+    signal,
+  }) => listCourses({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCourses>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListCoursesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCourses>>
+>;
+export type ListCoursesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all learning courses with per-user mastery progress (when signed in)
+ */
+
+export function useListCourses<
+  TData = Awaited<ReturnType<typeof listCourses>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listCourses>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListCoursesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Bulk import or update a course from a flat list of question objects
+ */
+export const getBulkImportCourseUrl = () => {
+  return `/api/courses/bulk-import`;
+};
+
+export const bulkImportCourse = async (
+  courseImportBody: CourseImportBody,
+  options?: RequestInit,
+): Promise<CourseImportResult> => {
+  return customFetch<CourseImportResult>(getBulkImportCourseUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(courseImportBody),
+  });
+};
+
+export const getBulkImportCourseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkImportCourse>>,
+    TError,
+    { data: BodyType<CourseImportBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bulkImportCourse>>,
+  TError,
+  { data: BodyType<CourseImportBody> },
+  TContext
+> => {
+  const mutationKey = ["bulkImportCourse"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bulkImportCourse>>,
+    { data: BodyType<CourseImportBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bulkImportCourse(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BulkImportCourseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bulkImportCourse>>
+>;
+export type BulkImportCourseMutationBody = BodyType<CourseImportBody>;
+export type BulkImportCourseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Bulk import or update a course from a flat list of question objects
+ */
+export const useBulkImportCourse = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkImportCourse>>,
+    TError,
+    { data: BodyType<CourseImportBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bulkImportCourse>>,
+  TError,
+  { data: BodyType<CourseImportBody> },
+  TContext
+> => {
+  return useMutation(getBulkImportCourseMutationOptions(options));
+};
+
+/**
+ * @summary Get a course with its modules (and per-user mastery if signed in)
+ */
+export const getGetCourseUrl = (slug: string) => {
+  return `/api/courses/${slug}`;
+};
+
+export const getCourse = async (
+  slug: string,
+  options?: RequestInit,
+): Promise<CourseDetail> => {
+  return customFetch<CourseDetail>(getGetCourseUrl(slug), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCourseQueryKey = (slug: string) => {
+  return [`/api/courses/${slug}`] as const;
+};
+
+export const getGetCourseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCourse>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCourse>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCourseQueryKey(slug);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCourse>>> = ({
+    signal,
+  }) => getCourse(slug, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!slug,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCourse>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetCourseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCourse>>
+>;
+export type GetCourseQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a course with its modules (and per-user mastery if signed in)
+ */
+
+export function useGetCourse<
+  TData = Awaited<ReturnType<typeof getCourse>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCourse>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCourseQueryOptions(slug, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a single module with its lessons and questions (locked modules return 403 for signed-in users)
+ */
+export const getGetCourseModuleUrl = (slug: string, moduleSlug: string) => {
+  return `/api/courses/${slug}/modules/${moduleSlug}`;
+};
+
+export const getCourseModule = async (
+  slug: string,
+  moduleSlug: string,
+  options?: RequestInit,
+): Promise<ModuleDetail> => {
+  return customFetch<ModuleDetail>(getGetCourseModuleUrl(slug, moduleSlug), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCourseModuleQueryKey = (
+  slug: string,
+  moduleSlug: string,
+) => {
+  return [`/api/courses/${slug}/modules/${moduleSlug}`] as const;
+};
+
+export const getGetCourseModuleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCourseModule>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  moduleSlug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCourseModule>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCourseModuleQueryKey(slug, moduleSlug);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCourseModule>>> = ({
+    signal,
+  }) => getCourseModule(slug, moduleSlug, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(slug && moduleSlug),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCourseModule>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCourseModuleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCourseModule>>
+>;
+export type GetCourseModuleQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a single module with its lessons and questions (locked modules return 403 for signed-in users)
+ */
+
+export function useGetCourseModule<
+  TData = Awaited<ReturnType<typeof getCourseModule>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  moduleSlug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCourseModule>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCourseModuleQueryOptions(
+    slug,
+    moduleSlug,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Submit answers for a module attempt and get score + per-question feedback
+ */
+export const getSubmitCourseModuleAttemptUrl = (moduleId: number) => {
+  return `/api/course-modules/${moduleId}/attempts`;
+};
+
+export const submitCourseModuleAttempt = async (
+  moduleId: number,
+  submitModuleAttemptBody: SubmitModuleAttemptBody,
+  options?: RequestInit,
+): Promise<ModuleAttemptResult> => {
+  return customFetch<ModuleAttemptResult>(
+    getSubmitCourseModuleAttemptUrl(moduleId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(submitModuleAttemptBody),
+    },
+  );
+};
+
+export const getSubmitCourseModuleAttemptMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitCourseModuleAttempt>>,
+    TError,
+    { moduleId: number; data: BodyType<SubmitModuleAttemptBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitCourseModuleAttempt>>,
+  TError,
+  { moduleId: number; data: BodyType<SubmitModuleAttemptBody> },
+  TContext
+> => {
+  const mutationKey = ["submitCourseModuleAttempt"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitCourseModuleAttempt>>,
+    { moduleId: number; data: BodyType<SubmitModuleAttemptBody> }
+  > = (props) => {
+    const { moduleId, data } = props ?? {};
+
+    return submitCourseModuleAttempt(moduleId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitCourseModuleAttemptMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitCourseModuleAttempt>>
+>;
+export type SubmitCourseModuleAttemptMutationBody =
+  BodyType<SubmitModuleAttemptBody>;
+export type SubmitCourseModuleAttemptMutationError = ErrorType<void>;
+
+/**
+ * @summary Submit answers for a module attempt and get score + per-question feedback
+ */
+export const useSubmitCourseModuleAttempt = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitCourseModuleAttempt>>,
+    TError,
+    { moduleId: number; data: BodyType<SubmitModuleAttemptBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitCourseModuleAttempt>>,
+  TError,
+  { moduleId: number; data: BodyType<SubmitModuleAttemptBody> },
+  TContext
+> => {
+  return useMutation(getSubmitCourseModuleAttemptMutationOptions(options));
+};
 
 /**
  * @summary Get the current user's history for a specific quiz

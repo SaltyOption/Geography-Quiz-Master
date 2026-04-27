@@ -16,6 +16,10 @@ import PrivacyPage from "@/pages/privacy";
 import AdminDashboard from "@/pages/admin/index";
 import AdminCategories from "@/pages/admin/categories";
 import AdminImport from "@/pages/admin/import";
+import AdminCoursesImport from "@/pages/admin/courses-import";
+import CoursesPage from "@/pages/courses";
+import CourseDetailPage from "@/pages/courses/[slug]";
+import ModuleTakingPage from "@/pages/courses/[slug]/modules/[moduleSlug]";
 import AdminCreateQuiz from "@/pages/admin/quizzes/new";
 import AdminEditQuiz from "@/pages/admin/quizzes/[id]";
 import AdminCreateQuestion from "@/pages/admin/quizzes/[id]/questions/new";
@@ -155,7 +159,11 @@ function ClerkProviderWithRoutes() {
               <Route path="/privacy" component={PrivacyPage} />
               <Route path="/quiz/:id" component={QuizPage} />
               <Route path="/quiz/:id/results" component={QuizResultsPage} />
-              
+
+              <Route path="/courses" component={CoursesPage} />
+              <Route path="/courses/:slug/modules/:moduleSlug" component={ModuleTakingPage} />
+              <Route path="/courses/:slug" component={CourseDetailPage} />
+
               <Route path="/admin">
                 <AdminGuard><AdminDashboard /></AdminGuard>
               </Route>
@@ -164,6 +172,9 @@ function ClerkProviderWithRoutes() {
               </Route>
               <Route path="/admin/import">
                 <AdminGuard><AdminImport /></AdminGuard>
+              </Route>
+              <Route path="/admin/courses-import">
+                <AdminGuard><AdminCoursesImport /></AdminGuard>
               </Route>
               <Route path="/admin/quizzes/new">
                 <AdminGuard><AdminCreateQuiz /></AdminGuard>

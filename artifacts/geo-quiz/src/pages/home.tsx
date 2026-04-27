@@ -1,6 +1,6 @@
-import { useGetCategoryTree, useListQuizzes, type CategoryNode } from "@workspace/api-client-react";
+import { useGetCategoryTree, useListQuizzes, useListCourses, type CategoryNode } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Globe2, Loader2, FolderTree, ChevronRight, BookOpen } from "lucide-react";
+import { Globe2, Loader2, FolderTree, ChevronRight, BookOpen, GraduationCap } from "lucide-react";
 import { SignUpBanner } from "@/components/SignUpBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,7 @@ function CategoryCard({ node }: { node: CategoryNode }) {
 export default function Home() {
   const { data: tree, isLoading, error } = useGetCategoryTree();
   const { data: quizzes } = useListQuizzes();
+  const { data: courses } = useListCourses();
 
   if (isLoading) {
     return (
@@ -136,6 +137,56 @@ export default function Home() {
         </div>
       ) : (
         <div className="space-y-12">
+          {(courses ?? []).length > 0 && (
+            <section>
+              <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                    <GraduationCap className="h-6 w-6 text-primary" /> Learning Courses
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Layered modules with explanations and fun facts. Master each module to unlock the next.
+                  </p>
+                </div>
+                <Button asChild variant="ghost" size="sm" data-testid="link-home-courses">
+                  <Link href="/courses">
+                    View all <ChevronRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {(courses ?? []).slice(0, 4).map((c) => (
+                  <Link key={c.id} href={`/courses/${c.slug}`}>
+                    <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
+                      <CardHeader>
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                            <GraduationCap className="h-5 w-5" />
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                        </div>
+                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                          {c.title}
+                        </CardTitle>
+                        {c.description && (
+                          <CardDescription className="line-clamp-2">{c.description}</CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-sm text-muted-foreground">
+                          {c.moduleCount} module{c.moduleCount === 1 ? "" : "s"}
+                          {c.masteredCount > 0 && (
+                            <> · <span className="text-green-700 dark:text-green-300 font-medium">{c.masteredCount} mastered</span></>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
           {roots.map((root) => (
             <section key={root.id}>
               <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">

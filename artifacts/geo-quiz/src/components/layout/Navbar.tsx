@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Compass, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { Compass, Settings, LogOut, User as UserIcon, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Show, useUser, useClerk } from "@clerk/react";
 import { useGetMe } from "@workspace/api-client-react";
@@ -25,6 +25,14 @@ export function Navbar() {
         </Link>
         
         <nav className="flex items-center space-x-2">
+          {!onAdminPage && (
+            <Button variant="ghost" size="sm" asChild data-testid="link-courses">
+              <Link href="/courses">
+                <GraduationCap className="mr-2 h-4 w-4" />
+                Courses
+              </Link>
+            </Button>
+          )}
           {onAdminPage ? (
             <Button variant="ghost" asChild>
               <Link href="/">Back to Quizzes</Link>

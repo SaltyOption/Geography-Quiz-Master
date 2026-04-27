@@ -22,6 +22,8 @@ tags:
     description: Category hierarchy management
   - name: me
     description: Current user identity and admin status
+  - name: courses
+    description: Layered learning courses (topics with modules and lessons)
 paths:
   /categories:
     get:
@@ -449,6 +451,116 @@ paths:
                 $ref: "#/components/schemas/UserProgress"
         "401":
           description: Unauthorized
+
+  /courses:
+    get:
+      operationId: listCourses
+      tags: [courses]
+      summary: List all learning courses with per-user mastery progress (when signed in)
+      responses:
+        "200":
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CourseSummary"
+
+  /courses/bulk-import:
+    post:
+      operationId: bulkImportCourse
+      tags: [courses]
+      summary: Bulk import or update a course from a flat list of question objects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourseImportBody"
+      responses:
+        "200":
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseImportResult"
+
+  /courses/{slug}:
+    get:
+      operationId: getCourse
+      tags: [courses]
+      summary: Get a course with its modules (and per-user mastery if signed in)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Course detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseDetail"
+        "404":
+          description: Not found
+
+  /courses/{slug}/modules/{moduleSlug}:
+    get:
+      operationId: getCourseModule
+      tags: [courses]
+      summary: Get a single module with its lessons and questions (locked modules return 403 for signed-in users)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: moduleSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Module detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModuleDetail"
+        "403":
+          description: Module is locked (previous module not yet mastered)
+        "404":
+          description: Not found
+
+  /course-modules/{moduleId}/attempts:
+    post:
+      operationId: submitCourseModuleAttempt
+      tags: [courses]
+      summary: Submit answers for a module attempt and get score + per-question feedback
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitModuleAttemptBody"
+      responses:
+        "200":
+          description: Module attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModuleAttemptResult"
+        "404":
+          description: Module not found
 
   /user/progress/{quizId}:
     get:
@@ -1066,3 +1178,389 @@ components:
         - bestPercentage
         - lastAttemptAt
         - history
+
+    CourseSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        moduleCount:
+          type: integer
+        masteredCount:
+          type: integer
+          description: Number of modules the signed-in user has mastered. 0 for anonymous users.
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - imageUrl
+        - moduleCount
+        - masteredCount
+
+    CourseModuleSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+        questionCount:
+          type: integer
+        lessonCount:
+          type: integer
+        locked:
+          type: boolean
+          description: True if the signed-in user must master the previous module first. Always false for anonymous users.
+        attempts:
+          type: integer
+        bestPercentage:
+          type: number
+        mastered:
+          type: boolean
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - orderIndex
+        - questionCount
+        - lessonCount
+        - locked
+        - attempts
+        - bestPercentage
+        - mastered
+
+    CourseDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        masteryThreshold:
+          type: integer
+          description: Percentage required to master a module (e.g. 80).
+        modules:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseModuleSummary"
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - imageUrl
+        - masteryThreshold
+        - modules
+
+    CourseQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctOption:
+          type: integer
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+        learningObjective:
+          type: ["string", "null"]
+        difficulty:
+          type: ["string", "null"]
+        questionType:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+      required:
+        - id
+        - text
+        - options
+        - correctOption
+        - explanation
+        - funFact
+        - learningObjective
+        - difficulty
+        - questionType
+        - orderIndex
+
+    LessonDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        orderIndex:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseQuestion"
+      required:
+        - id
+        - slug
+        - title
+        - orderIndex
+        - questions
+
+    ModuleDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+        courseSlug:
+          type: string
+        courseTitle:
+          type: string
+        masteryThreshold:
+          type: integer
+        previousModule:
+          oneOf:
+            - $ref: "#/components/schemas/CourseModuleSummary"
+            - type: "null"
+        nextModule:
+          oneOf:
+            - $ref: "#/components/schemas/CourseModuleSummary"
+            - type: "null"
+        bestPercentage:
+          type: number
+        attempts:
+          type: integer
+        mastered:
+          type: boolean
+        lessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonDetail"
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - orderIndex
+        - courseSlug
+        - courseTitle
+        - masteryThreshold
+        - previousModule
+        - nextModule
+        - bestPercentage
+        - attempts
+        - mastered
+        - lessons
+
+    SubmitModuleAttemptBody:
+      type: object
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionAnswer"
+      required:
+        - answers
+
+    ModuleQuestionResult:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        isCorrect:
+          type: boolean
+        selectedOption:
+          type: integer
+        correctOption:
+          type: integer
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+      required:
+        - questionId
+        - isCorrect
+        - selectedOption
+        - correctOption
+        - explanation
+        - funFact
+
+    ModuleAttemptResult:
+      type: object
+      properties:
+        moduleId:
+          type: integer
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentage:
+          type: number
+        masteryThreshold:
+          type: integer
+        mastered:
+          type: boolean
+        previouslyMastered:
+          type: boolean
+          description: Whether the user had already mastered this module before this attempt.
+        saved:
+          type: boolean
+          description: Whether the attempt was saved (only true for signed-in users).
+        questionResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModuleQuestionResult"
+      required:
+        - moduleId
+        - score
+        - totalQuestions
+        - percentage
+        - masteryThreshold
+        - mastered
+        - previouslyMastered
+        - saved
+        - questionResults
+
+    CourseImportItem:
+      type: object
+      description: One question row in the course bulk import payload.
+      properties:
+        topic:
+          type: string
+          minLength: 1
+        module:
+          type: string
+          minLength: 1
+        lesson:
+          type: string
+          minLength: 1
+        question:
+          type: string
+          minLength: 1
+        options:
+          type: object
+          properties:
+            A: { type: string, minLength: 1 }
+            B: { type: string, minLength: 1 }
+            C: { type: string, minLength: 1 }
+            D: { type: string, minLength: 1 }
+          required: [A, B, C, D]
+        correct_answer:
+          type: string
+          enum: [A, B, C, D]
+        explanation:
+          type: string
+          minLength: 1
+        fun_fact:
+          type: ["string", "null"]
+        learning_objective:
+          type: ["string", "null"]
+        difficulty:
+          type: ["string", "null"]
+        question_type:
+          type: ["string", "null"]
+        mastery_weight:
+          type: ["integer", "null"]
+      required:
+        - topic
+        - module
+        - lesson
+        - question
+        - options
+        - correct_answer
+        - explanation
+
+    CourseImportBody:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseImportItem"
+      required:
+        - items
+
+    CourseImportModuleResult:
+      type: object
+      properties:
+        title:
+          type: string
+        slug:
+          type: string
+        created:
+          type: boolean
+        questionsAdded:
+          type: integer
+        lessonsAdded:
+          type: integer
+      required:
+        - title
+        - slug
+        - created
+        - questionsAdded
+        - lessonsAdded
+
+    CourseImportResult:
+      type: object
+      properties:
+        courseId:
+          type: integer
+        courseSlug:
+          type: string
+        courseTitle:
+          type: string
+        courseCreated:
+          type: boolean
+        modulesCreated:
+          type: integer
+        lessonsAdded:
+          type: integer
+        questionsAdded:
+          type: integer
+        modules:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseImportModuleResult"
+      required:
+        - courseId
+        - courseSlug
+        - courseTitle
+        - courseCreated
+        - modulesCreated
+        - lessonsAdded
+        - questionsAdded
+        - modules

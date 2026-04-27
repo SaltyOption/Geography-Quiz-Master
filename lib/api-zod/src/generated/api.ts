@@ -485,6 +485,237 @@ export const GetUserProgressResponse = zod.object({
 });
 
 /**
+ * @summary List all learning courses with per-user mastery progress (when signed in)
+ */
+export const ListCoursesResponseItem = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullable(),
+  imageUrl: zod.string().nullable(),
+  moduleCount: zod.number(),
+  masteredCount: zod
+    .number()
+    .describe(
+      "Number of modules the signed-in user has mastered. 0 for anonymous users.",
+    ),
+});
+export const ListCoursesResponse = zod.array(ListCoursesResponseItem);
+
+/**
+ * @summary Bulk import or update a course from a flat list of question objects
+ */
+
+export const BulkImportCourseBody = zod.object({
+  items: zod.array(
+    zod
+      .object({
+        topic: zod.string().min(1),
+        module: zod.string().min(1),
+        lesson: zod.string().min(1),
+        question: zod.string().min(1),
+        options: zod.object({
+          A: zod.string().min(1),
+          B: zod.string().min(1),
+          C: zod.string().min(1),
+          D: zod.string().min(1),
+        }),
+        correct_answer: zod.enum(["A", "B", "C", "D"]),
+        explanation: zod.string().min(1),
+        fun_fact: zod.string().nullish(),
+        learning_objective: zod.string().nullish(),
+        difficulty: zod.string().nullish(),
+        question_type: zod.string().nullish(),
+        mastery_weight: zod.number().nullish(),
+      })
+      .describe("One question row in the course bulk import payload."),
+  ),
+});
+
+export const BulkImportCourseResponse = zod.object({
+  courseId: zod.number(),
+  courseSlug: zod.string(),
+  courseTitle: zod.string(),
+  courseCreated: zod.boolean(),
+  modulesCreated: zod.number(),
+  lessonsAdded: zod.number(),
+  questionsAdded: zod.number(),
+  modules: zod.array(
+    zod.object({
+      title: zod.string(),
+      slug: zod.string(),
+      created: zod.boolean(),
+      questionsAdded: zod.number(),
+      lessonsAdded: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get a course with its modules (and per-user mastery if signed in)
+ */
+export const GetCourseParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetCourseResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullable(),
+  imageUrl: zod.string().nullable(),
+  masteryThreshold: zod
+    .number()
+    .describe("Percentage required to master a module (e.g. 80)."),
+  modules: zod.array(
+    zod.object({
+      id: zod.number(),
+      slug: zod.string(),
+      title: zod.string(),
+      description: zod.string().nullable(),
+      orderIndex: zod.number(),
+      questionCount: zod.number(),
+      lessonCount: zod.number(),
+      locked: zod
+        .boolean()
+        .describe(
+          "True if the signed-in user must master the previous module first. Always false for anonymous users.",
+        ),
+      attempts: zod.number(),
+      bestPercentage: zod.number(),
+      mastered: zod.boolean(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get a single module with its lessons and questions (locked modules return 403 for signed-in users)
+ */
+export const GetCourseModuleParams = zod.object({
+  slug: zod.coerce.string(),
+  moduleSlug: zod.coerce.string(),
+});
+
+export const GetCourseModuleResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullable(),
+  orderIndex: zod.number(),
+  courseSlug: zod.string(),
+  courseTitle: zod.string(),
+  masteryThreshold: zod.number(),
+  previousModule: zod.union([
+    zod.object({
+      id: zod.number(),
+      slug: zod.string(),
+      title: zod.string(),
+      description: zod.string().nullable(),
+      orderIndex: zod.number(),
+      questionCount: zod.number(),
+      lessonCount: zod.number(),
+      locked: zod
+        .boolean()
+        .describe(
+          "True if the signed-in user must master the previous module first. Always false for anonymous users.",
+        ),
+      attempts: zod.number(),
+      bestPercentage: zod.number(),
+      mastered: zod.boolean(),
+    }),
+    zod.null(),
+  ]),
+  nextModule: zod.union([
+    zod.object({
+      id: zod.number(),
+      slug: zod.string(),
+      title: zod.string(),
+      description: zod.string().nullable(),
+      orderIndex: zod.number(),
+      questionCount: zod.number(),
+      lessonCount: zod.number(),
+      locked: zod
+        .boolean()
+        .describe(
+          "True if the signed-in user must master the previous module first. Always false for anonymous users.",
+        ),
+      attempts: zod.number(),
+      bestPercentage: zod.number(),
+      mastered: zod.boolean(),
+    }),
+    zod.null(),
+  ]),
+  bestPercentage: zod.number(),
+  attempts: zod.number(),
+  mastered: zod.boolean(),
+  lessons: zod.array(
+    zod.object({
+      id: zod.number(),
+      slug: zod.string(),
+      title: zod.string(),
+      orderIndex: zod.number(),
+      questions: zod.array(
+        zod.object({
+          id: zod.number(),
+          text: zod.string(),
+          options: zod.array(zod.string()),
+          correctOption: zod.number(),
+          explanation: zod.string(),
+          funFact: zod.string().nullable(),
+          learningObjective: zod.string().nullable(),
+          difficulty: zod.string().nullable(),
+          questionType: zod.string().nullable(),
+          orderIndex: zod.number(),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * @summary Submit answers for a module attempt and get score + per-question feedback
+ */
+export const SubmitCourseModuleAttemptParams = zod.object({
+  moduleId: zod.coerce.number(),
+});
+
+export const SubmitCourseModuleAttemptBody = zod.object({
+  answers: zod.array(
+    zod.object({
+      questionId: zod.number(),
+      selectedOption: zod.number(),
+    }),
+  ),
+});
+
+export const SubmitCourseModuleAttemptResponse = zod.object({
+  moduleId: zod.number(),
+  score: zod.number(),
+  totalQuestions: zod.number(),
+  percentage: zod.number(),
+  masteryThreshold: zod.number(),
+  mastered: zod.boolean(),
+  previouslyMastered: zod
+    .boolean()
+    .describe(
+      "Whether the user had already mastered this module before this attempt.",
+    ),
+  saved: zod
+    .boolean()
+    .describe("Whether the attempt was saved (only true for signed-in users)."),
+  questionResults: zod.array(
+    zod.object({
+      questionId: zod.number(),
+      isCorrect: zod.boolean(),
+      selectedOption: zod.number(),
+      correctOption: zod.number(),
+      explanation: zod.string(),
+      funFact: zod.string().nullable(),
+    }),
+  ),
+});
+
+/**
  * @summary Get the current user's history for a specific quiz
  */
 export const GetUserQuizProgressParams = zod.object({

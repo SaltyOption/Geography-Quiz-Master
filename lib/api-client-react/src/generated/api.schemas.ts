@@ -277,3 +277,188 @@ export interface UserQuizProgress {
   lastAttemptAt: string | null;
   history: UserAttemptSummary[];
 }
+
+export interface CourseSummary {
+  id: number;
+  slug: string;
+  title: string;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  imageUrl: string | null;
+  moduleCount: number;
+  /** Number of modules the signed-in user has mastered. 0 for anonymous users. */
+  masteredCount: number;
+}
+
+export interface CourseModuleSummary {
+  id: number;
+  slug: string;
+  title: string;
+  /** @nullable */
+  description: string | null;
+  orderIndex: number;
+  questionCount: number;
+  lessonCount: number;
+  /** True if the signed-in user must master the previous module first. Always false for anonymous users. */
+  locked: boolean;
+  attempts: number;
+  bestPercentage: number;
+  mastered: boolean;
+}
+
+export interface CourseDetail {
+  id: number;
+  slug: string;
+  title: string;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  imageUrl: string | null;
+  /** Percentage required to master a module (e.g. 80). */
+  masteryThreshold: number;
+  modules: CourseModuleSummary[];
+}
+
+export interface CourseQuestion {
+  id: number;
+  text: string;
+  options: string[];
+  correctOption: number;
+  explanation: string;
+  /** @nullable */
+  funFact: string | null;
+  /** @nullable */
+  learningObjective: string | null;
+  /** @nullable */
+  difficulty: string | null;
+  /** @nullable */
+  questionType: string | null;
+  orderIndex: number;
+}
+
+export interface LessonDetail {
+  id: number;
+  slug: string;
+  title: string;
+  orderIndex: number;
+  questions: CourseQuestion[];
+}
+
+export interface ModuleDetail {
+  id: number;
+  slug: string;
+  title: string;
+  /** @nullable */
+  description: string | null;
+  orderIndex: number;
+  courseSlug: string;
+  courseTitle: string;
+  masteryThreshold: number;
+  previousModule: CourseModuleSummary | null;
+  nextModule: CourseModuleSummary | null;
+  bestPercentage: number;
+  attempts: number;
+  mastered: boolean;
+  lessons: LessonDetail[];
+}
+
+export interface SubmitModuleAttemptBody {
+  answers: QuestionAnswer[];
+}
+
+export interface ModuleQuestionResult {
+  questionId: number;
+  isCorrect: boolean;
+  selectedOption: number;
+  correctOption: number;
+  explanation: string;
+  /** @nullable */
+  funFact: string | null;
+}
+
+export interface ModuleAttemptResult {
+  moduleId: number;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  masteryThreshold: number;
+  mastered: boolean;
+  /** Whether the user had already mastered this module before this attempt. */
+  previouslyMastered: boolean;
+  /** Whether the attempt was saved (only true for signed-in users). */
+  saved: boolean;
+  questionResults: ModuleQuestionResult[];
+}
+
+export type CourseImportItemOptions = {
+  /** @minLength 1 */
+  A: string;
+  /** @minLength 1 */
+  B: string;
+  /** @minLength 1 */
+  C: string;
+  /** @minLength 1 */
+  D: string;
+};
+
+export type CourseImportItemCorrectAnswer =
+  (typeof CourseImportItemCorrectAnswer)[keyof typeof CourseImportItemCorrectAnswer];
+
+export const CourseImportItemCorrectAnswer = {
+  A: "A",
+  B: "B",
+  C: "C",
+  D: "D",
+} as const;
+
+/**
+ * One question row in the course bulk import payload.
+ */
+export interface CourseImportItem {
+  /** @minLength 1 */
+  topic: string;
+  /** @minLength 1 */
+  module: string;
+  /** @minLength 1 */
+  lesson: string;
+  /** @minLength 1 */
+  question: string;
+  options: CourseImportItemOptions;
+  correct_answer: CourseImportItemCorrectAnswer;
+  /** @minLength 1 */
+  explanation: string;
+  /** @nullable */
+  fun_fact?: string | null;
+  /** @nullable */
+  learning_objective?: string | null;
+  /** @nullable */
+  difficulty?: string | null;
+  /** @nullable */
+  question_type?: string | null;
+  /** @nullable */
+  mastery_weight?: number | null;
+}
+
+export interface CourseImportBody {
+  items: CourseImportItem[];
+}
+
+export interface CourseImportModuleResult {
+  title: string;
+  slug: string;
+  created: boolean;
+  questionsAdded: number;
+  lessonsAdded: number;
+}
+
+export interface CourseImportResult {
+  courseId: number;
+  courseSlug: string;
+  courseTitle: string;
+  courseCreated: boolean;
+  modulesCreated: number;
+  lessonsAdded: number;
+  questionsAdded: number;
+  modules: CourseImportModuleResult[];
+}
