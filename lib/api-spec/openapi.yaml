@@ -535,6 +535,70 @@ paths:
         "404":
           description: Not found
 
+  /course-modules/{moduleId}/progress:
+    get:
+      operationId: getCourseModuleProgress
+      tags: [courses]
+      summary: Get the signed-in user's saved in-progress answers for a module
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Saved progress (null if anonymous or none saved)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModuleProgress"
+    put:
+      operationId: saveCourseModuleProgress
+      tags: [courses]
+      summary: Save the signed-in user's in-progress answers for a module (no-op for anonymous)
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveModuleProgressBody"
+      responses:
+        "200":
+          description: Save result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModuleProgress"
+    delete:
+      operationId: clearCourseModuleProgress
+      tags: [courses]
+      summary: Clear the signed-in user's saved progress for a module (no-op for anonymous)
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved:
+                    type: boolean
+                required:
+                  - saved
+
   /course-modules/{moduleId}/attempts:
     post:
       operationId: submitCourseModuleAttempt
@@ -1232,6 +1296,9 @@ components:
           type: number
         mastered:
           type: boolean
+        inProgress:
+          type: boolean
+          description: True if the signed-in user has saved (unsubmitted) answers for this module.
       required:
         - id
         - slug
@@ -1244,6 +1311,7 @@ components:
         - attempts
         - bestPercentage
         - mastered
+        - inProgress
 
     CourseDetail:
       type: object
@@ -1333,6 +1401,33 @@ components:
         - orderIndex
         - questions
 
+    ModuleProgress:
+      type: ["object", "null"]
+      properties:
+        moduleId:
+          type: integer
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionAnswer"
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - moduleId
+        - answers
+        - updatedAt
+
+    SaveModuleProgressBody:
+      type: object
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionAnswer"
+      required:
+        - answers
+
     ModuleDetail:
       type: object
       properties:
@@ -1366,6 +1461,8 @@ components:
           type: integer
         mastered:
           type: boolean
+        progress:
+          $ref: "#/components/schemas/ModuleProgress"
         lessons:
           type: array
           items:

@@ -100,6 +100,28 @@ export const courseModuleAttemptsTable = pgTable("course_module_attempts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Saved progress for a logged-in user mid-module. One row per (user, module).
+// Cleared automatically when the user submits a final attempt.
+export const courseModuleProgressTable = pgTable(
+  "course_module_progress",
+  {
+    id: serial("id").primaryKey(),
+    moduleId: integer("module_id")
+      .notNull()
+      .references(() => courseModulesTable.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    answers: jsonb("answers").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [uniqueIndex("course_module_progress_user_module_idx").on(t.userId, t.moduleId)],
+);
+
+export type CourseModuleProgress = typeof courseModuleProgressTable.$inferSelect;
+
 export const insertCourseSchema = createInsertSchema(coursesTable).omit({
   id: true,
   createdAt: true,

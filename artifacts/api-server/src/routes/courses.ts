@@ -8,10 +8,12 @@ import {
   courseLessonsTable,
   courseQuestionsTable,
   courseModuleAttemptsTable,
+  courseModuleProgressTable,
 } from "@workspace/db";
 import {
   SubmitCourseModuleAttemptBody,
   BulkImportCourseBody,
+  SaveCourseModuleProgressBody,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -52,6 +54,25 @@ type ModuleAttemptStats = {
   bestPercentage: number;
   mastered: boolean;
 };
+
+async function getModuleProgressForUser(
+  moduleIds: number[],
+  userId: string,
+): Promise<Set<number>> {
+  const set = new Set<number>();
+  if (moduleIds.length === 0) return set;
+  const rows = await db
+    .select({ moduleId: courseModuleProgressTable.moduleId })
+    .from(courseModuleProgressTable)
+    .where(
+      and(
+        eq(courseModuleProgressTable.userId, userId),
+        inArray(courseModuleProgressTable.moduleId, moduleIds),
+      ),
+    );
+  for (const r of rows) set.add(r.moduleId);
+  return set;
+}
 
 async function getModuleStatsForUser(
   moduleIds: number[],
@@ -188,6 +209,9 @@ router.get("/courses/:slug", async (req, res): Promise<void> => {
   const stats = userId
     ? await getModuleStatsForUser(moduleIds, userId)
     : new Map<number, ModuleAttemptStats>();
+  const progressSet = userId
+    ? await getModuleProgressForUser(moduleIds, userId)
+    : new Set<number>();
 
   const moduleSummaries = modules.map((m, idx) => {
     const s = stats.get(m.id);
@@ -209,6 +233,7 @@ router.get("/courses/:slug", async (req, res): Promise<void> => {
       attempts: s?.attempts ?? 0,
       bestPercentage: s?.bestPercentage ?? 0,
       mastered: s?.mastered ?? false,
+      inProgress: progressSet.has(m.id),
     };
   });
 
@@ -337,10 +362,37 @@ router.get("/courses/:slug/modules/:moduleSlug", async (req, res): Promise<void>
       attempts: s?.attempts ?? 0,
       bestPercentage: s?.bestPercentage ?? 0,
       mastered: s?.mastered ?? false,
+      inProgress: false,
     };
   }
 
   const myStats = stats.get(mod.id);
+
+  // Load any saved in-progress answers for this module (signed-in users only).
+  let progress: {
+    moduleId: number;
+    answers: Array<{ questionId: number; selectedOption: number }>;
+    updatedAt: string;
+  } | null = null;
+  if (userId) {
+    const [row] = await db
+      .select()
+      .from(courseModuleProgressTable)
+      .where(
+        and(
+          eq(courseModuleProgressTable.userId, userId),
+          eq(courseModuleProgressTable.moduleId, mod.id),
+        ),
+      )
+      .limit(1);
+    if (row) {
+      progress = {
+        moduleId: mod.id,
+        answers: row.answers as Array<{ questionId: number; selectedOption: number }>,
+        updatedAt: row.updatedAt.toISOString(),
+      };
+    }
+  }
 
   res.json({
     id: mod.id,
@@ -356,8 +408,114 @@ router.get("/courses/:slug/modules/:moduleSlug", async (req, res): Promise<void>
     bestPercentage: myStats?.bestPercentage ?? 0,
     attempts: myStats?.attempts ?? 0,
     mastered: myStats?.mastered ?? false,
+    progress,
     lessons: lessonsOut,
   });
+});
+
+// Helper: load module by id (used by progress endpoints below).
+async function loadModuleById(moduleId: number) {
+  const [mod] = await db
+    .select()
+    .from(courseModulesTable)
+    .where(eq(courseModulesTable.id, moduleId))
+    .limit(1);
+  return mod ?? null;
+}
+
+router.get("/course-modules/:moduleId/progress", async (req, res): Promise<void> => {
+  const moduleId = Number(req.params.moduleId);
+  if (!Number.isInteger(moduleId) || moduleId <= 0) {
+    res.status(400).json({ error: "Invalid moduleId" });
+    return;
+  }
+  const auth = getAuth(req);
+  const userId = auth?.userId ?? null;
+  if (!userId) {
+    res.json(null);
+    return;
+  }
+  const [row] = await db
+    .select()
+    .from(courseModuleProgressTable)
+    .where(
+      and(
+        eq(courseModuleProgressTable.userId, userId),
+        eq(courseModuleProgressTable.moduleId, moduleId),
+      ),
+    )
+    .limit(1);
+  if (!row) {
+    res.json(null);
+    return;
+  }
+  res.json({
+    moduleId: row.moduleId,
+    answers: row.answers,
+    updatedAt: row.updatedAt.toISOString(),
+  });
+});
+
+router.put("/course-modules/:moduleId/progress", async (req, res): Promise<void> => {
+  const moduleId = Number(req.params.moduleId);
+  if (!Number.isInteger(moduleId) || moduleId <= 0) {
+    res.status(400).json({ error: "Invalid moduleId" });
+    return;
+  }
+  const parsed = SaveCourseModuleProgressBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const auth = getAuth(req);
+  const userId = auth?.userId ?? null;
+  // Anonymous: silently no-op so the client doesn't need to gate on auth state.
+  if (!userId) {
+    res.json(null);
+    return;
+  }
+  const mod = await loadModuleById(moduleId);
+  if (!mod) {
+    res.status(404).json({ error: "Module not found" });
+    return;
+  }
+  const answers = parsed.data.answers;
+  const [row] = await db
+    .insert(courseModuleProgressTable)
+    .values({ moduleId, userId, answers })
+    .onConflictDoUpdate({
+      target: [courseModuleProgressTable.userId, courseModuleProgressTable.moduleId],
+      set: { answers, updatedAt: new Date() },
+    })
+    .returning();
+  res.json({
+    moduleId: row.moduleId,
+    answers: row.answers,
+    updatedAt: row.updatedAt.toISOString(),
+  });
+});
+
+router.delete("/course-modules/:moduleId/progress", async (req, res): Promise<void> => {
+  const moduleId = Number(req.params.moduleId);
+  if (!Number.isInteger(moduleId) || moduleId <= 0) {
+    res.status(400).json({ error: "Invalid moduleId" });
+    return;
+  }
+  const auth = getAuth(req);
+  const userId = auth?.userId ?? null;
+  if (!userId) {
+    res.json({ saved: false });
+    return;
+  }
+  await db
+    .delete(courseModuleProgressTable)
+    .where(
+      and(
+        eq(courseModuleProgressTable.userId, userId),
+        eq(courseModuleProgressTable.moduleId, moduleId),
+      ),
+    );
+  res.json({ saved: true });
 });
 
 router.post("/course-modules/:moduleId/attempts", async (req, res): Promise<void> => {
@@ -447,6 +605,16 @@ router.post("/course-modules/:moduleId/attempts", async (req, res): Promise<void
       mastered,
       answers: answers,
     });
+
+    // The user has finished this module — drop any in-progress save.
+    await db
+      .delete(courseModuleProgressTable)
+      .where(
+        and(
+          eq(courseModuleProgressTable.userId, userId),
+          eq(courseModuleProgressTable.moduleId, mod.id),
+        ),
+      );
   }
 
   res.json({

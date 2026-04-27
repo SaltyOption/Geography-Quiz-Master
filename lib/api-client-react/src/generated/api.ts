@@ -22,6 +22,7 @@ import type {
   Category,
   CategoryNode,
   CategoryWithQuizzes,
+  ClearCourseModuleProgress200,
   CourseDetail,
   CourseImportBody,
   CourseImportResult,
@@ -34,12 +35,14 @@ import type {
   Me,
   ModuleAttemptResult,
   ModuleDetail,
+  ModuleProgress,
   Question,
   Quiz,
   QuizAttemptResult,
   QuizStats,
   QuizSummary,
   QuizWithQuestions,
+  SaveModuleProgressBody,
   SubmitModuleAttemptBody,
   SubmitQuizAttemptBody,
   UpdateCategoryBody,
@@ -2285,6 +2288,279 @@ export function useGetCourseModule<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get the signed-in user's saved in-progress answers for a module
+ */
+export const getGetCourseModuleProgressUrl = (moduleId: number) => {
+  return `/api/course-modules/${moduleId}/progress`;
+};
+
+export const getCourseModuleProgress = async (
+  moduleId: number,
+  options?: RequestInit,
+): Promise<ModuleProgress | null> => {
+  return customFetch<ModuleProgress | null>(
+    getGetCourseModuleProgressUrl(moduleId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCourseModuleProgressQueryKey = (moduleId: number) => {
+  return [`/api/course-modules/${moduleId}/progress`] as const;
+};
+
+export const getGetCourseModuleProgressQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCourseModuleProgress>>,
+  TError = ErrorType<unknown>,
+>(
+  moduleId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCourseModuleProgress>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCourseModuleProgressQueryKey(moduleId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCourseModuleProgress>>
+  > = ({ signal }) =>
+    getCourseModuleProgress(moduleId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!moduleId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCourseModuleProgress>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCourseModuleProgressQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCourseModuleProgress>>
+>;
+export type GetCourseModuleProgressQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the signed-in user's saved in-progress answers for a module
+ */
+
+export function useGetCourseModuleProgress<
+  TData = Awaited<ReturnType<typeof getCourseModuleProgress>>,
+  TError = ErrorType<unknown>,
+>(
+  moduleId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCourseModuleProgress>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCourseModuleProgressQueryOptions(
+    moduleId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Save the signed-in user's in-progress answers for a module (no-op for anonymous)
+ */
+export const getSaveCourseModuleProgressUrl = (moduleId: number) => {
+  return `/api/course-modules/${moduleId}/progress`;
+};
+
+export const saveCourseModuleProgress = async (
+  moduleId: number,
+  saveModuleProgressBody: SaveModuleProgressBody,
+  options?: RequestInit,
+): Promise<ModuleProgress | null> => {
+  return customFetch<ModuleProgress | null>(
+    getSaveCourseModuleProgressUrl(moduleId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(saveModuleProgressBody),
+    },
+  );
+};
+
+export const getSaveCourseModuleProgressMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveCourseModuleProgress>>,
+    TError,
+    { moduleId: number; data: BodyType<SaveModuleProgressBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveCourseModuleProgress>>,
+  TError,
+  { moduleId: number; data: BodyType<SaveModuleProgressBody> },
+  TContext
+> => {
+  const mutationKey = ["saveCourseModuleProgress"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveCourseModuleProgress>>,
+    { moduleId: number; data: BodyType<SaveModuleProgressBody> }
+  > = (props) => {
+    const { moduleId, data } = props ?? {};
+
+    return saveCourseModuleProgress(moduleId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveCourseModuleProgressMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveCourseModuleProgress>>
+>;
+export type SaveCourseModuleProgressMutationBody =
+  BodyType<SaveModuleProgressBody>;
+export type SaveCourseModuleProgressMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Save the signed-in user's in-progress answers for a module (no-op for anonymous)
+ */
+export const useSaveCourseModuleProgress = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveCourseModuleProgress>>,
+    TError,
+    { moduleId: number; data: BodyType<SaveModuleProgressBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveCourseModuleProgress>>,
+  TError,
+  { moduleId: number; data: BodyType<SaveModuleProgressBody> },
+  TContext
+> => {
+  return useMutation(getSaveCourseModuleProgressMutationOptions(options));
+};
+
+/**
+ * @summary Clear the signed-in user's saved progress for a module (no-op for anonymous)
+ */
+export const getClearCourseModuleProgressUrl = (moduleId: number) => {
+  return `/api/course-modules/${moduleId}/progress`;
+};
+
+export const clearCourseModuleProgress = async (
+  moduleId: number,
+  options?: RequestInit,
+): Promise<ClearCourseModuleProgress200> => {
+  return customFetch<ClearCourseModuleProgress200>(
+    getClearCourseModuleProgressUrl(moduleId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getClearCourseModuleProgressMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearCourseModuleProgress>>,
+    TError,
+    { moduleId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearCourseModuleProgress>>,
+  TError,
+  { moduleId: number },
+  TContext
+> => {
+  const mutationKey = ["clearCourseModuleProgress"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearCourseModuleProgress>>,
+    { moduleId: number }
+  > = (props) => {
+    const { moduleId } = props ?? {};
+
+    return clearCourseModuleProgress(moduleId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearCourseModuleProgressMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearCourseModuleProgress>>
+>;
+
+export type ClearCourseModuleProgressMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Clear the signed-in user's saved progress for a module (no-op for anonymous)
+ */
+export const useClearCourseModuleProgress = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearCourseModuleProgress>>,
+    TError,
+    { moduleId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearCourseModuleProgress>>,
+  TError,
+  { moduleId: number },
+  TContext
+> => {
+  return useMutation(getClearCourseModuleProgressMutationOptions(options));
+};
 
 /**
  * @summary Submit answers for a module attempt and get score + per-question feedback

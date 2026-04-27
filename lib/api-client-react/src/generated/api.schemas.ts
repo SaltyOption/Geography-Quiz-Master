@@ -305,6 +305,8 @@ export interface CourseModuleSummary {
   attempts: number;
   bestPercentage: number;
   mastered: boolean;
+  /** True if the signed-in user has saved (unsubmitted) answers for this module. */
+  inProgress: boolean;
 }
 
 export interface CourseDetail {
@@ -345,6 +347,19 @@ export interface LessonDetail {
   questions: CourseQuestion[];
 }
 
+/**
+ * @nullable
+ */
+export type ModuleProgress = {
+  moduleId: number;
+  answers: QuestionAnswer[];
+  updatedAt: string;
+} | null;
+
+export interface SaveModuleProgressBody {
+  answers: QuestionAnswer[];
+}
+
 export interface ModuleDetail {
   id: number;
   slug: string;
@@ -360,6 +375,7 @@ export interface ModuleDetail {
   bestPercentage: number;
   attempts: number;
   mastered: boolean;
+  progress?: ModuleProgress | null;
   lessons: LessonDetail[];
 }
 
@@ -462,3 +478,7 @@ export interface CourseImportResult {
   questionsAdded: number;
   modules: CourseImportModuleResult[];
 }
+
+export type ClearCourseModuleProgress200 = {
+  saved: boolean;
+};

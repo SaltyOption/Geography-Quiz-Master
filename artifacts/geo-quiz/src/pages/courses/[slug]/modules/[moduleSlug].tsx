@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
-import { Show } from "@clerk/react";
+import { Show, useAuth } from "@clerk/react";
 import {
   useGetCourseModule,
   useSubmitCourseModuleAttempt,
+  useSaveCourseModuleProgress,
+  useClearCourseModuleProgress,
   type ModuleAttemptResult,
   type CourseQuestion,
 } from "@workspace/api-client-react";
@@ -30,9 +32,12 @@ type FlatQuestion = CourseQuestion & { lessonTitle: string };
 export default function ModuleTakingPage() {
   const { slug, moduleSlug } = useParams<{ slug: string; moduleSlug: string }>();
   const [, setLocation] = useLocation();
+  const { isSignedIn } = useAuth();
 
   const { data, isLoading, error, refetch } = useGetCourseModule(slug!, moduleSlug!);
   const submit = useSubmitCourseModuleAttempt();
+  const saveProgress = useSaveCourseModuleProgress();
+  const clearProgress = useClearCourseModuleProgress();
 
   const questions = useMemo<FlatQuestion[]>(() => {
     if (!data) return [];
@@ -50,6 +55,38 @@ export default function ModuleTakingPage() {
   const [answered, setAnswered] = useState(false);
   const [answers, setAnswers] = useState<Array<{ questionId: number; selectedOption: number }>>([]);
   const [result, setResult] = useState<ModuleAttemptResult | null>(null);
+  const [resumed, setResumed] = useState(false);
+
+  // Restore saved progress on first load (signed-in users only).
+  // The user picks up at their next un-answered question with all
+  // prior answers preserved for the final score submission.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (!data || !data.progress || questions.length === 0) return;
+    const saved = data.progress.answers;
+    const validIds = new Set(questions.map((q) => q.id));
+    const filtered = saved.filter((a) => validIds.has(a.questionId));
+    if (filtered.length === 0) {
+      restoredRef.current = true;
+      return;
+    }
+    restoredRef.current = true;
+    setAnswers(filtered);
+    if (filtered.length >= questions.length) {
+      // All questions were answered but never submitted — show the last
+      // question with its feedback so the user can finish.
+      const last = filtered[filtered.length - 1];
+      setIdx(questions.length - 1);
+      setSelected(last.selectedOption);
+      setAnswered(true);
+    } else {
+      setIdx(filtered.length);
+      setSelected(null);
+      setAnswered(false);
+    }
+    setResumed(true);
+  }, [data, questions]);
 
   if (isLoading) {
     return (
@@ -112,7 +149,22 @@ export default function ModuleTakingPage() {
     if (answered || !current) return;
     setSelected(optionIndex);
     setAnswered(true);
-    setAnswers((prev) => [...prev, { questionId: current.id, selectedOption: optionIndex }]);
+    const nextAnswers = [...answers, { questionId: current.id, selectedOption: optionIndex }];
+    setAnswers(nextAnswers);
+
+    // Save progress for signed-in users so they can resume on a later visit.
+    // Fire-and-forget — surface failures to the console only.
+    if (isSignedIn) {
+      saveProgress.mutate(
+        { moduleId: data!.id, data: { answers: nextAnswers } },
+        {
+          onError: (err) => {
+            // eslint-disable-next-line no-console
+            console.error("Failed to save module progress", err);
+          },
+        },
+      );
+    }
   };
 
   const handleNext = async () => {
@@ -140,7 +192,22 @@ export default function ModuleTakingPage() {
     setAnswered(false);
     setAnswers([]);
     setResult(null);
+    setResumed(false);
+    restoredRef.current = true;
+    if (isSignedIn && data) {
+      clearProgress.mutate({ moduleId: data.id });
+    }
     refetch();
+  };
+
+  const handleSaveAndExit = () => {
+    if (isSignedIn && data) {
+      // The latest answers were already saved on each selection — just
+      // navigate back to the course detail page.
+      setLocation(`/courses/${data.courseSlug}`);
+    } else {
+      setLocation(`/courses/${data?.courseSlug ?? ""}`);
+    }
   };
 
   if (result) {
@@ -258,10 +325,39 @@ export default function ModuleTakingPage() {
           </span>
         </div>
         <Progress value={progress} className="h-2" />
-        <div className="text-xs text-muted-foreground">
-          Lesson: <span className="font-medium text-foreground">{current.lessonTitle}</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs text-muted-foreground">
+            Lesson: <span className="font-medium text-foreground">{current.lessonTitle}</span>
+          </div>
+          {isSignedIn && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSaveAndExit}
+              data-testid="button-save-and-exit"
+              className="text-xs text-muted-foreground"
+            >
+              Save & exit
+            </Button>
+          )}
         </div>
       </div>
+
+      {resumed && (
+        <div
+          className="mb-6 flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"
+          data-testid="banner-resumed"
+        >
+          <RotateCcw className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <strong className="text-foreground">Welcome back.</strong>{" "}
+            <span className="text-muted-foreground">
+              We picked up where you left off. {answers.length} of {total}{" "}
+              question{answers.length === 1 ? "" : "s"} already answered.
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="animate-in fade-in slide-in-from-right-4 duration-300" key={current.id}>
         <h2 className="mb-2 text-2xl sm:text-3xl font-serif font-bold leading-tight">

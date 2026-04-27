@@ -584,6 +584,11 @@ export const GetCourseResponse = zod.object({
       attempts: zod.number(),
       bestPercentage: zod.number(),
       mastered: zod.boolean(),
+      inProgress: zod
+        .boolean()
+        .describe(
+          "True if the signed-in user has saved (unsubmitted) answers for this module.",
+        ),
     }),
   ),
 });
@@ -622,6 +627,11 @@ export const GetCourseModuleResponse = zod.object({
       attempts: zod.number(),
       bestPercentage: zod.number(),
       mastered: zod.boolean(),
+      inProgress: zod
+        .boolean()
+        .describe(
+          "True if the signed-in user has saved (unsubmitted) answers for this module.",
+        ),
     }),
     zod.null(),
   ]),
@@ -642,12 +652,29 @@ export const GetCourseModuleResponse = zod.object({
       attempts: zod.number(),
       bestPercentage: zod.number(),
       mastered: zod.boolean(),
+      inProgress: zod
+        .boolean()
+        .describe(
+          "True if the signed-in user has saved (unsubmitted) answers for this module.",
+        ),
     }),
     zod.null(),
   ]),
   bestPercentage: zod.number(),
   attempts: zod.number(),
   mastered: zod.boolean(),
+  progress: zod
+    .object({
+      moduleId: zod.number(),
+      answers: zod.array(
+        zod.object({
+          questionId: zod.number(),
+          selectedOption: zod.number(),
+        }),
+      ),
+      updatedAt: zod.coerce.date(),
+    })
+    .nullish(),
   lessons: zod.array(
     zod.object({
       id: zod.number(),
@@ -670,6 +697,66 @@ export const GetCourseModuleResponse = zod.object({
       ),
     }),
   ),
+});
+
+/**
+ * @summary Get the signed-in user's saved in-progress answers for a module
+ */
+export const GetCourseModuleProgressParams = zod.object({
+  moduleId: zod.coerce.number(),
+});
+
+export const GetCourseModuleProgressResponse = zod
+  .object({
+    moduleId: zod.number(),
+    answers: zod.array(
+      zod.object({
+        questionId: zod.number(),
+        selectedOption: zod.number(),
+      }),
+    ),
+    updatedAt: zod.coerce.date(),
+  })
+  .nullable();
+
+/**
+ * @summary Save the signed-in user's in-progress answers for a module (no-op for anonymous)
+ */
+export const SaveCourseModuleProgressParams = zod.object({
+  moduleId: zod.coerce.number(),
+});
+
+export const SaveCourseModuleProgressBody = zod.object({
+  answers: zod.array(
+    zod.object({
+      questionId: zod.number(),
+      selectedOption: zod.number(),
+    }),
+  ),
+});
+
+export const SaveCourseModuleProgressResponse = zod
+  .object({
+    moduleId: zod.number(),
+    answers: zod.array(
+      zod.object({
+        questionId: zod.number(),
+        selectedOption: zod.number(),
+      }),
+    ),
+    updatedAt: zod.coerce.date(),
+  })
+  .nullable();
+
+/**
+ * @summary Clear the signed-in user's saved progress for a module (no-op for anonymous)
+ */
+export const ClearCourseModuleProgressParams = zod.object({
+  moduleId: zod.coerce.number(),
+});
+
+export const ClearCourseModuleProgressResponse = zod.object({
+  saved: zod.boolean(),
 });
 
 /**
