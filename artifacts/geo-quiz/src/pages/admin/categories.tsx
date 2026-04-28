@@ -131,13 +131,14 @@ function CategoryTreeNode({
             <Badge variant="outline" className="text-xs">
               {node.quizCount} {node.quizCount === 1 ? "quiz" : "quizzes"}
             </Badge>
-            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="flex items-center gap-1">
               <Button
                 size="icon"
                 variant="ghost"
                 className="h-7 w-7"
                 onClick={() => onAddChild(node.id)}
                 title="Add child category"
+                data-testid={`button-add-child-${node.id}`}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -147,12 +148,19 @@ function CategoryTreeNode({
                 className="h-7 w-7"
                 onClick={() => setEditing({ id: node.id, name: node.name, parentId: node.parentId })}
                 title="Rename"
+                data-testid={`button-rename-${node.id}`}
               >
                 <Edit2 className="h-4 w-4" />
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Delete">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    title="Delete"
+                    data-testid={`button-delete-${node.id}`}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </AlertDialogTrigger>
