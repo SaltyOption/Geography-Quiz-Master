@@ -229,6 +229,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/BulkImportResult"
 
+  /quizzes/export:
+    get:
+      operationId: exportQuizzes
+      tags: [quizzes]
+      summary: Export all quizzes and questions in the bulk-import JSON shape
+      responses:
+        "200":
+          description: All quizzes and questions, ready to be re-imported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizExportResult"
+        "422":
+          description: Some questions are malformed and would not round-trip cleanly
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizExportError"
+
   /quizzes/{id}:
     get:
       operationId: getQuiz
@@ -842,6 +861,48 @@ components:
             type: integer
       required:
         - items
+
+    QuizExportResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BulkImportItem"
+        skippedEmptyQuizzes:
+          type: array
+          items:
+            type: string
+      required:
+        - items
+        - skippedEmptyQuizzes
+
+    QuizExportInvalidQuestion:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        quizTitle:
+          type: string
+        reason:
+          type: string
+      required:
+        - questionId
+        - quizTitle
+        - reason
+
+    QuizExportError:
+      type: object
+      properties:
+        error:
+          type: string
+        invalid:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizExportInvalidQuestion"
+      required:
+        - error
+        - invalid
 
     BulkImportTopicResult:
       type: object

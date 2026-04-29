@@ -247,6 +247,31 @@ export const BulkImportQuizzesResponse = zod.object({
 });
 
 /**
+ * @summary Export all quizzes and questions in the bulk-import JSON shape
+ */
+
+export const ExportQuizzesResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      topic: zod.string().min(1),
+      question: zod.string().min(1),
+      options: zod.object({
+        A: zod.string().min(1),
+        B: zod.string().min(1),
+        C: zod.string().min(1),
+        D: zod.string().min(1),
+      }),
+      correct_answer: zod.enum(["A", "B", "C", "D"]),
+      explanation: zod.string().min(1),
+      fun_fact: zod.string().nullish(),
+      difficulty: zod.string().nullish(),
+      image_url: zod.string().nullish(),
+    }),
+  ),
+  skippedEmptyQuizzes: zod.array(zod.string()),
+});
+
+/**
  * @summary Get a quiz with its questions
  */
 export const GetQuizParams = zod.object({

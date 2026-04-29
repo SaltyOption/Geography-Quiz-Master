@@ -126,6 +126,82 @@ router.post("/quizzes", requireAdmin, async (req, res): Promise<void> => {
   });
 });
 
+router.get("/quizzes/export", requireAdmin, async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      quizId: quizzesTable.id,
+      quizTitle: quizzesTable.title,
+      quizDifficulty: quizzesTable.difficulty,
+      questionId: questionsTable.id,
+      questionText: questionsTable.text,
+      options: questionsTable.options,
+      correctOption: questionsTable.correctOption,
+      explanation: questionsTable.explanation,
+      funFact: questionsTable.funFact,
+      imageUrl: questionsTable.imageUrl,
+      orderIndex: questionsTable.orderIndex,
+    })
+    .from(quizzesTable)
+    .innerJoin(questionsTable, eq(questionsTable.quizId, quizzesTable.id))
+    .orderBy(quizzesTable.title, questionsTable.orderIndex, questionsTable.id);
+
+  // Fail-fast on malformed data so the round-trip is never silently lossy.
+  const invalid: Array<{ questionId: number; quizTitle: string; reason: string }> = [];
+  for (const r of rows) {
+    if (!Array.isArray(r.options) || r.options.length !== 4) {
+      invalid.push({
+        questionId: r.questionId,
+        quizTitle: r.quizTitle,
+        reason: `expected 4 options, got ${Array.isArray(r.options) ? r.options.length : "non-array"}`,
+      });
+    } else if (r.correctOption < 0 || r.correctOption > 3) {
+      invalid.push({
+        questionId: r.questionId,
+        quizTitle: r.quizTitle,
+        reason: `correctOption ${r.correctOption} is out of range [0,3]`,
+      });
+    }
+  }
+  if (invalid.length > 0) {
+    res.status(422).json({
+      error:
+        "Cannot export: some questions are malformed and would not round-trip cleanly. Fix or delete them, then try again.",
+      invalid,
+    });
+    return;
+  }
+
+  // Surface quizzes that have no questions so admins know they aren't included
+  // (the bulk-import format is question-driven and can't represent empty quizzes).
+  const exportedQuizIds = new Set(rows.map((r) => r.quizId));
+  const allQuizzes = await db
+    .select({ id: quizzesTable.id, title: quizzesTable.title })
+    .from(quizzesTable)
+    .orderBy(quizzesTable.title);
+  const skippedEmptyQuizzes = allQuizzes
+    .filter((q) => !exportedQuizIds.has(q.id))
+    .map((q) => q.title);
+
+  const letters = ["A", "B", "C", "D"] as const;
+  const items = rows.map((r) => ({
+    topic: r.quizTitle,
+    question: r.questionText,
+    options: {
+      A: r.options[0],
+      B: r.options[1],
+      C: r.options[2],
+      D: r.options[3],
+    },
+    correct_answer: letters[r.correctOption],
+    explanation: r.explanation,
+    fun_fact: r.funFact ?? null,
+    difficulty: r.quizDifficulty,
+    image_url: r.imageUrl ?? null,
+  }));
+
+  res.json({ items, skippedEmptyQuizzes });
+});
+
 router.post("/quizzes/bulk-import", requireAdmin, async (req, res): Promise<void> => {
   // Accept either an envelope { items, categoryIds } or a bare array of items.
   const body = Array.isArray(req.body) ? { items: req.body } : req.body;

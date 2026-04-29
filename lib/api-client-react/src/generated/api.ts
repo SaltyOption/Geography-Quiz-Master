@@ -39,6 +39,8 @@ import type {
   Question,
   Quiz,
   QuizAttemptResult,
+  QuizExportError,
+  QuizExportResult,
   QuizStats,
   QuizSummary,
   QuizWithQuestions,
@@ -1016,6 +1018,81 @@ export const useBulkImportQuizzes = <
 > => {
   return useMutation(getBulkImportQuizzesMutationOptions(options));
 };
+
+/**
+ * @summary Export all quizzes and questions in the bulk-import JSON shape
+ */
+export const getExportQuizzesUrl = () => {
+  return `/api/quizzes/export`;
+};
+
+export const exportQuizzes = async (
+  options?: RequestInit,
+): Promise<QuizExportResult> => {
+  return customFetch<QuizExportResult>(getExportQuizzesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportQuizzesQueryKey = () => {
+  return [`/api/quizzes/export`] as const;
+};
+
+export const getExportQuizzesQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportQuizzes>>,
+  TError = ErrorType<QuizExportError>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof exportQuizzes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportQuizzesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportQuizzes>>> = ({
+    signal,
+  }) => exportQuizzes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportQuizzes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportQuizzesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportQuizzes>>
+>;
+export type ExportQuizzesQueryError = ErrorType<QuizExportError>;
+
+/**
+ * @summary Export all quizzes and questions in the bulk-import JSON shape
+ */
+
+export function useExportQuizzes<
+  TData = Awaited<ReturnType<typeof exportQuizzes>>,
+  TError = ErrorType<QuizExportError>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof exportQuizzes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportQuizzesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get a quiz with its questions

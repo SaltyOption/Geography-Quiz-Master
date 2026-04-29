@@ -1,7 +1,23 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useListQuizzes, useDeleteQuiz, getListQuizzesQueryKey } from "@workspace/api-client-react";
+import {
+  useListQuizzes,
+  useDeleteQuiz,
+  getListQuizzesQueryKey,
+  exportQuizzes,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Loader2, BarChart2, FolderTree, Upload, GraduationCap } from "lucide-react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Loader2,
+  BarChart2,
+  FolderTree,
+  Upload,
+  Download,
+  GraduationCap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +39,48 @@ export default function AdminDashboard() {
   const deleteQuiz = useDeleteQuiz();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const data = await exportQuizzes();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `quizzes-export-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      const skipped = data.skippedEmptyQuizzes ?? [];
+      const skippedNote =
+        skipped.length > 0
+          ? ` Skipped ${skipped.length} empty quiz${skipped.length === 1 ? "" : "es"}: ${skipped.join(", ")}.`
+          : "";
+      toast({
+        title: "Export downloaded",
+        description: `${data.items.length} questions across ${
+          new Set(data.items.map((i) => i.topic)).size
+        } quizzes.${skippedNote}`,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not download the export file.";
+      toast({
+        title: "Export failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleDelete = async (id: number) => {
     try {
@@ -53,6 +111,19 @@ export default function AdminDashboard() {
             <Link href="/admin/categories">
               <FolderTree className="mr-2 h-4 w-4" /> Manage Categories
             </Link>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting || !quizzes || quizzes.length === 0}
+            data-testid="button-export-quizzes"
+          >
+            {isExporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Download All
           </Button>
           <Button variant="outline" asChild data-testid="link-bulk-import">
             <Link href="/admin/import">

@@ -132,6 +132,22 @@ export interface BulkImportBody {
   categoryIds?: number[];
 }
 
+export interface QuizExportResult {
+  items: BulkImportItem[];
+  skippedEmptyQuizzes: string[];
+}
+
+export interface QuizExportInvalidQuestion {
+  questionId: number;
+  quizTitle: string;
+  reason: string;
+}
+
+export interface QuizExportError {
+  error: string;
+  invalid: QuizExportInvalidQuestion[];
+}
+
 export interface BulkImportTopicResult {
   topic: string;
   quizId: number;
