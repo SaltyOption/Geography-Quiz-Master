@@ -1,8 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { Compass, Settings, LogOut, User as UserIcon, GraduationCap } from "lucide-react";
+import { Settings, LogOut, User as UserIcon, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Show, useUser, useClerk } from "@clerk/react";
 import { useGetMe } from "@workspace/api-client-react";
+import mascotUrl from "@assets/mascot_swallow.png";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -16,9 +17,11 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
         <Link href="/" className="flex items-center space-x-2 transition-opacity hover:opacity-80">
-          <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
-            <Compass className="h-5 w-5" />
-          </div>
+          <img
+            src={mascotUrl}
+            alt="Mascot"
+            className="h-10 w-10 object-contain drop-shadow-sm"
+          />
           <span className="font-serif text-xl font-bold tracking-tight text-foreground">
             World Geography<span className="text-primary"> Trivia</span>
           </span>

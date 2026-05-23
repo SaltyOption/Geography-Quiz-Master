@@ -1,6 +1,7 @@
 import { useGetCategoryTree, useListQuizzes, useListCourses, type CategoryNode } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Globe2, Loader2, FolderTree, ChevronRight, BookOpen, GraduationCap } from "lucide-react";
+import { Loader2, FolderTree, ChevronRight, BookOpen, GraduationCap } from "lucide-react";
+import mascotUrl from "@assets/mascot_swallow.png";
 import { SignUpBanner } from "@/components/SignUpBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +121,11 @@ export default function Home() {
           </p>
         </div>
         <div className="flex justify-center md:justify-end">
-          <Globe2 className="h-24 w-24 text-primary/20 md:h-32 md:w-32" />
+          <img
+            src={mascotUrl}
+            alt="Geography quiz mascot"
+            className="h-40 w-40 object-contain drop-shadow-lg md:h-56 md:w-56 lg:h-64 lg:w-64"
+          />
         </div>
       </div>
 
