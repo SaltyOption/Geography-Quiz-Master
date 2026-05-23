@@ -23,6 +23,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import mascotThinkingUrl from "@assets/mascot_swallow_thinking.png";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -360,9 +361,19 @@ export default function ModuleTakingPage() {
       )}
 
       <div className="animate-in fade-in slide-in-from-right-4 duration-300" key={current.id}>
-        <h2 className="mb-2 text-2xl sm:text-3xl font-serif font-bold leading-tight">
-          {current.text}
-        </h2>
+        <div className="mb-2 flex items-start gap-4">
+          <h2 className="flex-1 text-2xl sm:text-3xl font-serif font-bold leading-tight">
+            {current.text}
+          </h2>
+          {!answered && (
+            <img
+              src={mascotThinkingUrl}
+              alt=""
+              aria-hidden="true"
+              className="hidden h-20 w-20 shrink-0 object-contain drop-shadow-sm sm:block md:h-24 md:w-24 animate-in fade-in duration-500"
+            />
+          )}
+        </div>
         {current.learningObjective && !answered && (
           <Badge variant="outline" className="mb-6 text-xs font-normal text-muted-foreground">
             Goal: {current.learningObjective}

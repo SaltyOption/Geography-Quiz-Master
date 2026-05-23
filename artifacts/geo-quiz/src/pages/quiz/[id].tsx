@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, ArrowRight, Loader2, MapPin } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
+import mascotThinkingUrl from "@assets/mascot_swallow_thinking.png";
 
 export default function QuizPage() {
   const { id } = useParams();
@@ -99,12 +100,21 @@ export default function QuizPage() {
 
       {/* Main Question Card */}
       <div className="animate-in fade-in slide-in-from-right-4 duration-300" key={currentQuestion.id}>
-        <div className="mb-8">
-          <h2 className="text-3xl font-serif font-bold text-foreground leading-tight">
+        <div className="mb-8 flex items-start gap-4">
+          <h2 className="flex-1 text-3xl font-serif font-bold text-foreground leading-tight">
             {currentQuestion.text}
           </h2>
-          {currentQuestion.imageUrl && (
-            <div className="mt-6 flex justify-center overflow-hidden rounded-xl border bg-muted/50 p-4">
+          {!isAnswered && (
+            <img
+              src={mascotThinkingUrl}
+              alt=""
+              aria-hidden="true"
+              className="hidden h-24 w-24 shrink-0 object-contain drop-shadow-sm sm:block md:h-28 md:w-28 animate-in fade-in duration-500"
+            />
+          )}
+        </div>
+        {currentQuestion.imageUrl && (
+          <div className="mb-8 flex justify-center overflow-hidden rounded-xl border bg-muted/50 p-4">
               <img
                 src={
                   currentQuestion.imageUrl.startsWith("/")
@@ -115,9 +125,8 @@ export default function QuizPage() {
                 className="max-h-72 w-auto object-contain"
                 loading="eager"
               />
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="grid gap-3 sm:grid-cols-1">
           {currentQuestion.options.map((option, index) => {
