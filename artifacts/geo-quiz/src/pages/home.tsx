@@ -110,11 +110,11 @@ export default function Home() {
       <div className="mb-12 flex flex-col gap-4 text-center md:flex-row md:items-center md:justify-between md:text-left">
         <div>
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
-            Explore the <span className="text-primary">World</span>
+            Explore the <span className="text-secondary">World</span>
           </h1>
           <p className="mt-4 max-w-[42rem] text-lg text-muted-foreground sm:text-xl">
             Embark on a journey through continents, cultures, and landscapes. Pick a category below to start your adventure or try our{" "}
-            <Link href="/daily" className="font-medium text-primary underline-offset-4 hover:underline" data-testid="link-daily-quiz">
+            <Link href="/daily" className="font-medium text-secondary underline-offset-4 hover:underline" data-testid="link-daily-quiz">
               daily quiz
             </Link>
             .
@@ -147,7 +147,7 @@ export default function Home() {
               <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                    <GraduationCap className="h-6 w-6 text-primary" /> Learning Courses
+                    <GraduationCap className="h-6 w-6 text-secondary" /> Learning Courses
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     Layered modules with explanations and fun facts. Master each module to unlock the next.
@@ -228,7 +228,7 @@ export default function Home() {
           ))}
 
           <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-            <BookOpen className="mx-auto mb-2 h-5 w-5 text-primary/60" />
+            <BookOpen className="mx-auto mb-2 h-5 w-5 text-secondary" />
             {totalQuizzes} {totalQuizzes === 1 ? "quiz" : "quizzes"} in total · Pick any category above to start an adventure
           </div>
         </div>

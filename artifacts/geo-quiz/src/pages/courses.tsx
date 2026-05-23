@@ -103,11 +103,11 @@ export default function CoursesPage() {
     <div className="container max-w-7xl py-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-10 flex flex-col gap-4 text-center md:flex-row md:items-end md:justify-between md:text-left">
         <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-secondary/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-secondary">
             <GraduationCap className="h-3.5 w-3.5" /> Learning courses
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Learn by <span className="text-primary">course</span>
+            Learn by <span className="text-secondary">course</span>
           </h1>
           <p className="mt-3 max-w-[42rem] text-lg text-muted-foreground">
             Layered lessons with explanations and fun facts. Master each module to unlock the next.
@@ -115,7 +115,7 @@ export default function CoursesPage() {
         </div>
         <Show when="signed-in">
           <div className="hidden md:flex items-center gap-2 rounded-lg border bg-muted/40 px-4 py-2 text-sm">
-            <Trophy className="h-4 w-4 text-primary" />
+            <Trophy className="h-4 w-4 text-secondary" />
             Your progress is saved across sessions.
           </div>
         </Show>
