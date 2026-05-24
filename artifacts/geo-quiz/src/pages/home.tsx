@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useGetCategoryTree, useListQuizzes, useListCourses, type CategoryNode } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Loader2, FolderTree, ChevronRight, BookOpen, GraduationCap } from "lucide-react";
+import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap } from "lucide-react";
 import mascotUrl from "@assets/mascot_swallow.png";
 import { SignUpBanner } from "@/components/SignUpBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,6 +81,7 @@ export default function Home() {
   const { data: tree, isLoading, error } = useGetCategoryTree();
   const { data: quizzes } = useListQuizzes();
   const { data: courses } = useListCourses();
+  const [showAllCourses, setShowAllCourses] = useState(false);
 
   if (isLoading) {
     return (
@@ -153,14 +155,23 @@ export default function Home() {
                     Layered modules with explanations and fun facts. Master each module to unlock the next.
                   </p>
                 </div>
-                <Button asChild variant="ghost" size="sm" data-testid="link-home-courses">
-                  <Link href="/courses">
-                    View all <ChevronRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
+                {(courses ?? []).length > 3 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-testid="button-home-courses-toggle"
+                    onClick={() => setShowAllCourses((v) => !v)}
+                  >
+                    {showAllCourses ? (
+                      <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
+                    ) : (
+                      <>View all <ChevronDown className="ml-1 h-4 w-4" /></>
+                    )}
+                  </Button>
+                )}
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {(courses ?? []).slice(0, 4).map((c) => (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {(courses ?? []).slice(0, showAllCourses ? undefined : 3).map((c) => (
                   <Link key={c.id} href={`/courses/${c.slug}`}>
                     <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
                       <CardHeader>
