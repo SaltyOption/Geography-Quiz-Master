@@ -104,19 +104,28 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
   it("returns 400 for invalid body (missing answers)", async () => {
     const res = await request(app)
       .post("/api/course-modules/1/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
       .send({});
     expect(res.status).toBe(400);
   });
 
-  it("returns 404 when module does not exist (anonymous)", async () => {
+  it("returns 401 for anonymous users", async () => {
+    const res = await request(app)
+      .post("/api/course-modules/1/attempts")
+      .send({ answers: [] });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when module does not exist", async () => {
     pushDbResult([]); // module lookup
     const res = await request(app)
       .post("/api/course-modules/9999/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
       .send({ answers: [] });
     expect(res.status).toBe(404);
   });
 
-  it("scores anonymous attempts and reports mastery threshold", async () => {
+  it("scores signed-in attempts and reports mastery threshold", async () => {
     // module lookup
     pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]);
     // lessons
@@ -145,6 +154,7 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
 
     const res = await request(app)
       .post("/api/course-modules/5/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
       .send({
         answers: [
           { questionId: 100, selectedOption: 0 },
@@ -158,7 +168,6 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
     expect(res.body.percentage).toBe(50);
     expect(res.body.mastered).toBe(false);
     expect(res.body.masteryThreshold).toBe(80);
-    expect(res.body.saved).toBe(false);
     expect(Array.isArray(res.body.questionResults)).toBe(true);
     expect(res.body.questionResults).toHaveLength(2);
   });
@@ -216,6 +225,7 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
 
     const res = await request(app)
       .post("/api/course-modules/7/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
       .send({
         answers: [
           { questionId: 200, selectedOption: 0 },
@@ -247,6 +257,7 @@ describe("POST /api/course-modules/:moduleId/attempts — bypass protection", ()
     // give the user 5/5 — duplicates are deduped, unanswered questions count wrong.
     const res = await request(app)
       .post("/api/course-modules/8/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
       .send({
         answers: [
           { questionId: 300, selectedOption: 0 },
@@ -274,6 +285,7 @@ describe("POST /api/course-modules/:moduleId/attempts — bypass protection", ()
 
     const res = await request(app)
       .post("/api/course-modules/9/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
       .send({
         answers: [
           { questionId: 400, selectedOption: 0 },
@@ -295,10 +307,17 @@ describe("POST /api/course-modules/:moduleId/attempts — bypass protection", ()
 });
 
 describe("GET /api/courses", () => {
-  it("returns an empty array when no courses exist", async () => {
+  it("requires sign-in (anonymous gets 401)", async () => {
+    const res = await request(app).get("/api/courses");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns an empty array when no courses exist (signed-in)", async () => {
     pushDbResult([]); // courses
     pushDbResult([]); // module counts
-    const res = await request(app).get("/api/courses");
+    const res = await request(app)
+      .get("/api/courses")
+      .set("x-test-user-id", NON_ADMIN_ID);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body).toHaveLength(0);

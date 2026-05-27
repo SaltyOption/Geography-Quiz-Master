@@ -3,6 +3,7 @@ import { Link, useParams, useLocation } from "wouter";
 import { Show, useAuth } from "@clerk/react";
 import {
   useGetCourseModule,
+  getGetCourseModuleQueryKey,
   useSubmitCourseModuleAttempt,
   useSaveCourseModuleProgress,
   useClearCourseModuleProgress,
@@ -24,7 +25,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import mascotThinkingUrl from "@assets/mascot_swallow_thinking.png";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
@@ -33,9 +34,14 @@ type FlatQuestion = CourseQuestion & { lessonTitle: string };
 export default function ModuleTakingPage() {
   const { slug, moduleSlug } = useParams<{ slug: string; moduleSlug: string }>();
   const [, setLocation] = useLocation();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded: authLoaded } = useAuth();
 
-  const { data, isLoading, error, refetch } = useGetCourseModule(slug!, moduleSlug!);
+  const { data, isLoading, error, refetch } = useGetCourseModule(slug!, moduleSlug!, {
+    query: {
+      queryKey: getGetCourseModuleQueryKey(slug!, moduleSlug!),
+      enabled: authLoaded && !!isSignedIn,
+    },
+  });
   const submit = useSubmitCourseModuleAttempt();
   const saveProgress = useSaveCourseModuleProgress();
   const clearProgress = useClearCourseModuleProgress();
@@ -88,6 +94,40 @@ export default function ModuleTakingPage() {
     }
     setResumed(true);
   }, [data, questions]);
+
+  if (!authLoaded) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="container max-w-3xl py-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="text-center">
+          <CardHeader>
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Lock className="h-6 w-6" />
+            </div>
+            <CardTitle className="text-3xl">Sign in to take this module</CardTitle>
+            <CardDescription className="mt-2 text-base">
+              Free account required to take any course module and track your progress.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Button asChild size="lg">
+              <Link href="/sign-up">Create free account</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -238,16 +278,6 @@ export default function ModuleTakingPage() {
                 </>
               )}
             </p>
-
-            <Show when="signed-out">
-              <div className="mt-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-                Your result wasn't saved.{" "}
-                <Link href="/sign-in" className="text-primary underline-offset-2 hover:underline">
-                  Sign in
-                </Link>{" "}
-                to track mastery.
-              </div>
-            </Show>
 
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <Button variant="outline" onClick={handleRetake}>

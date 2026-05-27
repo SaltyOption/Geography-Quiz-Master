@@ -1,13 +1,40 @@
 import { Link } from "wouter";
-import { Show } from "@clerk/react";
+import { Show, useAuth } from "@clerk/react";
 import {
   useListCourses,
+  getListCoursesQueryKey,
   type CourseSummary,
 } from "@workspace/api-client-react";
-import { Loader2, BookOpen, ChevronRight, GraduationCap, Trophy } from "lucide-react";
+import { Loader2, BookOpen, ChevronRight, GraduationCap, Trophy, Lock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+
+function CoursesSignInGate() {
+  return (
+    <div className="container max-w-3xl py-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <Card className="text-center">
+        <CardHeader>
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Lock className="h-6 w-6" />
+          </div>
+          <CardTitle className="text-3xl">Learning courses are for members</CardTitle>
+          <CardDescription className="mt-2 text-base">
+            Create a free account to start any course, track mastery, and unlock modules as you go.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Button asChild size="lg">
+            <Link href="/sign-up">Create free account</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link href="/sign-in">Sign in</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function CourseCard({ course }: { course: CourseSummary }) {
   const baseUrl = import.meta.env.BASE_URL;
@@ -76,7 +103,19 @@ function CourseCard({ course }: { course: CourseSummary }) {
 }
 
 export default function CoursesPage() {
-  const { data: courses, isLoading, error } = useListCourses();
+  const { isSignedIn, isLoaded } = useAuth();
+  const { data: courses, isLoading, error } = useListCourses({
+    query: { queryKey: getListCoursesQueryKey(), enabled: isLoaded && !!isSignedIn },
+  });
+
+  if (!isLoaded) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (!isSignedIn) return <CoursesSignInGate />;
 
   if (isLoading) {
     return (

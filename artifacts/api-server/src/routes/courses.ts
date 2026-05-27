@@ -107,6 +107,10 @@ async function getModuleStatsForUser(
 router.get("/courses", async (req, res): Promise<void> => {
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to access courses" });
+    return;
+  }
 
   const courses = await db
     .select()
@@ -161,6 +165,10 @@ router.get("/courses/:slug", async (req, res): Promise<void> => {
   const slug = String(req.params.slug);
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to access courses" });
+    return;
+  }
 
   const [course] = await db
     .select()
@@ -253,6 +261,10 @@ router.get("/courses/:slug/modules/:moduleSlug", async (req, res): Promise<void>
   const moduleSlug = String(req.params.moduleSlug);
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to access courses" });
+    return;
+  }
 
   const [course] = await db
     .select()
@@ -432,7 +444,7 @@ router.get("/course-modules/:moduleId/progress", async (req, res): Promise<void>
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
   if (!userId) {
-    res.json(null);
+    res.status(401).json({ error: "Sign in to access courses" });
     return;
   }
   const [row] = await db
@@ -469,9 +481,8 @@ router.put("/course-modules/:moduleId/progress", async (req, res): Promise<void>
   }
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
-  // Anonymous: silently no-op so the client doesn't need to gate on auth state.
   if (!userId) {
-    res.json(null);
+    res.status(401).json({ error: "Sign in to access courses" });
     return;
   }
   const mod = await loadModuleById(moduleId);
@@ -504,7 +515,7 @@ router.delete("/course-modules/:moduleId/progress", async (req, res): Promise<vo
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
   if (!userId) {
-    res.json({ saved: false });
+    res.status(401).json({ error: "Sign in to access courses" });
     return;
   }
   await db
@@ -533,6 +544,10 @@ router.post("/course-modules/:moduleId/attempts", async (req, res): Promise<void
   const { answers } = parsed.data;
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to submit module attempts" });
+    return;
+  }
 
   const [mod] = await db
     .select()
