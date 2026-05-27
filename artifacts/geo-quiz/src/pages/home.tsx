@@ -228,7 +228,7 @@ export default function Home() {
                       Layered modules with explanations and fun facts. Master each module to unlock the next.
                     </p>
                   </div>
-                  {courseList.length > 3 && (
+                  {courseList.length > 4 && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -243,8 +243,8 @@ export default function Home() {
                     </Button>
                   )}
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {courseList.slice(0, showAllCourses ? undefined : 3).map((c) => (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {courseList.slice(0, showAllCourses ? undefined : 4).map((c) => (
                     <Link key={c.id} href={`/courses/${c.slug}`}>
                       <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
                         <CardHeader>
