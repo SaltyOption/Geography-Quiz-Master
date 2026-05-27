@@ -82,6 +82,7 @@ export default function Home() {
   const { data: quizzes } = useListQuizzes();
   const { data: courses } = useListCourses();
   const [showAllCourses, setShowAllCourses] = useState(false);
+  const [expandedRoots, setExpandedRoots] = useState<Record<number, boolean>>({});
 
   if (isLoading) {
     return (
@@ -190,11 +191,28 @@ export default function Home() {
                       {countAll(root).quizzes} {countAll(root).quizzes === 1 ? "quiz" : "quizzes"} across {root.children.length} {root.children.length === 1 ? "category" : "categories"}
                     </p>
                   </div>
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href={`/category/${root.slug}`}>
-                      View all <ChevronRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
+                  {root.children.length > 4 ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      data-testid={`button-home-root-toggle-${root.id}`}
+                      onClick={() =>
+                        setExpandedRoots((prev) => ({ ...prev, [root.id]: !prev[root.id] }))
+                      }
+                    >
+                      {expandedRoots[root.id] ? (
+                        <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
+                      ) : (
+                        <>View all <ChevronDown className="ml-1 h-4 w-4" /></>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={`/category/${root.slug}`}>
+                        View all <ChevronRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
                 </div>
 
                 {root.children.length === 0 ? (
@@ -208,9 +226,11 @@ export default function Home() {
                   </Card>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {root.children.map((child) => (
-                      <CategoryCard key={child.id} node={child} />
-                    ))}
+                    {root.children
+                      .slice(0, expandedRoots[root.id] ? undefined : 4)
+                      .map((child) => (
+                        <CategoryCard key={child.id} node={child} />
+                      ))}
                   </div>
                 )}
               </section>
