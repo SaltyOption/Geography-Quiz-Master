@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGetCategoryTree, useListQuizzes, useListCourses, type CategoryNode } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap } from "lucide-react";
+import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass } from "lucide-react";
 import mascotUrl from "@assets/mascot_swallow.png";
 import { SignUpBanner } from "@/components/SignUpBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,146 +105,184 @@ export default function Home() {
   const roots = tree ?? [];
   const totalQuizzes = quizzes?.length ?? 0;
 
+  const courseList = courses ?? [];
+  const totalCategories = roots.reduce((sum, r) => sum + r.children.length, 0);
+
   return (
     <>
       <SignUpBanner />
       <div className="container max-w-7xl py-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-12 flex flex-col gap-4 text-center md:flex-row md:items-center md:justify-between md:text-left">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-7xl">
-            Explore the <span className="text-secondary">World</span>
-          </h1>
-          <p className="mt-4 max-w-[42rem] text-lg text-muted-foreground sm:text-xl">
-            Embark on a journey through continents, cultures, and landscapes. Pick a category below to start your adventure or try our{" "}
-            <Link href="/daily" className="font-medium text-secondary underline-offset-4 hover:underline" data-testid="link-daily-quiz">
-              daily quiz
-            </Link>
-            .
-          </p>
-        </div>
-        <div className="flex justify-center md:justify-end">
-          <img
-            src={mascotUrl}
-            alt="Geography quiz mascot"
-            className="h-40 w-40 object-contain drop-shadow-lg md:h-56 md:w-56 lg:h-64 lg:w-64"
-          />
-        </div>
-      </div>
-
-      {roots.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-16 text-center">
-          <FolderTree className="mb-4 h-12 w-12 text-muted-foreground/50" />
-          <h2 className="text-xl font-semibold">No categories yet</h2>
-          <p className="mt-2 text-muted-foreground">
-            Head to the admin panel to create your first category and quizzes.
-          </p>
-          <Button asChild className="mt-6">
-            <Link href="/admin">Go to Admin Dashboard</Link>
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-12">
-          {(courses ?? []).length > 0 && (
-            <section>
-              <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                    <GraduationCap className="h-6 w-6 text-secondary" /> Learning Courses
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Layered modules with explanations and fun facts. Master each module to unlock the next.
-                  </p>
-                </div>
-                {(courses ?? []).length > 3 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    data-testid="button-home-courses-toggle"
-                    onClick={() => setShowAllCourses((v) => !v)}
-                  >
-                    {showAllCourses ? (
-                      <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
-                    ) : (
-                      <>View all <ChevronDown className="ml-1 h-4 w-4" /></>
-                    )}
-                  </Button>
-                )}
+        {/* Hero */}
+        <section className="relative mb-12 overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/5 via-background to-secondary/10 px-6 py-10 sm:px-10 sm:py-14">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full bg-secondary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 -left-10 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+          <div className="relative flex flex-col items-center gap-6 text-center md:flex-row md:items-center md:justify-between md:text-left">
+            <div className="max-w-2xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-secondary backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5" /> World Geography Trivia
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {(courses ?? []).slice(0, showAllCourses ? undefined : 3).map((c) => (
-                  <Link key={c.id} href={`/courses/${c.slug}`}>
-                    <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
-                      <CardHeader>
-                        <div className="mb-2 flex items-start justify-between gap-2">
-                          <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                            <GraduationCap className="h-5 w-5" />
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-                        </div>
-                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                          {c.title}
-                        </CardTitle>
-                        {c.description && (
-                          <CardDescription className="line-clamp-2">{c.description}</CardDescription>
-                        )}
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-sm text-muted-foreground">
-                          {c.moduleCount} module{c.moduleCount === 1 ? "" : "s"}
-                          {c.masteredCount > 0 && (
-                            <> · <span className="text-green-700 dark:text-green-300 font-medium">{c.masteredCount} mastered</span></>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+              <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
+                Explore the <span className="text-secondary">World</span>
+              </h1>
+              <p className="mt-4 text-lg text-muted-foreground sm:text-xl">
+                Continents, capitals, cultures, and landscapes — one quick quiz at a time.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3 md:justify-start">
+                <Button asChild size="lg" data-testid="button-hero-daily">
+                  <Link href="/daily">
+                    <Sparkles className="mr-2 h-4 w-4" /> Daily quiz
                   </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {roots.map((root) => (
-            <section key={root.id}>
-              <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight">{root.name}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {countAll(root).quizzes} {countAll(root).quizzes === 1 ? "quiz" : "quizzes"} across {root.children.length} {root.children.length === 1 ? "category" : "categories"}
-                  </p>
-                </div>
-                <Button asChild variant="ghost" size="sm">
-                  <Link href={`/category/${root.slug}`}>
-                    View all <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+                <Button asChild size="lg" variant="outline" data-testid="button-hero-browse">
+                  <Link href="#quizzes">
+                    <Compass className="mr-2 h-4 w-4" /> Browse quizzes
                   </Link>
                 </Button>
               </div>
+            </div>
+            <div className="flex shrink-0 justify-center md:justify-end">
+              <img
+                src={mascotUrl}
+                alt="Geography quiz mascot"
+                className="h-40 w-40 object-contain drop-shadow-lg md:h-56 md:w-56 lg:h-64 lg:w-64"
+              />
+            </div>
+          </div>
 
-              {root.children.length === 0 ? (
-                <Card className="border-dashed">
-                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    No subcategories yet.{" "}
-                    <Link href={`/category/${root.slug}`} className="text-primary hover:underline">
-                      Browse {root.name}
+          {(totalQuizzes > 0 || courseList.length > 0 || totalCategories > 0) && (
+            <div className="relative mt-8 grid grid-cols-3 gap-3 border-t pt-6 text-center">
+              <div>
+                <div className="text-2xl font-bold text-foreground sm:text-3xl">{totalQuizzes}</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Quizzes</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-foreground sm:text-3xl">{totalCategories}</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Categories</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-foreground sm:text-3xl">{courseList.length}</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Courses</div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {roots.length === 0 ? (
+          <div id="quizzes" className="scroll-mt-20 flex flex-col items-center justify-center rounded-xl border border-dashed p-16 text-center">
+            <FolderTree className="mb-4 h-12 w-12 text-muted-foreground/50" />
+            <h2 className="text-xl font-semibold">No categories yet</h2>
+            <p className="mt-2 text-muted-foreground">
+              Head to the admin panel to create your first category and quizzes.
+            </p>
+            <Button asChild className="mt-6">
+              <Link href="/admin">Go to Admin Dashboard</Link>
+            </Button>
+          </div>
+        ) : (
+          <div id="quizzes" className="space-y-12 scroll-mt-20">
+            {/* Quizzes first */}
+            {roots.map((root) => (
+              <section key={root.id}>
+                <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">{root.name}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {countAll(root).quizzes} {countAll(root).quizzes === 1 ? "quiz" : "quizzes"} across {root.children.length} {root.children.length === 1 ? "category" : "categories"}
+                    </p>
+                  </div>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href={`/category/${root.slug}`}>
+                      View all <ChevronRight className="ml-1 h-4 w-4" />
                     </Link>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {root.children.map((child) => (
-                    <CategoryCard key={child.id} node={child} />
+                  </Button>
+                </div>
+
+                {root.children.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                      No subcategories yet.{" "}
+                      <Link href={`/category/${root.slug}`} className="text-primary hover:underline">
+                        Browse {root.name}
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {root.children.map((child) => (
+                      <CategoryCard key={child.id} node={child} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            ))}
+
+            {/* Learning Courses (after quizzes) */}
+            {courseList.length > 0 && (
+              <section>
+                <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                      <GraduationCap className="h-6 w-6 text-secondary" /> Learning Courses
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Layered modules with explanations and fun facts. Master each module to unlock the next.
+                    </p>
+                  </div>
+                  {courseList.length > 3 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      data-testid="button-home-courses-toggle"
+                      onClick={() => setShowAllCourses((v) => !v)}
+                    >
+                      {showAllCourses ? (
+                        <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
+                      ) : (
+                        <>View all <ChevronDown className="ml-1 h-4 w-4" /></>
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {courseList.slice(0, showAllCourses ? undefined : 3).map((c) => (
+                    <Link key={c.id} href={`/courses/${c.slug}`}>
+                      <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
+                        <CardHeader>
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                              <GraduationCap className="h-5 w-5" />
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                          </div>
+                          <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                            {c.title}
+                          </CardTitle>
+                          {c.description && (
+                            <CardDescription className="line-clamp-2">{c.description}</CardDescription>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm text-muted-foreground">
+                            {c.moduleCount} module{c.moduleCount === 1 ? "" : "s"}
+                            {c.masteredCount > 0 && (
+                              <> · <span className="text-green-700 dark:text-green-300 font-medium">{c.masteredCount} mastered</span></>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
-              )}
-            </section>
-          ))}
+              </section>
+            )}
 
-          <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-            <BookOpen className="mx-auto mb-2 h-5 w-5 text-secondary" />
-            {totalQuizzes} {totalQuizzes === 1 ? "quiz" : "quizzes"} in total · Pick any category above to start an adventure
+            <div className="rounded-xl border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+              <BookOpen className="mx-auto mb-2 h-5 w-5 text-secondary" />
+              {totalQuizzes} {totalQuizzes === 1 ? "quiz" : "quizzes"} in total · Pick any category above to start an adventure
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     </>
   );
 }
