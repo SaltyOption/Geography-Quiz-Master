@@ -1,6 +1,6 @@
 import { Link, useParams } from "wouter";
-import { Show, useAuth } from "@clerk/react";
-import { useGetCourse, getGetCourseQueryKey } from "@workspace/api-client-react";
+import { Show } from "@clerk/react";
+import { useGetCourse } from "@workspace/api-client-react";
 import {
   Loader2,
   ArrowLeft,
@@ -9,53 +9,16 @@ import {
   Play,
   GraduationCap,
   ListOrdered,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
-function SignInGate() {
-  return (
-    <div className="container max-w-3xl py-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <Card className="text-center">
-        <CardHeader>
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Lock className="h-6 w-6" />
-          </div>
-          <CardTitle className="text-3xl">Sign in to open this course</CardTitle>
-          <CardDescription className="mt-2 text-base">
-            Free account required to take any course module and track your progress.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Button asChild size="lg">
-            <Link href="/sign-up">Create free account</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 export default function CourseDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { isSignedIn, isLoaded } = useAuth();
-  const { data: course, isLoading, error } = useGetCourse(slug!, {
-    query: { queryKey: getGetCourseQueryKey(slug!), enabled: isLoaded && !!isSignedIn },
-  });
-
-  if (!isLoaded) {
-    return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  if (!isSignedIn) return <SignInGate />;
+  const { data: course, isLoading, error } = useGetCourse(slug!);
 
   if (isLoading) {
     return (
@@ -112,6 +75,28 @@ export default function CourseDetailPage() {
           )}
         </Show>
       </div>
+
+      <Show when="signed-out">
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div className="text-sm">
+              <p className="font-medium">Sign up to take this course.</p>
+              <p className="text-muted-foreground">
+                Free account required to answer questions, save progress, and unlock modules as you master each one.
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button asChild size="sm">
+              <Link href="/sign-up">Create free account</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
+          </div>
+        </div>
+      </Show>
 
       {course.modules.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-16 text-center">

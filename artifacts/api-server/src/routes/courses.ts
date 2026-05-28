@@ -107,10 +107,6 @@ async function getModuleStatsForUser(
 router.get("/courses", async (req, res): Promise<void> => {
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
-  if (!userId) {
-    res.status(401).json({ error: "Sign in to access courses" });
-    return;
-  }
 
   const courses = await db
     .select()
@@ -165,10 +161,6 @@ router.get("/courses/:slug", async (req, res): Promise<void> => {
   const slug = String(req.params.slug);
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
-  if (!userId) {
-    res.status(401).json({ error: "Sign in to access courses" });
-    return;
-  }
 
   const [course] = await db
     .select()

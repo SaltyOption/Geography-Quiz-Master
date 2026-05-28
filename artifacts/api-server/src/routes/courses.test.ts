@@ -307,9 +307,12 @@ describe("POST /api/course-modules/:moduleId/attempts — bypass protection", ()
 });
 
 describe("GET /api/courses", () => {
-  it("requires sign-in (anonymous gets 401)", async () => {
+  it("allows anonymous users (returns empty list when no courses)", async () => {
+    pushDbResult([]); // courses
     const res = await request(app).get("/api/courses");
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(0);
   });
 
   it("returns an empty array when no courses exist (signed-in)", async () => {
