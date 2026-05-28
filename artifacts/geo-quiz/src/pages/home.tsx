@@ -191,7 +191,7 @@ export default function Home() {
                       {countAll(root).quizzes} {countAll(root).quizzes === 1 ? "quiz" : "quizzes"} across {root.children.length} {root.children.length === 1 ? "category" : "categories"}
                     </p>
                   </div>
-                  {root.children.length > 4 ? (
+                  {root.children.length > 3 ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -225,9 +225,9 @@ export default function Home() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {root.children
-                      .slice(0, expandedRoots[root.id] ? undefined : 4)
+                      .slice(0, expandedRoots[root.id] ? undefined : 3)
                       .map((child) => (
                         <CategoryCard key={child.id} node={child} />
                       ))}
@@ -248,7 +248,7 @@ export default function Home() {
                       Layered modules with explanations and fun facts. Master each module to unlock the next.
                     </p>
                   </div>
-                  {courseList.length > 4 && (
+                  {courseList.length > 3 && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -263,8 +263,8 @@ export default function Home() {
                     </Button>
                   )}
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {courseList.slice(0, showAllCourses ? undefined : 4).map((c) => (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {courseList.slice(0, showAllCourses ? undefined : 3).map((c) => (
                     <Link key={c.id} href={`/courses/${c.slug}`}>
                       <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
                         <CardHeader>
