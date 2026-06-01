@@ -200,6 +200,7 @@ describe("POST /api/quizzes/:id/questions", () => {
       funFact: null,
       imageUrl: null,
       orderIndex: 0,
+      categories: [],
       createdAt: isoNow,
       updatedAt: isoNow,
     });
@@ -234,6 +235,7 @@ describe("PATCH /api/questions/:id", () => {
       funFact: null,
       imageUrl: null,
       orderIndex: 0,
+      categories: [],
       createdAt: isoNow,
       updatedAt: isoNow,
     });

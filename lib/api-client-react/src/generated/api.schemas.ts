@@ -53,6 +53,12 @@ export interface Quiz {
   updatedAt: string;
 }
 
+export interface QuestionCategory {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export interface Question {
   id: number;
   quizId: number;
@@ -65,6 +71,7 @@ export interface Question {
   /** @nullable */
   imageUrl: string | null;
   orderIndex: number;
+  categories: QuestionCategory[];
   createdAt: string;
   updatedAt: string;
 }
@@ -125,6 +132,8 @@ export interface BulkImportItem {
   difficulty?: string | null;
   /** @nullable */
   image_url?: string | null;
+  /** Optional category names to tag this question with. Existing categories are matched by name (case-insensitive); unknown names are created as new root categories. */
+  categories?: string[];
 }
 
 export interface BulkImportBody {
@@ -159,6 +168,8 @@ export interface BulkImportResult {
   quizzesCreated: number;
   quizzesUpdated: number;
   questionsAdded: number;
+  /** Names of categories that were newly created from question `categories` tags during this import. */
+  categoriesCreated: string[];
   topics: BulkImportTopicResult[];
 }
 
@@ -190,6 +201,25 @@ export interface CategoryWithQuizzes {
   descendants: Category[];
   /** Quizzes in this category or any of its descendants. */
   quizzes: QuizSummary[];
+  /** Number of questions tagged with this category or any of its descendants (available as a practice quiz). */
+  taggedQuestionCount: number;
+}
+
+export interface PracticeQuestion {
+  id: number;
+  text: string;
+  options: string[];
+  correctOption: number;
+  explanation: string;
+  /** @nullable */
+  funFact: string | null;
+  /** @nullable */
+  imageUrl: string | null;
+}
+
+export interface CategoryPracticeQuiz {
+  category: QuestionCategory;
+  questions: PracticeQuestion[];
 }
 
 export interface CreateCategoryBody {
@@ -217,6 +247,7 @@ export interface CreateQuestionBody {
   /** @nullable */
   imageUrl?: string | null;
   orderIndex: number;
+  categoryIds?: number[];
 }
 
 export interface UpdateQuestionBody {
@@ -229,6 +260,7 @@ export interface UpdateQuestionBody {
   /** @nullable */
   imageUrl?: string | null;
   orderIndex?: number;
+  categoryIds?: number[];
 }
 
 export interface QuestionAnswer {
@@ -494,6 +526,13 @@ export interface CourseImportResult {
   questionsAdded: number;
   modules: CourseImportModuleResult[];
 }
+
+export type GetCategoryPracticeQuizParams = {
+  /**
+   * Maximum number of questions to include (default 20).
+   */
+  limit?: number;
+};
 
 export type ClearCourseModuleProgress200 = {
   saved: boolean;

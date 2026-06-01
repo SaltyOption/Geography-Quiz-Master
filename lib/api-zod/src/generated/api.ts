@@ -114,6 +114,44 @@ export const GetCategoryBySlugResponse = zod.object({
       }),
     )
     .describe("Quizzes in this category or any of its descendants."),
+  taggedQuestionCount: zod
+    .number()
+    .describe(
+      "Number of questions tagged with this category or any of its descendants (available as a practice quiz).",
+    ),
+});
+
+/**
+ * @summary Build a practice quiz from questions tagged with this category (or any descendant)
+ */
+export const GetCategoryPracticeQuizParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetCategoryPracticeQuizQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .optional()
+    .describe("Maximum number of questions to include (default 20)."),
+});
+
+export const GetCategoryPracticeQuizResponse = zod.object({
+  category: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    slug: zod.string(),
+  }),
+  questions: zod.array(
+    zod.object({
+      id: zod.number(),
+      text: zod.string(),
+      options: zod.array(zod.string()),
+      correctOption: zod.number(),
+      explanation: zod.string(),
+      funFact: zod.string().nullable(),
+      imageUrl: zod.string().nullable(),
+    }),
+  ),
 });
 
 /**
@@ -227,6 +265,12 @@ export const BulkImportQuizzesBody = zod.object({
       fun_fact: zod.string().nullish(),
       difficulty: zod.string().nullish(),
       image_url: zod.string().nullish(),
+      categories: zod
+        .array(zod.string())
+        .optional()
+        .describe(
+          "Optional category names to tag this question with. Existing categories are matched by name (case-insensitive); unknown names are created as new root categories.",
+        ),
     }),
   ),
   categoryIds: zod.array(zod.number()).optional(),
@@ -236,6 +280,11 @@ export const BulkImportQuizzesResponse = zod.object({
   quizzesCreated: zod.number(),
   quizzesUpdated: zod.number(),
   questionsAdded: zod.number(),
+  categoriesCreated: zod
+    .array(zod.string())
+    .describe(
+      "Names of categories that were newly created from question `categories` tags during this import.",
+    ),
   topics: zod.array(
     zod.object({
       topic: zod.string(),
@@ -266,6 +315,12 @@ export const ExportQuizzesResponse = zod.object({
       fun_fact: zod.string().nullish(),
       difficulty: zod.string().nullish(),
       image_url: zod.string().nullish(),
+      categories: zod
+        .array(zod.string())
+        .optional()
+        .describe(
+          "Optional category names to tag this question with. Existing categories are matched by name (case-insensitive); unknown names are created as new root categories.",
+        ),
     }),
   ),
   skippedEmptyQuizzes: zod.array(zod.string()),
@@ -308,6 +363,13 @@ export const GetQuizResponse = zod.object({
       funFact: zod.string().nullable(),
       imageUrl: zod.string().nullable(),
       orderIndex: zod.number(),
+      categories: zod.array(
+        zod.object({
+          id: zod.number(),
+          name: zod.string(),
+          slug: zod.string(),
+        }),
+      ),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -363,6 +425,13 @@ export const ListQuestionsResponseItem = zod.object({
   funFact: zod.string().nullable(),
   imageUrl: zod.string().nullable(),
   orderIndex: zod.number(),
+  categories: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      slug: zod.string(),
+    }),
+  ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -383,6 +452,7 @@ export const CreateQuestionBody = zod.object({
   funFact: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
   orderIndex: zod.number(),
+  categoryIds: zod.array(zod.number()).optional(),
 });
 
 /**
@@ -402,6 +472,13 @@ export const GetQuestionResponse = zod.object({
   funFact: zod.string().nullable(),
   imageUrl: zod.string().nullable(),
   orderIndex: zod.number(),
+  categories: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      slug: zod.string(),
+    }),
+  ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -421,6 +498,7 @@ export const UpdateQuestionBody = zod.object({
   funFact: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
   orderIndex: zod.number().optional(),
+  categoryIds: zod.array(zod.number()).optional(),
 });
 
 export const UpdateQuestionResponse = zod.object({
@@ -433,6 +511,13 @@ export const UpdateQuestionResponse = zod.object({
   funFact: zod.string().nullable(),
   imageUrl: zod.string().nullable(),
   orderIndex: zod.number(),
+  categories: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      slug: zod.string(),
+    }),
+  ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

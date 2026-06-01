@@ -44,7 +44,9 @@ function makeChain(): Record<string, unknown> {
 
 export const dbMock = {
   select: (..._args: unknown[]) => makeChain(),
+  selectDistinct: (..._args: unknown[]) => makeChain(),
   insert: (..._args: unknown[]) => makeChain(),
   update: (..._args: unknown[]) => makeChain(),
   delete: (..._args: unknown[]) => makeChain(),
+  transaction: async <T>(fn: (tx: typeof dbMock) => Promise<T>): Promise<T> => fn(dbMock),
 };

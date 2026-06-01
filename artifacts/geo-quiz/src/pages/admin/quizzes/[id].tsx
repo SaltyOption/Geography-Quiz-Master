@@ -4,15 +4,17 @@ import {
   useGetQuiz, 
   useUpdateQuiz, 
   useDeleteQuestion,
+  useUpdateQuestion,
   getGetQuizQueryKey,
   getListQuizzesQueryKey,
   getGetCategoryTreeQueryKey,
+  type Question,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, Loader2, Plus, GripVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, GripVertical, Trash2, Tags } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +22,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -225,6 +235,8 @@ export default function AdminEditQuiz() {
                           </div>
                         ))}
                       </div>
+
+                      <QuestionTagsEditor question={q} quizId={quizId} />
                     </div>
                   </CardContent>
                 </Card>
@@ -233,6 +245,78 @@ export default function AdminEditQuiz() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function QuestionTagsEditor({ question, quizId }: { question: Question; quizId: number }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const updateQuestion = useUpdateQuestion();
+  const [open, setOpen] = useState(false);
+  const [categoryIds, setCategoryIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setCategoryIds(question.categories.map((c) => c.id));
+    }
+  }, [open, question.categories]);
+
+  const handleSave = async () => {
+    try {
+      await updateQuestion.mutateAsync({ id: question.id, data: { categoryIds } });
+      queryClient.invalidateQueries({ queryKey: getGetQuizQueryKey(quizId) });
+      queryClient.invalidateQueries({ queryKey: getGetCategoryTreeQueryKey() });
+      toast({ title: "Tags updated" });
+      setOpen(false);
+    } catch {
+      toast({ title: "Failed to update tags", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+      {question.categories.map((c) => (
+        <Badge key={c.id} variant="secondary" className="text-xs">
+          {c.name}
+        </Badge>
+      ))}
+      {question.categories.length === 0 && (
+        <span className="text-xs text-muted-foreground">No categories tagged</span>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+        onClick={() => setOpen(true)}
+      >
+        <Tags className="mr-1 h-3.5 w-3.5" /> Edit tags
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit question tags</DialogTitle>
+            <DialogDescription>
+              Tag this question with categories so it can be reused in category practice quizzes.
+            </DialogDescription>
+          </DialogHeader>
+          <CategoryMultiSelect selectedIds={categoryIds} onChange={setCategoryIds} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={updateQuestion.isPending}>
+              {updateQuestion.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save tags
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

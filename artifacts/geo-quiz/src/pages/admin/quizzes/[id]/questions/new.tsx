@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
 import { COUNTRIES, flagUrl, outlineUrl, pickRandomDistractors } from "@/lib/countries";
 
 const formSchema = z.object({
@@ -53,6 +55,7 @@ export default function AdminCreateQuestion() {
 
   const [quickType, setQuickType] = useState<"flag" | "outline">("flag");
   const [quickCountry, setQuickCountry] = useState<string>("");
+  const [categoryIds, setCategoryIds] = useState<number[]>([]);
 
   const handleQuickFill = () => {
     const country = COUNTRIES.find((c) => c.code === quickCountry);
@@ -98,6 +101,7 @@ export default function AdminCreateQuestion() {
         orderIndex: 0, // In a real app we'd get max order index, for now server handles or defaults
         funFact: values.funFact || null,
         imageUrl: values.imageUrl || null,
+        categoryIds,
       };
 
       await createQuestion.mutateAsync({ 
@@ -288,6 +292,14 @@ export default function AdminCreateQuestion() {
                     </FormItem>
                   )}
                 />
+
+                <div className="space-y-2">
+                  <Label className="font-bold">Categories (Optional)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Tag this question so it can be reused in category practice quizzes.
+                  </p>
+                  <CategoryMultiSelect selectedIds={categoryIds} onChange={setCategoryIds} />
+                </div>
               </div>
 
               <div className="flex justify-end gap-4 pt-4 border-t">

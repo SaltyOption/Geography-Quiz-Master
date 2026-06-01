@@ -93,6 +93,33 @@ paths:
         "404":
           description: Not found
 
+  /categories/by-slug/{slug}/practice:
+    get:
+      operationId: getCategoryPracticeQuiz
+      tags: [categories]
+      summary: Build a practice quiz from questions tagged with this category (or any descendant)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: "Maximum number of questions to include (default 20)."
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A shuffled set of tagged questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryPracticeQuiz"
+        "404":
+          description: Not found
+
   /categories/{id}:
     patch:
       operationId: updateCategory
@@ -841,6 +868,11 @@ components:
           type: ["string", "null"]
         image_url:
           type: ["string", "null"]
+        categories:
+          type: array
+          description: "Optional category names to tag this question with. Existing categories are matched by name (case-insensitive); unknown names are created as new root categories."
+          items:
+            type: string
       required:
         - topic
         - question
@@ -930,6 +962,11 @@ components:
           type: integer
         questionsAdded:
           type: integer
+        categoriesCreated:
+          type: array
+          description: "Names of categories that were newly created from question `categories` tags during this import."
+          items:
+            type: string
         topics:
           type: array
           items:
@@ -938,6 +975,7 @@ components:
         - quizzesCreated
         - quizzesUpdated
         - questionsAdded
+        - categoriesCreated
         - topics
 
     UpdateQuizBody:
@@ -1030,11 +1068,56 @@ components:
           description: "Quizzes in this category or any of its descendants."
           items:
             $ref: "#/components/schemas/QuizSummary"
+        taggedQuestionCount:
+          type: integer
+          description: "Number of questions tagged with this category or any of its descendants (available as a practice quiz)."
       required:
         - category
         - ancestors
         - descendants
         - quizzes
+        - taggedQuestionCount
+
+    PracticeQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctOption:
+          type: integer
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - text
+        - options
+        - correctOption
+        - explanation
+        - funFact
+        - imageUrl
+
+    CategoryPracticeQuiz:
+      type: object
+      properties:
+        category:
+          $ref: "#/components/schemas/QuestionCategory"
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PracticeQuestion"
+      required:
+        - category
+        - questions
 
     CreateCategoryBody:
       type: object
@@ -1082,6 +1165,10 @@ components:
           type: ["string", "null"]
         orderIndex:
           type: integer
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionCategory"
         createdAt:
           type: string
         updatedAt:
@@ -1096,8 +1183,23 @@ components:
         - funFact
         - imageUrl
         - orderIndex
+        - categories
         - createdAt
         - updatedAt
+
+    QuestionCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+      required:
+        - id
+        - name
+        - slug
 
     CreateQuestionBody:
       type: object
@@ -1118,6 +1220,10 @@ components:
           type: ["string", "null"]
         orderIndex:
           type: integer
+        categoryIds:
+          type: array
+          items:
+            type: integer
       required:
         - text
         - options
@@ -1144,6 +1250,10 @@ components:
           type: ["string", "null"]
         orderIndex:
           type: integer
+        categoryIds:
+          type: array
+          items:
+            type: integer
 
     SubmitQuizAttemptBody:
       type: object

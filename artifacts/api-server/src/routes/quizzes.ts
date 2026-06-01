@@ -7,6 +7,7 @@ import {
   quizAttemptsTable,
   categoriesTable,
   quizCategoriesTable,
+  questionCategoriesTable,
 } from "@workspace/db";
 import {
   CreateQuizBody,
@@ -18,6 +19,8 @@ import {
   BulkImportQuizzesBody,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { getCategoriesByQuestionIds } from "../lib/questionCategories";
+import { slugify, uniqueSlugTx } from "../lib/categorySlug";
 
 const router: IRouter = Router();
 
@@ -213,7 +216,13 @@ router.post("/quizzes/bulk-import", requireAdmin, async (req, res): Promise<void
 
   const { items, categoryIds } = parsed.data;
   if (items.length === 0) {
-    res.json({ quizzesCreated: 0, quizzesUpdated: 0, questionsAdded: 0, topics: [] });
+    res.json({
+      quizzesCreated: 0,
+      quizzesUpdated: 0,
+      questionsAdded: 0,
+      categoriesCreated: [],
+      topics: [],
+    });
     return;
   }
 
@@ -237,6 +246,26 @@ router.post("/quizzes/bulk-import", requireAdmin, async (req, res): Promise<void
       let quizzesCreated = 0;
       let quizzesUpdated = 0;
       let questionsAdded = 0;
+
+      // Resolve category names to ids (case-insensitive), creating missing ones as root categories.
+      const existingCats = await tx.select().from(categoriesTable);
+      const catByName = new Map<string, number>();
+      for (const c of existingCats) catByName.set(c.name.trim().toLowerCase(), c.id);
+      const categoriesCreated: string[] = [];
+
+      async function resolveCategoryId(name: string): Promise<number> {
+        const key = name.trim().toLowerCase();
+        const existingId = catByName.get(key);
+        if (existingId !== undefined) return existingId;
+        const finalSlug = await uniqueSlugTx(tx, slugify(name));
+        const [created] = await tx
+          .insert(categoriesTable)
+          .values({ name: name.trim(), slug: finalSlug, parentId: null })
+          .returning();
+        catByName.set(key, created.id);
+        categoriesCreated.push(created.name);
+        return created.id;
+      }
 
       for (const [topic, topicItems] of byTopic) {
         // Most common difficulty among the topic's questions, defaulting to "Medium".
@@ -312,14 +341,35 @@ router.post("/quizzes/bulk-import", requireAdmin, async (req, res): Promise<void
         });
 
         if (rows.length > 0) {
-          await tx.insert(questionsTable).values(rows);
+          const inserted = await tx
+            .insert(questionsTable)
+            .values(rows)
+            .returning({ id: questionsTable.id });
           questionsAdded += rows.length;
+
+          // Tag inserted questions with their item's categories (returned in insertion order).
+          const tagLinks: { questionId: number; categoryId: number }[] = [];
+          for (let i = 0; i < topicItems.length; i++) {
+            const names = topicItems[i].categories ?? [];
+            const questionId = inserted[i].id;
+            const seen = new Set<number>();
+            for (const name of names) {
+              if (!name || !name.trim()) continue;
+              const categoryId = await resolveCategoryId(name);
+              if (seen.has(categoryId)) continue;
+              seen.add(categoryId);
+              tagLinks.push({ questionId, categoryId });
+            }
+          }
+          if (tagLinks.length > 0) {
+            await tx.insert(questionCategoriesTable).values(tagLinks);
+          }
         }
 
         topicResults.push({ topic, quizId, created, questionsAdded: rows.length });
       }
 
-      return { quizzesCreated, quizzesUpdated, questionsAdded, topics: topicResults };
+      return { quizzesCreated, quizzesUpdated, questionsAdded, categoriesCreated, topics: topicResults };
     });
 
     res.json(summary);
@@ -350,6 +400,7 @@ router.get("/quizzes/:id", async (req, res): Promise<void> => {
     .orderBy(questionsTable.orderIndex);
 
   const catMap = await getCategoriesByQuizIds([quiz.id]);
+  const questionCatMap = await getCategoriesByQuestionIds(questions.map((q) => q.id));
 
   res.json({
     id: quiz.id,
@@ -370,6 +421,7 @@ router.get("/quizzes/:id", async (req, res): Promise<void> => {
       funFact: q.funFact ?? null,
       imageUrl: q.imageUrl ?? null,
       orderIndex: q.orderIndex,
+      categories: questionCatMap.get(q.id) ?? [],
       createdAt: q.createdAt.toISOString(),
       updatedAt: q.updatedAt.toISOString(),
     })),

@@ -1,0 +1,1 @@
+- [api-server db-mock tests](api-server-db-mock-tests.md) — vitest db mock is a shared FIFO queue; push one entry per awaited db call (incl. ignored deletes/inserts), txns reuse the same queue.

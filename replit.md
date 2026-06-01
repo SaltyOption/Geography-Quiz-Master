@@ -54,6 +54,7 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - `quiz_attempts` — id, quiz_id, user_id (nullable), score, total_questions, answers (jsonb), created_at
 - `categories` — id, name, parent_id (self-ref, ON DELETE SET NULL), timestamps. Forms an unlimited-depth tree.
 - `quiz_categories` — composite PK (quiz_id, category_id), both ON DELETE CASCADE. Many-to-many join table; quizzes can belong to multiple categories.
+- `question_categories` — composite PK (question_id, category_id), both ON DELETE CASCADE. Many-to-many join table; questions can be tagged with multiple categories and reused independently of their quiz.
 
 ## Category Hierarchy
 
@@ -92,9 +93,18 @@ The home page is a category browser only (no quizzes shown directly) — it grou
 - Admin page at `/admin/import` lets admins paste or upload a JSON array of question objects.
 - Endpoint: `POST /api/quizzes/bulk-import` (admin-only). Accepts either `{ items: BulkImportItem[], categoryIds?: number[] }` or a bare array of items.
 - Items are grouped by their `topic` field. Each topic becomes (or maps to) a quiz with `title = topic`. New quizzes are created with `description = "A quiz on {topic}"`, `category = topic`, and `difficulty` = the most common value among that topic's questions (default `Medium`). Optional `categoryIds` are attached only to newly created quizzes.
-- Question fields: `question`, `options{A,B,C,D}`, `correct_answer` ("A"|"B"|"C"|"D"), `explanation`, optional `fun_fact`, `difficulty`, `image_url`. Letters map to options index 0–3.
+- Question fields: `question`, `options{A,B,C,D}`, `correct_answer` ("A"|"B"|"C"|"D"), `explanation`, optional `fun_fact`, `difficulty`, `image_url`, `categories` (string[]). Letters map to options index 0–3.
+- Per-item `categories` are resolved by name (case-insensitive). Names that don't match an existing category create a new root category (unique slug auto-generated). The matched/created category ids tag each imported question via `question_categories`. The response's `categoriesCreated` lists names of newly created categories.
 - Order indices continue from `max(orderIndex) + 1` of the existing quiz, so re-importing the same topic appends questions.
-- The whole import runs inside a single DB transaction — if any insert fails, no quizzes or questions are created.
+- The whole import runs inside a single DB transaction — if any insert fails, no quizzes, questions, categories, or tags are created.
+
+## Question Tagging / Practice Quizzes
+
+- Questions can be tagged with any categories from the tree (many-to-many via `question_categories`), independently of the curated quiz they belong to. One question can carry multiple tags and be reused across practice quizzes.
+- Admin: the create-question form and the quiz-edit page expose a category multi-select / "Edit tags" dialog. `POST /api/quizzes/:id/questions` and `PATCH /api/questions/:id` accept `categoryIds: number[]` (replaces the full tag set). Question GET/list responses include `categories: QuestionCategory[]` ({ id, name, slug }).
+- `GET /api/categories/by-slug/:slug` returns `taggedQuestionCount` — the number of distinct questions tagged with the category or any descendant.
+- `GET /api/categories/by-slug/:slug/practice?limit=N` builds a non-persisted practice quiz: distinct questions tagged with the category or any descendant, shuffled, capped at `limit` (default 20, max 50). Returns `{ category, questions: PracticeQuestion[] }`.
+- Frontend: the category landing page shows a "Take a practice quiz (N)" button when `taggedQuestionCount > 0`, linking to `/category/:slug/practice`. The practice page reuses the quiz-taking UI but does not persist attempts (no score saved to history).
 
 ## Seeded Data
 

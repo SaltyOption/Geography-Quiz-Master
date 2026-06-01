@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getGetCategoryBySlugQueryKey, useGetCategoryBySlug, useGetUserProgress } from "@workspace/api-client-react";
 import { Link, useRoute } from "wouter";
-import { Loader2, Play, CheckCircle2, ChevronRight, MapPin, FolderTree, ArrowLeft, Share2, Check } from "lucide-react";
+import { Loader2, Play, CheckCircle2, ChevronRight, MapPin, FolderTree, ArrowLeft, Share2, Check, Dumbbell } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -176,6 +176,13 @@ export default function CategoryPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {data.taggedQuestionCount > 0 && (
+            <Button asChild>
+              <Link href={`/category/${category.slug}/practice`}>
+                <Dumbbell className="mr-2 h-4 w-4" /> Take a practice quiz ({data.taggedQuestionCount})
+              </Link>
+            </Button>
+          )}
           <Button onClick={handleShare} variant="outline">
             {copied ? (
               <>

@@ -63,7 +63,24 @@ const FIELD_ALIASES: Record<string, string[]> = {
   fun_fact: ["fun_fact", "funfact", "trivia", "did_you_know", "didyouknow"],
   difficulty: ["difficulty", "level"],
   image_url: ["image_url", "imageurl", "image", "img", "img_url", "picture", "photo"],
+  categories: ["categories", "tags", "category_tags", "categorytags", "labels"],
 };
+
+// Normalize a categories value that may be an array of strings or a comma-separated string.
+function normalizeCategories(raw: unknown): string[] | undefined {
+  let arr: unknown[];
+  if (Array.isArray(raw)) {
+    arr = raw;
+  } else if (typeof raw === "string") {
+    arr = raw.split(",");
+  } else {
+    return undefined;
+  }
+  const names = arr
+    .map((v) => String(v ?? "").trim())
+    .filter((v) => v.length > 0);
+  return names.length > 0 ? Array.from(new Set(names)) : undefined;
+}
 
 function pick(obj: AnyRec, key: keyof typeof FIELD_ALIASES): unknown {
   const lowerMap: AnyRec = {};
@@ -247,6 +264,7 @@ function parseInput(raw: string): ParseResult {
     const fun = pick(row, "fun_fact");
     const diff = pick(row, "difficulty");
     const img = pick(row, "image_url");
+    const cats = normalizeCategories(pick(row, "categories"));
 
     items.push({
       topic,
@@ -257,6 +275,7 @@ function parseInput(raw: string): ParseResult {
       fun_fact: fun ? String(fun) : null,
       difficulty: diff ? String(diff) : null,
       image_url: img ? String(img) : null,
+      categories: cats,
     });
   }
   if (items.length === 0) {
@@ -485,6 +504,23 @@ export default function AdminImport() {
                 </li>
               ))}
             </ul>
+            {result.categoriesCreated.length > 0 && (
+              <div className="mt-4 border-t pt-3">
+                <h4 className="mb-2 text-sm font-semibold">
+                  New categories created ({result.categoriesCreated.length})
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {result.categoriesCreated.map((name) => (
+                    <span
+                      key={name}
+                      className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

@@ -11,6 +11,11 @@ import {
   ListQuestionsParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import {
+  getCategoriesByQuestionIds,
+  getCategoriesForQuestion,
+  setQuestionCategories,
+} from "../lib/questionCategories";
 
 const router: IRouter = Router();
 
@@ -28,6 +33,8 @@ router.get("/quizzes/:id/questions", async (req, res): Promise<void> => {
     .where(eq(questionsTable.quizId, params.data.id))
     .orderBy(questionsTable.orderIndex);
 
+  const catMap = await getCategoriesByQuestionIds(questions.map((q) => q.id));
+
   res.json(
     questions.map((q) => ({
       id: q.id,
@@ -39,6 +46,7 @@ router.get("/quizzes/:id/questions", async (req, res): Promise<void> => {
       funFact: q.funFact ?? null,
       imageUrl: q.imageUrl ?? null,
       orderIndex: q.orderIndex,
+      categories: catMap.get(q.id) ?? [],
       createdAt: q.createdAt.toISOString(),
       updatedAt: q.updatedAt.toISOString(),
     }))
@@ -65,10 +73,16 @@ router.post("/quizzes/:id/questions", requireAdmin, async (req, res): Promise<vo
     return;
   }
 
+  const { categoryIds, ...questionData } = parsed.data;
+
   const [question] = await db
     .insert(questionsTable)
-    .values({ ...parsed.data, quizId: params.data.id })
+    .values({ ...questionData, quizId: params.data.id })
     .returning();
+
+  if (categoryIds && categoryIds.length > 0) {
+    await setQuestionCategories(question.id, categoryIds);
+  }
 
   res.status(201).json({
     id: question.id,
@@ -80,6 +94,7 @@ router.post("/quizzes/:id/questions", requireAdmin, async (req, res): Promise<vo
     funFact: question.funFact ?? null,
     imageUrl: question.imageUrl ?? null,
     orderIndex: question.orderIndex,
+    categories: await getCategoriesForQuestion(question.id),
     createdAt: question.createdAt.toISOString(),
     updatedAt: question.updatedAt.toISOString(),
   });
@@ -113,6 +128,7 @@ router.get("/questions/:id", async (req, res): Promise<void> => {
     funFact: question.funFact ?? null,
     imageUrl: question.imageUrl ?? null,
     orderIndex: question.orderIndex,
+    categories: await getCategoriesForQuestion(question.id),
     createdAt: question.createdAt.toISOString(),
     updatedAt: question.updatedAt.toISOString(),
   });
@@ -132,15 +148,29 @@ router.patch("/questions/:id", requireAdmin, async (req, res): Promise<void> => 
     return;
   }
 
-  const [question] = await db
-    .update(questionsTable)
-    .set(parsed.data)
-    .where(eq(questionsTable.id, params.data.id))
-    .returning();
+  const { categoryIds, ...updateFields } = parsed.data;
+
+  let question: typeof questionsTable.$inferSelect | undefined;
+  if (Object.keys(updateFields).length > 0) {
+    [question] = await db
+      .update(questionsTable)
+      .set(updateFields)
+      .where(eq(questionsTable.id, params.data.id))
+      .returning();
+  } else {
+    [question] = await db
+      .select()
+      .from(questionsTable)
+      .where(eq(questionsTable.id, params.data.id));
+  }
 
   if (!question) {
     res.status(404).json({ error: "Question not found" });
     return;
+  }
+
+  if (categoryIds !== undefined) {
+    await setQuestionCategories(question.id, categoryIds);
   }
 
   res.json({
@@ -153,6 +183,7 @@ router.patch("/questions/:id", requireAdmin, async (req, res): Promise<void> => 
     funFact: question.funFact ?? null,
     imageUrl: question.imageUrl ?? null,
     orderIndex: question.orderIndex,
+    categories: await getCategoriesForQuestion(question.id),
     createdAt: question.createdAt.toISOString(),
     updatedAt: question.updatedAt.toISOString(),
   });

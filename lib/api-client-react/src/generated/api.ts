@@ -21,6 +21,7 @@ import type {
   BulkImportResult,
   Category,
   CategoryNode,
+  CategoryPracticeQuiz,
   CategoryWithQuizzes,
   ClearCourseModuleProgress200,
   CourseDetail,
@@ -31,6 +32,7 @@ import type {
   CreateQuestionBody,
   CreateQuizBody,
   DailyQuiz,
+  GetCategoryPracticeQuizParams,
   HealthStatus,
   Me,
   ModuleAttemptResult,
@@ -378,6 +380,126 @@ export function useGetCategoryBySlug<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetCategoryBySlugQueryOptions(slug, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Build a practice quiz from questions tagged with this category (or any descendant)
+ */
+export const getGetCategoryPracticeQuizUrl = (
+  slug: string,
+  params?: GetCategoryPracticeQuizParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/categories/by-slug/${slug}/practice?${stringifiedParams}`
+    : `/api/categories/by-slug/${slug}/practice`;
+};
+
+export const getCategoryPracticeQuiz = async (
+  slug: string,
+  params?: GetCategoryPracticeQuizParams,
+  options?: RequestInit,
+): Promise<CategoryPracticeQuiz> => {
+  return customFetch<CategoryPracticeQuiz>(
+    getGetCategoryPracticeQuizUrl(slug, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCategoryPracticeQuizQueryKey = (
+  slug: string,
+  params?: GetCategoryPracticeQuizParams,
+) => {
+  return [
+    `/api/categories/by-slug/${slug}/practice`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCategoryPracticeQuizQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCategoryPracticeQuiz>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  params?: GetCategoryPracticeQuizParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCategoryPracticeQuiz>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCategoryPracticeQuizQueryKey(slug, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCategoryPracticeQuiz>>
+  > = ({ signal }) =>
+    getCategoryPracticeQuiz(slug, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!slug,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCategoryPracticeQuiz>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCategoryPracticeQuizQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCategoryPracticeQuiz>>
+>;
+export type GetCategoryPracticeQuizQueryError = ErrorType<void>;
+
+/**
+ * @summary Build a practice quiz from questions tagged with this category (or any descendant)
+ */
+
+export function useGetCategoryPracticeQuiz<
+  TData = Awaited<ReturnType<typeof getCategoryPracticeQuiz>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  params?: GetCategoryPracticeQuizParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCategoryPracticeQuiz>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCategoryPracticeQuizQueryOptions(
+    slug,
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

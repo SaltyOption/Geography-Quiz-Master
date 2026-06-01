@@ -1,6 +1,13 @@
 import { Router, type IRouter } from "express";
 import { eq, sql, asc, inArray } from "drizzle-orm";
-import { db, categoriesTable, quizCategoriesTable, quizzesTable, questionsTable } from "@workspace/db";
+import {
+  db,
+  categoriesTable,
+  quizCategoriesTable,
+  quizzesTable,
+  questionsTable,
+  questionCategoriesTable,
+} from "@workspace/db";
 import {
   CreateCategoryBody,
   UpdateCategoryBody,
@@ -8,6 +15,7 @@ import {
   DeleteCategoryParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { slugify, uniqueSlug } from "../lib/categorySlug";
 
 const router: IRouter = Router();
 
@@ -21,27 +29,22 @@ const serializeCategory = (c: typeof categoriesTable.$inferSelect) => ({
   updatedAt: c.updatedAt.toISOString(),
 });
 
-function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-async function uniqueSlug(base: string, excludeId?: number): Promise<string> {
-  const baseSlug = base || "category";
-  let candidate = baseSlug;
-  let n = 2;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const existing = await db.select().from(categoriesTable).where(eq(categoriesTable.slug, candidate));
-    const conflict = existing.find((c) => c.id !== excludeId);
-    if (!conflict) return candidate;
-    candidate = `${baseSlug}-${n++}`;
+function collectDescendantIds(
+  rootId: number,
+  all: { id: number; parentId: number | null }[]
+): number[] {
+  const descendantIds: number[] = [];
+  const queue: number[] = [rootId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    for (const c of all) {
+      if (c.parentId === id) {
+        descendantIds.push(c.id);
+        queue.push(c.id);
+      }
+    }
   }
+  return descendantIds;
 }
 
 router.get("/categories", async (_req, res): Promise<void> => {
@@ -109,17 +112,7 @@ router.get("/categories/by-slug/:slug", async (req, res): Promise<void> => {
   }
 
   // Collect descendants (BFS)
-  const descendantIds: number[] = [];
-  const queue: number[] = [category.id];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    for (const c of all) {
-      if (c.parentId === id) {
-        descendantIds.push(c.id);
-        queue.push(c.id);
-      }
-    }
-  }
+  const descendantIds = collectDescendantIds(category.id, all);
   const descendants = descendantIds.map((id) => byId.get(id)!).filter(Boolean);
 
   // Quizzes: this category + all descendants
@@ -167,11 +160,65 @@ router.get("/categories/by-slug/:slug", async (req, res): Promise<void> => {
     quizzes.sort((a, b) => a.title.localeCompare(b.title));
   }
 
+  // Count distinct questions tagged with this category or any descendant.
+  const [taggedRow] = await db
+    .select({
+      count: sql<number>`count(distinct ${questionCategoriesTable.questionId})::int`,
+    })
+    .from(questionCategoriesTable)
+    .where(inArray(questionCategoriesTable.categoryId, includedCategoryIds));
+  const taggedQuestionCount = taggedRow?.count ?? 0;
+
   res.json({
     category: serializeCategory(category),
     ancestors: ancestors.map(serializeCategory),
     descendants: descendants.map(serializeCategory),
     quizzes,
+    taggedQuestionCount,
+  });
+});
+
+router.get("/categories/by-slug/:slug/practice", async (req, res): Promise<void> => {
+  const slug = String(req.params.slug);
+  const rawLimit = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
+  const parsedLimit = rawLimit !== undefined ? Number(rawLimit) : NaN;
+  const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 20;
+
+  const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.slug, slug));
+  if (!category) {
+    res.status(404).json({ error: "Category not found" });
+    return;
+  }
+
+  const all = await db
+    .select({ id: categoriesTable.id, parentId: categoriesTable.parentId })
+    .from(categoriesTable);
+  const includedCategoryIds = [category.id, ...collectDescendantIds(category.id, all)];
+
+  const rows = await db
+    .selectDistinct({ question: questionsTable })
+    .from(questionCategoriesTable)
+    .innerJoin(questionsTable, eq(questionCategoriesTable.questionId, questionsTable.id))
+    .where(inArray(questionCategoriesTable.categoryId, includedCategoryIds));
+
+  // Shuffle (Fisher-Yates) then cap.
+  const questions = rows.map((r) => r.question);
+  for (let i = questions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [questions[i], questions[j]] = [questions[j], questions[i]];
+  }
+
+  res.json({
+    category: { id: category.id, name: category.name, slug: category.slug },
+    questions: questions.slice(0, limit).map((q) => ({
+      id: q.id,
+      text: q.text,
+      options: q.options,
+      correctOption: q.correctOption,
+      explanation: q.explanation,
+      funFact: q.funFact ?? null,
+      imageUrl: q.imageUrl ?? null,
+    })),
   });
 });
 

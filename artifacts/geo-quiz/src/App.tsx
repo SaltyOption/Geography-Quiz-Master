@@ -9,6 +9,7 @@ import { queryClient } from "./lib/queryClient";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import CategoryPage from "@/pages/category";
+import CategoryPracticePage from "@/pages/category/[slug]/practice";
 import QuizPage from "@/pages/quiz/[id]";
 import QuizResultsPage from "@/pages/quiz/[id]/results";
 import DailyQuizPage from "@/pages/daily";
@@ -150,6 +151,7 @@ function ClerkProviderWithRoutes() {
           <main className="flex-1">
             <Switch>
               <Route path="/" component={Home} />
+              <Route path="/category/:slug/practice" component={CategoryPracticePage} />
               <Route path="/category/:slug" component={CategoryPage} />
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />

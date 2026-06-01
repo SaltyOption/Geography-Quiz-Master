@@ -2,6 +2,7 @@ import { pgTable, text, serial, timestamp, integer, primaryKey, type AnyPgColumn
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { quizzesTable } from "./quizzes";
+import { questionsTable } from "./questions";
 
 export const categoriesTable = pgTable("categories", {
   id: serial("id").primaryKey(),
@@ -20,6 +21,15 @@ export const quizCategoriesTable = pgTable(
     categoryId: integer("category_id").notNull().references(() => categoriesTable.id, { onDelete: "cascade" }),
   },
   (t) => [primaryKey({ columns: [t.quizId, t.categoryId] })],
+);
+
+export const questionCategoriesTable = pgTable(
+  "question_categories",
+  {
+    questionId: integer("question_id").notNull().references(() => questionsTable.id, { onDelete: "cascade" }),
+    categoryId: integer("category_id").notNull().references(() => categoriesTable.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.questionId, t.categoryId] })],
 );
 
 export const insertCategorySchema = createInsertSchema(categoriesTable).omit({ id: true, createdAt: true, updatedAt: true });
