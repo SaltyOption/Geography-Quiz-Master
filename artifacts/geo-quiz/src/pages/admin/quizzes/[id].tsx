@@ -5,16 +5,19 @@ import {
   useUpdateQuiz, 
   useDeleteQuestion,
   useUpdateQuestion,
+  useImportQuestionsByCategory,
+  useGetCategoryTree,
   getGetQuizQueryKey,
   getListQuizzesQueryKey,
   getGetCategoryTreeQueryKey,
   type Question,
+  type CategoryNode,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, Loader2, Plus, GripVertical, Trash2, Tags } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, GripVertical, Trash2, Tags, FolderInput } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -186,11 +189,14 @@ export default function AdminEditQuiz() {
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Questions ({quiz.questions?.length || 0})</h2>
-            <Button asChild>
-              <Link href={`/admin/quizzes/${quizId}/questions/new`}>
-                <Plus className="mr-2 h-4 w-4" /> Add Question
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <ImportByTagDialog quizId={quizId} />
+              <Button asChild>
+                <Link href={`/admin/quizzes/${quizId}/questions/new`}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Question
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {quiz.questions?.length === 0 ? (
@@ -319,5 +325,126 @@ function QuestionTagsEditor({ question, quizId }: { question: Question; quizId: 
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function flattenCategoryTree(
+  nodes: CategoryNode[],
+  depth = 0
+): { id: number; name: string; depth: number }[] {
+  return nodes.flatMap((n) => [
+    { id: n.id, name: n.name, depth },
+    ...flattenCategoryTree(n.children, depth + 1),
+  ]);
+}
+
+function ImportByTagDialog({ quizId }: { quizId: number }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const importByCategory = useImportQuestionsByCategory();
+  const { data: tree, isLoading } = useGetCategoryTree();
+  const [open, setOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string>("");
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) setSelectedId("");
+    setOpen(next);
+  };
+
+  const flat = tree ? flattenCategoryTree(tree) : [];
+
+  const handleImport = async () => {
+    if (!selectedId) return;
+    try {
+      const result = await importByCategory.mutateAsync({
+        id: quizId,
+        data: { categoryId: parseInt(selectedId, 10) },
+      });
+      queryClient.invalidateQueries({ queryKey: getGetQuizQueryKey(quizId) });
+      if (result.imported === 0) {
+        toast({
+          title: "Nothing to add",
+          description:
+            result.skipped > 0
+              ? `All ${result.skipped} tagged question(s) are already in this quiz.`
+              : `No questions are tagged with "${result.categoryName}".`,
+        });
+      } else {
+        toast({
+          title: `Added ${result.imported} question${result.imported === 1 ? "" : "s"}`,
+          description:
+            result.skipped > 0
+              ? `${result.skipped} already-present question(s) were skipped.`
+              : undefined,
+        });
+        setOpen(false);
+      }
+    } catch {
+      toast({ title: "Failed to import questions", variant: "destructive" });
+    }
+  };
+
+  return (
+    <>
+      <Button variant="outline" onClick={() => handleOpenChange(true)}>
+        <FolderInput className="mr-2 h-4 w-4" /> Import by tag
+      </Button>
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import questions by tag</DialogTitle>
+            <DialogDescription>
+              Copies every question tagged with the chosen category (and its sub-categories)
+              into this quiz as independent, editable copies. Questions already in this quiz are
+              skipped.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : flat.length === 0 ? (
+            <div className="rounded-md border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+              No categories yet. Create them in the Categories admin page first.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {flat.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {`${"\u00A0\u00A0".repeat(c.depth)}${c.name}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={!selectedId || importByCategory.isPending}
+            >
+              {importByCategory.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FolderInput className="mr-2 h-4 w-4" />
+              )}
+              Import
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

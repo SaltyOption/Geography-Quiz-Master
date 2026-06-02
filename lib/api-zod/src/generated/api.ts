@@ -456,6 +456,23 @@ export const CreateQuestionBody = zod.object({
 });
 
 /**
+ * @summary Copy all questions tagged with a category (or any descendant) into this quiz
+ */
+export const ImportQuestionsByCategoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ImportQuestionsByCategoryBody = zod.object({
+  categoryId: zod.number(),
+});
+
+export const ImportQuestionsByCategoryResponse = zod.object({
+  imported: zod.number(),
+  skipped: zod.number(),
+  categoryName: zod.string(),
+});
+
+/**
  * @summary Get a single question
  */
 export const GetQuestionParams = zod.object({

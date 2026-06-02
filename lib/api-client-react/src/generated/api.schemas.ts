@@ -263,6 +263,16 @@ export interface UpdateQuestionBody {
   categoryIds?: number[];
 }
 
+export interface ImportQuestionsByCategoryBody {
+  categoryId: number;
+}
+
+export interface ImportQuestionsByCategoryResult {
+  imported: number;
+  skipped: number;
+  categoryName: string;
+}
+
 export interface QuestionAnswer {
   questionId: number;
   selectedOption: number;

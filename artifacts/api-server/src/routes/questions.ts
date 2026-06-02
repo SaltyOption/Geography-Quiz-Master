@@ -1,6 +1,12 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, questionsTable, quizzesTable } from "@workspace/db";
+import { eq, inArray, sql } from "drizzle-orm";
+import {
+  db,
+  questionsTable,
+  quizzesTable,
+  categoriesTable,
+  questionCategoriesTable,
+} from "@workspace/db";
 import {
   CreateQuestionBody,
   CreateQuestionParams,
@@ -9,6 +15,8 @@ import {
   GetQuestionParams,
   DeleteQuestionParams,
   ListQuestionsParams,
+  ImportQuestionsByCategoryBody,
+  ImportQuestionsByCategoryParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import {
@@ -16,6 +24,24 @@ import {
   getCategoriesForQuestion,
   setQuestionCategories,
 } from "../lib/questionCategories";
+
+function collectDescendantIds(
+  rootId: number,
+  all: { id: number; parentId: number | null }[]
+): number[] {
+  const descendantIds: number[] = [];
+  const queue: number[] = [rootId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    for (const c of all) {
+      if (c.parentId === id) {
+        descendantIds.push(c.id);
+        queue.push(c.id);
+      }
+    }
+  }
+  return descendantIds;
+}
 
 const router: IRouter = Router();
 
@@ -99,6 +125,136 @@ router.post("/quizzes/:id/questions", requireAdmin, async (req, res): Promise<vo
     updatedAt: question.updatedAt.toISOString(),
   });
 });
+
+router.post(
+  "/quizzes/:id/questions/import-by-category",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const params = ImportQuestionsByCategoryParams.safeParse({ id: rawId });
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const parsed = ImportQuestionsByCategoryBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const quizId = params.data.id;
+    const { categoryId } = parsed.data;
+
+    const [quiz] = await db.select().from(quizzesTable).where(eq(quizzesTable.id, quizId));
+    if (!quiz) {
+      res.status(404).json({ error: "Quiz not found" });
+      return;
+    }
+
+    const [category] = await db
+      .select()
+      .from(categoriesTable)
+      .where(eq(categoriesTable.id, categoryId));
+    if (!category) {
+      res.status(404).json({ error: "Category not found" });
+      return;
+    }
+
+    // Resolve the category and all its descendants.
+    const allCats = await db
+      .select({ id: categoriesTable.id, parentId: categoriesTable.parentId })
+      .from(categoriesTable);
+    const includedCategoryIds = [category.id, ...collectDescendantIds(category.id, allCats)];
+
+    // Distinct source questions tagged with the category or any descendant.
+    const taggedRows = await db
+      .selectDistinct({ question: questionsTable })
+      .from(questionCategoriesTable)
+      .innerJoin(questionsTable, eq(questionCategoriesTable.questionId, questionsTable.id))
+      .where(inArray(questionCategoriesTable.categoryId, includedCategoryIds));
+    const sourceQuestions = taggedRows.map((r) => r.question);
+
+    if (sourceQuestions.length === 0) {
+      res.json({ imported: 0, skipped: 0, categoryName: category.name });
+      return;
+    }
+
+    // Existing question texts in the target quiz, to skip duplicates and keep
+    // re-runs idempotent.
+    const existing = await db
+      .select({ text: questionsTable.text })
+      .from(questionsTable)
+      .where(eq(questionsTable.quizId, quizId));
+    const existingTexts = new Set(existing.map((q) => q.text));
+
+    // Skip questions already living in this quiz, and any whose text is already present.
+    const toCopy = sourceQuestions.filter(
+      (q) => q.quizId !== quizId && !existingTexts.has(q.text)
+    );
+    const skipped = sourceQuestions.length - toCopy.length;
+
+    if (toCopy.length === 0) {
+      res.json({ imported: 0, skipped, categoryName: category.name });
+      return;
+    }
+
+    // Tags of each source question, so copies retain them.
+    const tagRows = await db
+      .select({
+        questionId: questionCategoriesTable.questionId,
+        categoryId: questionCategoriesTable.categoryId,
+      })
+      .from(questionCategoriesTable)
+      .where(inArray(questionCategoriesTable.questionId, toCopy.map((q) => q.id)));
+    const tagsBySource = new Map<number, number[]>();
+    for (const row of tagRows) {
+      const arr = tagsBySource.get(row.questionId) ?? [];
+      arr.push(row.categoryId);
+      tagsBySource.set(row.questionId, arr);
+    }
+
+    const imported = await db.transaction(async (tx) => {
+      const [maxRow] = await tx
+        .select({ max: sql<number | null>`max(${questionsTable.orderIndex})` })
+        .from(questionsTable)
+        .where(eq(questionsTable.quizId, quizId));
+      let nextOrder = (maxRow?.max ?? -1) + 1;
+
+      const values = toCopy.map((q) => ({
+        quizId,
+        text: q.text,
+        options: q.options,
+        correctOption: q.correctOption,
+        explanation: q.explanation,
+        funFact: q.funFact ?? null,
+        imageUrl: q.imageUrl ?? null,
+        orderIndex: nextOrder++,
+      }));
+
+      const inserted = await tx
+        .insert(questionsTable)
+        .values(values)
+        .returning({ id: questionsTable.id });
+
+      // Carry over each source question's tags to its new copy.
+      const tagLinks: { questionId: number; categoryId: number }[] = [];
+      for (let i = 0; i < toCopy.length; i++) {
+        const newId = inserted[i].id;
+        for (const catId of tagsBySource.get(toCopy[i].id) ?? []) {
+          tagLinks.push({ questionId: newId, categoryId: catId });
+        }
+      }
+      if (tagLinks.length > 0) {
+        await tx.insert(questionCategoriesTable).values(tagLinks);
+      }
+
+      return inserted.length;
+    });
+
+    res.json({ imported, skipped, categoryName: category.name });
+  }
+);
 
 router.get("/questions/:id", async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

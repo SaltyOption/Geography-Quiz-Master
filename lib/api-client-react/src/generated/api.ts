@@ -36,6 +36,8 @@ import type {
   DailyQuiz,
   GetCategoryPracticeQuizParams,
   HealthStatus,
+  ImportQuestionsByCategoryBody,
+  ImportQuestionsByCategoryResult,
   Me,
   ModuleAttemptResult,
   ModuleDetail,
@@ -1639,6 +1641,97 @@ export const useCreateQuestion = <
   TContext
 > => {
   return useMutation(getCreateQuestionMutationOptions(options));
+};
+
+/**
+ * @summary Copy all questions tagged with a category (or any descendant) into this quiz
+ */
+export const getImportQuestionsByCategoryUrl = (id: number) => {
+  return `/api/quizzes/${id}/questions/import-by-category`;
+};
+
+export const importQuestionsByCategory = async (
+  id: number,
+  importQuestionsByCategoryBody: ImportQuestionsByCategoryBody,
+  options?: RequestInit,
+): Promise<ImportQuestionsByCategoryResult> => {
+  return customFetch<ImportQuestionsByCategoryResult>(
+    getImportQuestionsByCategoryUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(importQuestionsByCategoryBody),
+    },
+  );
+};
+
+export const getImportQuestionsByCategoryMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importQuestionsByCategory>>,
+    TError,
+    { id: number; data: BodyType<ImportQuestionsByCategoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof importQuestionsByCategory>>,
+  TError,
+  { id: number; data: BodyType<ImportQuestionsByCategoryBody> },
+  TContext
+> => {
+  const mutationKey = ["importQuestionsByCategory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof importQuestionsByCategory>>,
+    { id: number; data: BodyType<ImportQuestionsByCategoryBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return importQuestionsByCategory(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImportQuestionsByCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof importQuestionsByCategory>>
+>;
+export type ImportQuestionsByCategoryMutationBody =
+  BodyType<ImportQuestionsByCategoryBody>;
+export type ImportQuestionsByCategoryMutationError = ErrorType<void>;
+
+/**
+ * @summary Copy all questions tagged with a category (or any descendant) into this quiz
+ */
+export const useImportQuestionsByCategory = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importQuestionsByCategory>>,
+    TError,
+    { id: number; data: BodyType<ImportQuestionsByCategoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof importQuestionsByCategory>>,
+  TError,
+  { id: number; data: BodyType<ImportQuestionsByCategoryBody> },
+  TContext
+> => {
+  return useMutation(getImportQuestionsByCategoryMutationOptions(options));
 };
 
 /**

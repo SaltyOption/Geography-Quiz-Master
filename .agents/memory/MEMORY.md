@@ -1,1 +1,2 @@
 - [shadcn Form context](shadcn-form-context.md) — FormLabel/FormControl/FormMessage crash at render outside FormField; use plain Label for standalone labels.
+- [Import questions by tag](import-questions-by-tag.md) — copies tagged questions into a quiz as new rows; dedup-by-text is best-effort UX, intentionally no DB unique constraint.
