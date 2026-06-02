@@ -255,6 +255,26 @@ export interface ImportQuestionsByCategoryResult {
   categoryName: string;
 }
 
+export interface NewsletterSubscription {
+  email: string;
+  subscribed: boolean;
+}
+
+export interface UpdateNewsletterSubscriptionBody {
+  subscribed: boolean;
+}
+
+export interface NewsletterSubscriber {
+  email: string;
+  createdAt: string;
+}
+
+export interface NewsletterSubscribers {
+  subscribers: NewsletterSubscriber[];
+  subscribedCount: number;
+  optedOutCount: number;
+}
+
 export interface QuestionAnswer {
   questionId: number;
   selectedOption: number;

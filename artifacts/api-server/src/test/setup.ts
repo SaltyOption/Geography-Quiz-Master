@@ -36,4 +36,14 @@ vi.mock("@clerk/express", () => ({
     },
   getAuth: (req: { auth?: { userId: string | null } }) =>
     req.auth ?? { userId: null },
+  clerkClient: {
+    users: {
+      getUser: async (userId: string) => ({
+        primaryEmailAddressId: "email_1",
+        emailAddresses: [
+          { id: "email_1", emailAddress: `${userId}@example.com` },
+        ],
+      }),
+    },
+  },
 }));

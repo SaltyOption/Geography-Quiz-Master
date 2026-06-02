@@ -47,6 +47,14 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - Add, edit, delete questions per quiz
 - Questions have: text, 4 options, correct answer, explanation, fun fact, optional image
 
+## Newsletter
+
+- Signed-in users only. Everyone is subscribed **by default**; they can opt out from their profile page.
+- Table `newsletter_subscribers` — userId (Clerk id, PK), email, subscribed (boolean, default true), createdAt/updatedAt.
+- Endpoints (auth required): `GET /api/newsletter/me` upserts the user's current Clerk email (preserving any prior opt-out) and returns `{ email, subscribed }`; `PATCH /api/newsletter/me { subscribed }` opts in/out. Email is always read server-side from Clerk (`clerkClient.users.getUser`), never trusted from the client. Clerk fetch failures return `502`.
+- Default enrollment: a silent `NewsletterEnrollment` component in `App.tsx` (rendered only when signed-in) calls `GET /api/newsletter/me` on app bootstrap, so every signed-in user is captured even if they never open their profile.
+- Admin: `GET /api/newsletter/subscribers` (admin-only via `requireAdmin`) returns the subscribed recipients plus `subscribedCount`/`optedOutCount`. Admin page `/admin/newsletter` shows counts, the subscriber table, and a CSV export. Linked from the admin dashboard.
+
 ## Database Schema
 
 - `quizzes` — id, title, description, category (legacy text label), difficulty, timestamps

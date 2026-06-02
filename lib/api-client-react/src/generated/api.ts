@@ -40,6 +40,8 @@ import type {
   ModuleAttemptResult,
   ModuleDetail,
   ModuleProgress,
+  NewsletterSubscribers,
+  NewsletterSubscription,
   Question,
   Quiz,
   QuizAttemptResult,
@@ -53,6 +55,7 @@ import type {
   SubmitQuizAttemptBody,
   UpdateCategoryBody,
   UpdateCourseQuestionBody,
+  UpdateNewsletterSubscriptionBody,
   UpdateQuestionBody,
   UpdateQuizBody,
   UserProgress,
@@ -617,6 +620,251 @@ export function useGetMe<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get the current user's newsletter subscription status
+ */
+export const getGetNewsletterSubscriptionUrl = () => {
+  return `/api/newsletter/me`;
+};
+
+export const getNewsletterSubscription = async (
+  options?: RequestInit,
+): Promise<NewsletterSubscription> => {
+  return customFetch<NewsletterSubscription>(
+    getGetNewsletterSubscriptionUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetNewsletterSubscriptionQueryKey = () => {
+  return [`/api/newsletter/me`] as const;
+};
+
+export const getGetNewsletterSubscriptionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNewsletterSubscription>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getNewsletterSubscription>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNewsletterSubscriptionQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getNewsletterSubscription>>
+  > = ({ signal }) => getNewsletterSubscription({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getNewsletterSubscription>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetNewsletterSubscriptionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNewsletterSubscription>>
+>;
+export type GetNewsletterSubscriptionQueryError = ErrorType<void>;
+
+/**
+ * @summary Get the current user's newsletter subscription status
+ */
+
+export function useGetNewsletterSubscription<
+  TData = Awaited<ReturnType<typeof getNewsletterSubscription>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getNewsletterSubscription>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetNewsletterSubscriptionQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update the current user's newsletter subscription (opt in or out)
+ */
+export const getUpdateNewsletterSubscriptionUrl = () => {
+  return `/api/newsletter/me`;
+};
+
+export const updateNewsletterSubscription = async (
+  updateNewsletterSubscriptionBody: UpdateNewsletterSubscriptionBody,
+  options?: RequestInit,
+): Promise<NewsletterSubscription> => {
+  return customFetch<NewsletterSubscription>(
+    getUpdateNewsletterSubscriptionUrl(),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateNewsletterSubscriptionBody),
+    },
+  );
+};
+
+export const getUpdateNewsletterSubscriptionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateNewsletterSubscription>>,
+    TError,
+    { data: BodyType<UpdateNewsletterSubscriptionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateNewsletterSubscription>>,
+  TError,
+  { data: BodyType<UpdateNewsletterSubscriptionBody> },
+  TContext
+> => {
+  const mutationKey = ["updateNewsletterSubscription"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateNewsletterSubscription>>,
+    { data: BodyType<UpdateNewsletterSubscriptionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateNewsletterSubscription(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateNewsletterSubscriptionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateNewsletterSubscription>>
+>;
+export type UpdateNewsletterSubscriptionMutationBody =
+  BodyType<UpdateNewsletterSubscriptionBody>;
+export type UpdateNewsletterSubscriptionMutationError = ErrorType<void>;
+
+/**
+ * @summary Update the current user's newsletter subscription (opt in or out)
+ */
+export const useUpdateNewsletterSubscription = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateNewsletterSubscription>>,
+    TError,
+    { data: BodyType<UpdateNewsletterSubscriptionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateNewsletterSubscription>>,
+  TError,
+  { data: BodyType<UpdateNewsletterSubscriptionBody> },
+  TContext
+> => {
+  return useMutation(getUpdateNewsletterSubscriptionMutationOptions(options));
+};
+
+/**
+ * @summary List subscribed newsletter recipients (admin only)
+ */
+export const getGetNewsletterSubscribersUrl = () => {
+  return `/api/newsletter/subscribers`;
+};
+
+export const getNewsletterSubscribers = async (
+  options?: RequestInit,
+): Promise<NewsletterSubscribers> => {
+  return customFetch<NewsletterSubscribers>(getGetNewsletterSubscribersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetNewsletterSubscribersQueryKey = () => {
+  return [`/api/newsletter/subscribers`] as const;
+};
+
+export const getGetNewsletterSubscribersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNewsletterSubscribers>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getNewsletterSubscribers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetNewsletterSubscribersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getNewsletterSubscribers>>
+  > = ({ signal }) => getNewsletterSubscribers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getNewsletterSubscribers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetNewsletterSubscribersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNewsletterSubscribers>>
+>;
+export type GetNewsletterSubscribersQueryError = ErrorType<void>;
+
+/**
+ * @summary List subscribed newsletter recipients (admin only)
+ */
+
+export function useGetNewsletterSubscribers<
+  TData = Awaited<ReturnType<typeof getNewsletterSubscribers>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getNewsletterSubscribers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetNewsletterSubscribersQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

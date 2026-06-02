@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { ClerkProvider, Show, useClerk } from "@clerk/react";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { useGetNewsletterSubscription } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "./lib/queryClient";
@@ -15,6 +16,7 @@ import DailyQuizPage from "@/pages/daily";
 import PrivacyPage from "@/pages/privacy";
 import AdminDashboard from "@/pages/admin/index";
 import AdminCategories from "@/pages/admin/categories";
+import AdminNewsletter from "@/pages/admin/newsletter";
 import AdminImport from "@/pages/admin/import";
 import AdminCoursesImport from "@/pages/admin/courses-import";
 import AdminCourses from "@/pages/admin/courses";
@@ -106,6 +108,13 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function NewsletterEnrollment() {
+  // Captures the signed-in user's email by default (subscribed=true).
+  // The GET upserts a subscriber row server-side; opt-out is respected.
+  useGetNewsletterSubscription();
+  return null;
+}
+
 function UserPortal() {
   return (
     <>
@@ -146,6 +155,9 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <Show when="signed-in">
+          <NewsletterEnrollment />
+        </Show>
         <TooltipProvider>
         <div className="flex flex-col min-h-[100dvh]">
           <Navbar />
@@ -171,6 +183,9 @@ function ClerkProviderWithRoutes() {
               </Route>
               <Route path="/admin/categories">
                 <AdminGuard><AdminCategories /></AdminGuard>
+              </Route>
+              <Route path="/admin/newsletter">
+                <AdminGuard><AdminNewsletter /></AdminGuard>
               </Route>
               <Route path="/admin/import">
                 <AdminGuard><AdminImport /></AdminGuard>

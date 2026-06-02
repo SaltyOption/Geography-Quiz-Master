@@ -156,6 +156,40 @@ export const GetMeResponse = zod.object({
 });
 
 /**
+ * @summary Get the current user's newsletter subscription status
+ */
+export const GetNewsletterSubscriptionResponse = zod.object({
+  email: zod.string(),
+  subscribed: zod.boolean(),
+});
+
+/**
+ * @summary Update the current user's newsletter subscription (opt in or out)
+ */
+export const UpdateNewsletterSubscriptionBody = zod.object({
+  subscribed: zod.boolean(),
+});
+
+export const UpdateNewsletterSubscriptionResponse = zod.object({
+  email: zod.string(),
+  subscribed: zod.boolean(),
+});
+
+/**
+ * @summary List subscribed newsletter recipients (admin only)
+ */
+export const GetNewsletterSubscribersResponse = zod.object({
+  subscribers: zod.array(
+    zod.object({
+      email: zod.string(),
+      createdAt: zod.string(),
+    }),
+  ),
+  subscribedCount: zod.number(),
+  optedOutCount: zod.number(),
+});
+
+/**
  * Returns the deterministic quiz of the day for the current UTC date.
  * @summary Get today's daily quiz selection
  */
