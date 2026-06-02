@@ -11,8 +11,8 @@ import {
   getListQuizzesQueryKey,
   getGetCategoryTreeQueryKey,
   type Question,
-  type CategoryNode,
 } from "@workspace/api-client-react";
+import { flattenCategoryTree } from "@/lib/categoryTree";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -334,15 +334,6 @@ function QuestionTagsEditor({ question, quizId }: { question: Question; quizId: 
   );
 }
 
-function flattenCategoryTree(
-  nodes: CategoryNode[],
-  depth = 0
-): { id: number; name: string; depth: number }[] {
-  return nodes.flatMap((n) => [
-    { id: n.id, name: n.name, depth },
-    ...flattenCategoryTree(n.children, depth + 1),
-  ]);
-}
 
 function ImportByTagDialog({ quizId }: { quizId: number }) {
   const queryClient = useQueryClient();

@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useCreateQuiz, getListQuizzesQueryKey, getGetCategoryTreeQueryKey } from "@workspace/api-client-react";
+import {
+  useCreateQuiz,
+  useImportQuestionsByCategory,
+  useGetCategoryTree,
+  getListQuizzesQueryKey,
+  getGetCategoryTreeQueryKey,
+} from "@workspace/api-client-react";
+import { flattenCategoryTree } from "@/lib/categoryTree";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -28,9 +35,14 @@ const formSchema = z.object({
 export default function AdminCreateQuiz() {
   const [, setLocation] = useLocation();
   const createQuiz = useCreateQuiz();
+  const importByCategory = useImportQuestionsByCategory();
+  const { data: tree } = useGetCategoryTree();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
+  const [importTagId, setImportTagId] = useState<string>("none");
+
+  const flatTags = tree ? flattenCategoryTree(tree) : [];
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,9 +57,42 @@ export default function AdminCreateQuiz() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       const quiz = await createQuiz.mutateAsync({ data: { ...values, categoryIds } });
+
+      let imported = 0;
+      let importFailed = false;
+      if (importTagId !== "none") {
+        try {
+          const result = await importByCategory.mutateAsync({
+            id: quiz.id,
+            data: { categoryId: parseInt(importTagId, 10) },
+          });
+          imported = result.imported;
+        } catch {
+          importFailed = true;
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: getListQuizzesQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetCategoryTreeQueryKey() });
-      toast({ title: "Quiz created successfully" });
+
+      if (importFailed) {
+        toast({
+          title: "Quiz created, but importing questions failed",
+          description: "You can try importing by tag again from the quiz editor.",
+          variant: "destructive",
+        });
+      } else if (importTagId !== "none") {
+        toast({
+          title: "Quiz created successfully",
+          description:
+            imported > 0
+              ? `${imported} tagged question${imported === 1 ? "" : "s"} imported.`
+              : "No questions are tagged with the selected category yet.",
+        });
+      } else {
+        toast({ title: "Quiz created successfully" });
+      }
+
       setLocation(`/admin/quizzes/${quiz.id}`);
     } catch (error) {
       toast({
@@ -152,12 +197,36 @@ export default function AdminCreateQuiz() {
                 </p>
               </div>
 
+              <div className="space-y-2">
+                <Label>Pre-fill questions by tag (optional)</Label>
+                <Select value={importTagId} onValueChange={setImportTagId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Don't import any questions" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="none">Don't import any questions</SelectItem>
+                    {flatTags.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {`${"\u00A0\u00A0".repeat(c.depth)}${c.name}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Copies every existing question tagged with the chosen category (and its
+                  sub-categories) into this new quiz as editable copies.
+                </p>
+              </div>
+
               <div className="flex justify-end gap-4 pt-4 border-t">
                 <Button variant="outline" asChild>
                   <Link href="/admin">Cancel</Link>
                 </Button>
-                <Button type="submit" disabled={createQuiz.isPending}>
-                  {createQuiz.isPending ? (
+                <Button
+                  type="submit"
+                  disabled={createQuiz.isPending || importByCategory.isPending}
+                >
+                  {createQuiz.isPending || importByCategory.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Save className="mr-2 h-4 w-4" />
