@@ -137,7 +137,7 @@ export default function AdminCreateQuestion() {
         <CardContent>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1">
-              <FormLabel className="mb-2 block text-sm font-medium">Type</FormLabel>
+              <Label className="mb-2 block text-sm font-medium">Type</Label>
               <Select value={quickType} onValueChange={(v) => setQuickType(v as "flag" | "outline")}>
                 <SelectTrigger data-testid="select-quick-type">
                   <SelectValue />
@@ -149,7 +149,7 @@ export default function AdminCreateQuestion() {
               </Select>
             </div>
             <div className="flex-1">
-              <FormLabel className="mb-2 block text-sm font-medium">Country</FormLabel>
+              <Label className="mb-2 block text-sm font-medium">Country</Label>
               <Select value={quickCountry} onValueChange={setQuickCountry}>
                 <SelectTrigger data-testid="select-quick-country">
                   <SelectValue placeholder="Pick a country..." />
@@ -198,7 +198,7 @@ export default function AdminCreateQuestion() {
               />
 
               <div className="space-y-4 bg-muted/30 p-6 rounded-xl border">
-                <FormLabel className="text-base font-bold mb-4 block">Answer Options & Correct Answer</FormLabel>
+                <Label className="text-base font-bold mb-4 block">Answer Options & Correct Answer</Label>
                 
                 <FormField
                   control={form.control}

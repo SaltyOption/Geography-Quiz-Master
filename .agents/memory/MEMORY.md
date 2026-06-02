@@ -1,2 +1,1 @@
-- [HMR false-positive runtime errors](hmr-fast-refresh-artifacts.md) — "Invalid hook call" + "Maximum update depth" during active dev = likely Fast Refresh artifact, not a real bug.
-- [Effect deps on react-query arrays](effect-deps-unstable-arrays.md) — never put a query-derived array (e.g. question.categories) in a useEffect dep that calls setState; seed on open instead.
+- [shadcn Form context](shadcn-form-context.md) — FormLabel/FormControl/FormMessage crash at render outside FormField; use plain Label for standalone labels.
