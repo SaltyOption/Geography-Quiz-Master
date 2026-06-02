@@ -206,8 +206,12 @@ export default function AdminCreateQuiz() {
                   <SelectContent className="max-h-72">
                     <SelectItem value="none">Don't import any questions</SelectItem>
                     {flatTags.map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>
-                        {`${"\u00A0\u00A0".repeat(c.depth)}${c.name}`}
+                      <SelectItem
+                        key={c.id}
+                        value={String(c.id)}
+                        disabled={c.taggedQuestionCount === 0}
+                      >
+                        {`${"\u00A0\u00A0".repeat(c.depth)}${c.name} (${c.taggedQuestionCount})`}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -190,6 +190,7 @@ export interface CategoryNode {
   /** @nullable */
   imageUrl: string | null;
   quizCount: number;
+  taggedQuestionCount: number;
   children: CategoryNode[];
 }
 

@@ -1118,6 +1118,8 @@ components:
           type: ["string", "null"]
         quizCount:
           type: integer
+        taggedQuestionCount:
+          type: integer
         children:
           type: array
           items:
@@ -1129,6 +1131,7 @@ components:
         - parentId
         - imageUrl
         - quizCount
+        - taggedQuestionCount
         - children
 
     CategoryWithQuizzes:

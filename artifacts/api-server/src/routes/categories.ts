@@ -61,7 +61,44 @@ router.get("/categories/tree", async (_req, res): Promise<void> => {
     .groupBy(quizCategoriesTable.categoryId);
   const countMap = new Map(counts.map((c) => [c.categoryId, c.count]));
 
-  type Node = { id: number; name: string; slug: string; parentId: number | null; imageUrl: string | null; quizCount: number; children: Node[] };
+  // Direct question tags per category: categoryId -> set of question ids.
+  const tagRows = await db
+    .select({
+      categoryId: questionCategoriesTable.categoryId,
+      questionId: questionCategoriesTable.questionId,
+    })
+    .from(questionCategoriesTable);
+  const directTags = new Map<number, Set<number>>();
+  for (const row of tagRows) {
+    const set = directTags.get(row.categoryId) ?? new Set<number>();
+    set.add(row.questionId);
+    directTags.set(row.categoryId, set);
+  }
+
+  // Descendant-inclusive distinct tagged-question count per category (matches
+  // import-by-category, which pulls questions tagged with the category OR any
+  // descendant). Computed in a single memoized post-order pass over the tree.
+  const childrenByParent = new Map<number | null, number[]>();
+  for (const c of categories) {
+    const arr = childrenByParent.get(c.parentId) ?? [];
+    arr.push(c.id);
+    childrenByParent.set(c.parentId, arr);
+  }
+  const setCache = new Map<number, Set<number>>();
+  const taggedQuestionSet = (id: number): Set<number> => {
+    const cached = setCache.get(id);
+    if (cached) return cached;
+    const union = new Set<number>(directTags.get(id) ?? []);
+    setCache.set(id, union); // set before recursing to guard against cycles
+    for (const childId of childrenByParent.get(id) ?? []) {
+      for (const q of taggedQuestionSet(childId)) union.add(q);
+    }
+    return union;
+  };
+  const taggedCountMap = new Map<number, number>();
+  for (const c of categories) taggedCountMap.set(c.id, taggedQuestionSet(c.id).size);
+
+  type Node = { id: number; name: string; slug: string; parentId: number | null; imageUrl: string | null; quizCount: number; taggedQuestionCount: number; children: Node[] };
   const nodes: Map<number, Node> = new Map();
   for (const c of categories) {
     nodes.set(c.id, {
@@ -71,6 +108,7 @@ router.get("/categories/tree", async (_req, res): Promise<void> => {
       parentId: c.parentId,
       imageUrl: c.imageUrl,
       quizCount: countMap.get(c.id) ?? 0,
+      taggedQuestionCount: taggedCountMap.get(c.id) ?? 0,
       children: [],
     });
   }

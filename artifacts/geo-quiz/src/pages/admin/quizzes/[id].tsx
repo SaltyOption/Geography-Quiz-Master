@@ -415,8 +415,12 @@ function ImportByTagDialog({ quizId }: { quizId: number }) {
                 </SelectTrigger>
                 <SelectContent>
                   {flat.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {`${"\u00A0\u00A0".repeat(c.depth)}${c.name}`}
+                    <SelectItem
+                      key={c.id}
+                      value={String(c.id)}
+                      disabled={c.taggedQuestionCount === 0}
+                    >
+                      {`${"\u00A0\u00A0".repeat(c.depth)}${c.name} (${c.taggedQuestionCount})`}
                     </SelectItem>
                   ))}
                 </SelectContent>

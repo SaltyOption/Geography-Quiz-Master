@@ -43,6 +43,7 @@ export const GetCategoryTreeResponseItem = zod.object({
   parentId: zod.number().nullable(),
   imageUrl: zod.string().nullable(),
   quizCount: zod.number(),
+  taggedQuestionCount: zod.number(),
   children: zod.array(zod.unknown()),
 });
 export const GetCategoryTreeResponse = zod.array(GetCategoryTreeResponseItem);
