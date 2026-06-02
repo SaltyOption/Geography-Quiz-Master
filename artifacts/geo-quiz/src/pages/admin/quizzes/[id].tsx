@@ -67,6 +67,12 @@ export default function AdminEditQuiz() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      category: "",
+      difficulty: "medium",
+    },
     values: quiz ? {
       title: quiz.title,
       description: quiz.description,
