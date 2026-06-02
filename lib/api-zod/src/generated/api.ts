@@ -115,44 +115,6 @@ export const GetCategoryBySlugResponse = zod.object({
       }),
     )
     .describe("Quizzes in this category or any of its descendants."),
-  taggedQuestionCount: zod
-    .number()
-    .describe(
-      "Number of questions tagged with this category or any of its descendants (available as a practice quiz).",
-    ),
-});
-
-/**
- * @summary Build a practice quiz from questions tagged with this category (or any descendant)
- */
-export const GetCategoryPracticeQuizParams = zod.object({
-  slug: zod.coerce.string(),
-});
-
-export const GetCategoryPracticeQuizQueryParams = zod.object({
-  limit: zod.coerce
-    .number()
-    .optional()
-    .describe("Maximum number of questions to include (default 20)."),
-});
-
-export const GetCategoryPracticeQuizResponse = zod.object({
-  category: zod.object({
-    id: zod.number(),
-    name: zod.string(),
-    slug: zod.string(),
-  }),
-  questions: zod.array(
-    zod.object({
-      id: zod.number(),
-      text: zod.string(),
-      options: zod.array(zod.string()),
-      correctOption: zod.number(),
-      explanation: zod.string(),
-      funFact: zod.string().nullable(),
-      imageUrl: zod.string().nullable(),
-    }),
-  ),
 });
 
 /**

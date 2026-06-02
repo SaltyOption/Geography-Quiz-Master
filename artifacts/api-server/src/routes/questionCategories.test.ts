@@ -46,46 +46,6 @@ function questionRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("GET /api/categories/by-slug/:slug/practice", () => {
-  it("returns 404 when the category does not exist", async () => {
-    pushDbResult([]); // category lookup
-    const res = await request(app).get("/api/categories/by-slug/nope/practice");
-    expect(res.status).toBe(404);
-  });
-
-  it("returns tagged questions for the category and its descendants", async () => {
-    pushDbResult([{ id: 1, name: "Europe", slug: "europe", parentId: null }]); // category lookup
-    pushDbResult([{ id: 1, parentId: null }]); // all categories (id, parentId)
-    pushDbResult([
-      { question: questionRow({ id: 100, text: "Q1" }) },
-      { question: questionRow({ id: 101, text: "Q2", correctOption: 2 }) },
-    ]); // selectDistinct joined rows
-
-    const res = await request(app).get("/api/categories/by-slug/europe/practice");
-
-    expect(res.status).toBe(200);
-    expect(res.body.category).toEqual({ id: 1, name: "Europe", slug: "europe" });
-    expect(res.body.questions).toHaveLength(2);
-    const ids = res.body.questions.map((q: { id: number }) => q.id).sort();
-    expect(ids).toEqual([100, 101]);
-    // Practice questions must not leak quizId or category tags.
-    expect(res.body.questions[0]).not.toHaveProperty("quizId");
-    expect(res.body.questions[0]).toHaveProperty("correctOption");
-  });
-
-  it("caps the number of returned questions at the requested limit", async () => {
-    pushDbResult([{ id: 1, name: "Europe", slug: "europe", parentId: null }]);
-    pushDbResult([{ id: 1, parentId: null }]);
-    pushDbResult(
-      Array.from({ length: 10 }, (_, i) => ({ question: questionRow({ id: 200 + i }) })),
-    );
-
-    const res = await request(app).get("/api/categories/by-slug/europe/practice?limit=3");
-    expect(res.status).toBe(200);
-    expect(res.body.questions).toHaveLength(3);
-  });
-});
-
 describe("POST /api/quizzes/:id/questions — category tagging", () => {
   it("rejects non-admins with 403", async () => {
     const res = await request(app)

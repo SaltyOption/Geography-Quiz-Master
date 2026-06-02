@@ -98,13 +98,11 @@ The home page is a category browser only (no quizzes shown directly) — it grou
 - Order indices continue from `max(orderIndex) + 1` of the existing quiz, so re-importing the same topic appends questions.
 - The whole import runs inside a single DB transaction — if any insert fails, no quizzes, questions, categories, or tags are created.
 
-## Question Tagging / Practice Quizzes
+## Question Tagging
 
-- Questions can be tagged with any categories from the tree (many-to-many via `question_categories`), independently of the curated quiz they belong to. One question can carry multiple tags and be reused across practice quizzes.
+- Questions can be tagged with any categories from the tree (many-to-many via `question_categories`), independently of the curated quiz they belong to. One question can carry multiple tags and be reused across quizzes via import-by-tag.
 - Admin: the create-question form and the quiz-edit page expose a category multi-select / "Edit tags" dialog. `POST /api/quizzes/:id/questions` and `PATCH /api/questions/:id` accept `categoryIds: number[]` (replaces the full tag set). Question GET/list responses include `categories: QuestionCategory[]` ({ id, name, slug }).
-- `GET /api/categories/by-slug/:slug` returns `taggedQuestionCount` — the number of distinct questions tagged with the category or any descendant.
-- `GET /api/categories/by-slug/:slug/practice?limit=N` builds a non-persisted practice quiz: distinct questions tagged with the category or any descendant, shuffled, capped at `limit` (default 20, max 50). Returns `{ category, questions: PracticeQuestion[] }`.
-- Frontend: the category landing page shows a "Take a practice quiz (N)" button when `taggedQuestionCount > 0`, linking to `/category/:slug/practice`. The practice page reuses the quiz-taking UI but does not persist attempts (no score saved to history).
+- `GET /api/categories/tree` returns a descendant-inclusive, de-duplicated `taggedQuestionCount` per node, used by the admin import-by-tag pickers to show how many questions a category (or any descendant) contributes.
 
 ## Seeded Data
 

@@ -198,65 +198,11 @@ router.get("/categories/by-slug/:slug", async (req, res): Promise<void> => {
     quizzes.sort((a, b) => a.title.localeCompare(b.title));
   }
 
-  // Count distinct questions tagged with this category or any descendant.
-  const [taggedRow] = await db
-    .select({
-      count: sql<number>`count(distinct ${questionCategoriesTable.questionId})::int`,
-    })
-    .from(questionCategoriesTable)
-    .where(inArray(questionCategoriesTable.categoryId, includedCategoryIds));
-  const taggedQuestionCount = taggedRow?.count ?? 0;
-
   res.json({
     category: serializeCategory(category),
     ancestors: ancestors.map(serializeCategory),
     descendants: descendants.map(serializeCategory),
     quizzes,
-    taggedQuestionCount,
-  });
-});
-
-router.get("/categories/by-slug/:slug/practice", async (req, res): Promise<void> => {
-  const slug = String(req.params.slug);
-  const rawLimit = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
-  const parsedLimit = rawLimit !== undefined ? Number(rawLimit) : NaN;
-  const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 20;
-
-  const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.slug, slug));
-  if (!category) {
-    res.status(404).json({ error: "Category not found" });
-    return;
-  }
-
-  const all = await db
-    .select({ id: categoriesTable.id, parentId: categoriesTable.parentId })
-    .from(categoriesTable);
-  const includedCategoryIds = [category.id, ...collectDescendantIds(category.id, all)];
-
-  const rows = await db
-    .selectDistinct({ question: questionsTable })
-    .from(questionCategoriesTable)
-    .innerJoin(questionsTable, eq(questionCategoriesTable.questionId, questionsTable.id))
-    .where(inArray(questionCategoriesTable.categoryId, includedCategoryIds));
-
-  // Shuffle (Fisher-Yates) then cap.
-  const questions = rows.map((r) => r.question);
-  for (let i = questions.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [questions[i], questions[j]] = [questions[j], questions[i]];
-  }
-
-  res.json({
-    category: { id: category.id, name: category.name, slug: category.slug },
-    questions: questions.slice(0, limit).map((q) => ({
-      id: q.id,
-      text: q.text,
-      options: q.options,
-      correctOption: q.correctOption,
-      explanation: q.explanation,
-      funFact: q.funFact ?? null,
-      imageUrl: q.imageUrl ?? null,
-    })),
   });
 });
 

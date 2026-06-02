@@ -312,7 +312,7 @@ function QuestionTagsEditor({ question, quizId }: { question: Question; quizId: 
           <DialogHeader>
             <DialogTitle>Edit question tags</DialogTitle>
             <DialogDescription>
-              Tag this question with categories so it can be reused in category practice quizzes.
+              Tag this question with categories so it can be imported into other quizzes by tag.
             </DialogDescription>
           </DialogHeader>
           <CategoryMultiSelect selectedIds={categoryIds} onChange={setCategoryIds} />

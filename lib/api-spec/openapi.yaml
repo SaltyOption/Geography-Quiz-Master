@@ -93,33 +93,6 @@ paths:
         "404":
           description: Not found
 
-  /categories/by-slug/{slug}/practice:
-    get:
-      operationId: getCategoryPracticeQuiz
-      tags: [categories]
-      summary: Build a practice quiz from questions tagged with this category (or any descendant)
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: limit
-          in: query
-          required: false
-          description: "Maximum number of questions to include (default 20)."
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: A shuffled set of tagged questions
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CategoryPracticeQuiz"
-        "404":
-          description: Not found
-
   /categories/{id}:
     patch:
       operationId: updateCategory
@@ -1154,56 +1127,11 @@ components:
           description: "Quizzes in this category or any of its descendants."
           items:
             $ref: "#/components/schemas/QuizSummary"
-        taggedQuestionCount:
-          type: integer
-          description: "Number of questions tagged with this category or any of its descendants (available as a practice quiz)."
       required:
         - category
         - ancestors
         - descendants
         - quizzes
-        - taggedQuestionCount
-
-    PracticeQuestion:
-      type: object
-      properties:
-        id:
-          type: integer
-        text:
-          type: string
-        options:
-          type: array
-          items:
-            type: string
-        correctOption:
-          type: integer
-        explanation:
-          type: string
-        funFact:
-          type: ["string", "null"]
-        imageUrl:
-          type: ["string", "null"]
-      required:
-        - id
-        - text
-        - options
-        - correctOption
-        - explanation
-        - funFact
-        - imageUrl
-
-    CategoryPracticeQuiz:
-      type: object
-      properties:
-        category:
-          $ref: "#/components/schemas/QuestionCategory"
-        questions:
-          type: array
-          items:
-            $ref: "#/components/schemas/PracticeQuestion"
-      required:
-        - category
-        - questions
 
     CreateCategoryBody:
       type: object

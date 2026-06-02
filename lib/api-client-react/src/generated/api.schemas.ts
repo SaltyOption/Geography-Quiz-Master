@@ -202,25 +202,6 @@ export interface CategoryWithQuizzes {
   descendants: Category[];
   /** Quizzes in this category or any of its descendants. */
   quizzes: QuizSummary[];
-  /** Number of questions tagged with this category or any of its descendants (available as a practice quiz). */
-  taggedQuestionCount: number;
-}
-
-export interface PracticeQuestion {
-  id: number;
-  text: string;
-  options: string[];
-  correctOption: number;
-  explanation: string;
-  /** @nullable */
-  funFact: string | null;
-  /** @nullable */
-  imageUrl: string | null;
-}
-
-export interface CategoryPracticeQuiz {
-  category: QuestionCategory;
-  questions: PracticeQuestion[];
 }
 
 export interface CreateCategoryBody {
@@ -588,13 +569,6 @@ export interface CourseImportResult {
   questionsAdded: number;
   modules: CourseImportModuleResult[];
 }
-
-export type GetCategoryPracticeQuizParams = {
-  /**
-   * Maximum number of questions to include (default 20).
-   */
-  limit?: number;
-};
 
 export type ClearCourseModuleProgress200 = {
   saved: boolean;

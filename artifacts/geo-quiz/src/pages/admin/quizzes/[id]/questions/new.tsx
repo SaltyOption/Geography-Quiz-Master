@@ -296,7 +296,7 @@ export default function AdminCreateQuestion() {
                 <div className="space-y-2">
                   <Label className="font-bold">Categories (Optional)</Label>
                   <p className="text-sm text-muted-foreground">
-                    Tag this question so it can be reused in category practice quizzes.
+                    Tag this question so it can be imported into other quizzes by tag.
                   </p>
                   <CategoryMultiSelect selectedIds={categoryIds} onChange={setCategoryIds} />
                 </div>
