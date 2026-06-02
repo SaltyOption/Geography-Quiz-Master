@@ -256,11 +256,12 @@ function QuestionTagsEditor({ question, quizId }: { question: Question; quizId: 
   const [open, setOpen] = useState(false);
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
 
-  useEffect(() => {
-    if (open) {
-      setCategoryIds(question.categories.map((c) => c.id));
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      setCategoryIds((question.categories ?? []).map((c) => c.id));
     }
-  }, [open, question.categories]);
+    setOpen(next);
+  };
 
   const handleSave = async () => {
     try {
@@ -276,24 +277,24 @@ function QuestionTagsEditor({ question, quizId }: { question: Question; quizId: 
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 pt-1">
-      {question.categories.map((c) => (
+      {(question.categories ?? []).map((c) => (
         <Badge key={c.id} variant="secondary" className="text-xs">
           {c.name}
         </Badge>
       ))}
-      {question.categories.length === 0 && (
+      {(question.categories ?? []).length === 0 && (
         <span className="text-xs text-muted-foreground">No categories tagged</span>
       )}
       <Button
         variant="ghost"
         size="sm"
         className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-        onClick={() => setOpen(true)}
+        onClick={() => handleOpenChange(true)}
       >
         <Tags className="mr-1 h-3.5 w-3.5" /> Edit tags
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit question tags</DialogTitle>
@@ -303,7 +304,7 @@ function QuestionTagsEditor({ question, quizId }: { question: Question; quizId: 
           </DialogHeader>
           <CategoryMultiSelect selectedIds={categoryIds} onChange={setCategoryIds} />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={updateQuestion.isPending}>

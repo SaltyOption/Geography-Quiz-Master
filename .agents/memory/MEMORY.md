@@ -1,1 +1,2 @@
-- [api-server db-mock tests](api-server-db-mock-tests.md) — vitest db mock is a shared FIFO queue; push one entry per awaited db call (incl. ignored deletes/inserts), txns reuse the same queue.
+- [HMR false-positive runtime errors](hmr-fast-refresh-artifacts.md) — "Invalid hook call" + "Maximum update depth" during active dev = likely Fast Refresh artifact, not a real bug.
+- [Effect deps on react-query arrays](effect-deps-unstable-arrays.md) — never put a query-derived array (e.g. question.categories) in a useEffect dep that calls setState; seed on open instead.
