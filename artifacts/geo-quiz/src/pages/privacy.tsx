@@ -21,7 +21,7 @@ const sections: Array<{
   {
     icon: Lock,
     title: "How we use it",
-    body: "We use your information only to operate the site: signing you in, saving your scores, and showing you your quiz history. That's it.",
+    body: "We use your information to operate the site: signing you in, saving your scores, and showing you your quiz history. If you have an account, we may also use your email to send you our newsletter with occasional updates and new quizzes — you can opt out anytime from your profile page.",
   },
   {
     icon: Cookie,
