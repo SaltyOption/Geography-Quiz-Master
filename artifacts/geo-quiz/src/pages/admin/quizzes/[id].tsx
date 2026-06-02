@@ -13,6 +13,7 @@ import {
   type Question,
 } from "@workspace/api-client-react";
 import { flattenCategoryTree } from "@/lib/categoryTree";
+import { CategoryTagCombobox } from "@/components/CategoryTagCombobox";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -341,21 +342,21 @@ function ImportByTagDialog({ quizId }: { quizId: number }) {
   const importByCategory = useImportQuestionsByCategory();
   const { data: tree, isLoading } = useGetCategoryTree();
   const [open, setOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string>("");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const handleOpenChange = (next: boolean) => {
-    if (next) setSelectedId("");
+    if (next) setSelectedId(null);
     setOpen(next);
   };
 
   const flat = tree ? flattenCategoryTree(tree) : [];
 
   const handleImport = async () => {
-    if (!selectedId) return;
+    if (selectedId === null) return;
     try {
       const result = await importByCategory.mutateAsync({
         id: quizId,
-        data: { categoryId: parseInt(selectedId, 10) },
+        data: { categoryId: selectedId },
       });
       queryClient.invalidateQueries({ queryKey: getGetQuizQueryKey(quizId) });
       if (result.imported === 0) {
@@ -409,22 +410,11 @@ function ImportByTagDialog({ quizId }: { quizId: number }) {
           ) : (
             <div className="space-y-2">
               <Label>Category</Label>
-              <Select value={selectedId} onValueChange={setSelectedId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {flat.map((c) => (
-                    <SelectItem
-                      key={c.id}
-                      value={String(c.id)}
-                      disabled={c.taggedQuestionCount === 0}
-                    >
-                      {`${"\u00A0\u00A0".repeat(c.depth)}${c.name} (${c.taggedQuestionCount})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CategoryTagCombobox
+                tags={flat}
+                value={selectedId}
+                onChange={setSelectedId}
+              />
             </div>
           )}
 
@@ -434,7 +424,7 @@ function ImportByTagDialog({ quizId }: { quizId: number }) {
             </Button>
             <Button
               onClick={handleImport}
-              disabled={!selectedId || importByCategory.isPending}
+              disabled={selectedId === null || importByCategory.isPending}
             >
               {importByCategory.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
+import { CategoryTagCombobox } from "@/components/CategoryTagCombobox";
 import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
@@ -40,7 +41,7 @@ export default function AdminCreateQuiz() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [categoryIds, setCategoryIds] = useState<number[]>([]);
-  const [importTagId, setImportTagId] = useState<string>("none");
+  const [importCategoryId, setImportCategoryId] = useState<number | null>(null);
 
   const flatTags = tree ? flattenCategoryTree(tree) : [];
 
@@ -60,11 +61,11 @@ export default function AdminCreateQuiz() {
 
       let imported = 0;
       let importFailed = false;
-      if (importTagId !== "none") {
+      if (importCategoryId !== null) {
         try {
           const result = await importByCategory.mutateAsync({
             id: quiz.id,
-            data: { categoryId: parseInt(importTagId, 10) },
+            data: { categoryId: importCategoryId },
           });
           imported = result.imported;
         } catch {
@@ -81,7 +82,7 @@ export default function AdminCreateQuiz() {
           description: "You can try importing by tag again from the quiz editor.",
           variant: "destructive",
         });
-      } else if (importTagId !== "none") {
+      } else if (importCategoryId !== null) {
         toast({
           title: "Quiz created successfully",
           description:
@@ -199,23 +200,12 @@ export default function AdminCreateQuiz() {
 
               <div className="space-y-2">
                 <Label>Pre-fill questions by tag (optional)</Label>
-                <Select value={importTagId} onValueChange={setImportTagId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Don't import any questions" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    <SelectItem value="none">Don't import any questions</SelectItem>
-                    {flatTags.map((c) => (
-                      <SelectItem
-                        key={c.id}
-                        value={String(c.id)}
-                        disabled={c.taggedQuestionCount === 0}
-                      >
-                        {`${"\u00A0\u00A0".repeat(c.depth)}${c.name} (${c.taggedQuestionCount})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CategoryTagCombobox
+                  tags={flatTags}
+                  value={importCategoryId}
+                  onChange={setImportCategoryId}
+                  noneLabel="Don't import any questions"
+                />
                 <p className="text-xs text-muted-foreground">
                   Copies every existing question tagged with the chosen category (and its
                   sub-categories) into this new quiz as editable copies.
