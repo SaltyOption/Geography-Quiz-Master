@@ -581,6 +581,62 @@ paths:
         "404":
           description: Not found
 
+  /admin/courses/{slug}:
+    get:
+      operationId: getAdminCourse
+      tags: [courses]
+      summary: Admin - get a course with full nested modules, lessons, and questions (no mastery gating)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Admin course detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCourseDetail"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /course-questions/{id}:
+    patch:
+      operationId: updateCourseQuestion
+      tags: [courses]
+      summary: Admin - update a single course (learning module) question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCourseQuestionBody"
+      responses:
+        "200":
+          description: Updated course question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseQuestion"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
   /course-modules/{moduleId}/progress:
     get:
       operationId: getCourseModuleProgress
@@ -1571,6 +1627,103 @@ components:
         - title
         - orderIndex
         - questions
+
+    AdminCourseLesson:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        orderIndex:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseQuestion"
+      required:
+        - id
+        - slug
+        - title
+        - orderIndex
+        - questions
+
+    AdminCourseModule:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+        lessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCourseLesson"
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - orderIndex
+        - lessons
+
+    AdminCourseDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        modules:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCourseModule"
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - modules
+
+    UpdateCourseQuestionBody:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+        options:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: string
+            minLength: 1
+        correctOption:
+          type: integer
+          minimum: 0
+          maximum: 3
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+        learningObjective:
+          type: ["string", "null"]
+        difficulty:
+          type: ["string", "null"]
+        questionType:
+          type: ["string", "null"]
 
     ModuleProgress:
       type: ["object", "null"]

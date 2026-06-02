@@ -326,3 +326,152 @@ describe("GET /api/courses", () => {
     expect(res.body).toHaveLength(0);
   });
 });
+
+describe("GET /api/admin/courses/:slug", () => {
+  it("rejects unauthenticated requests with 401", async () => {
+    const res = await request(app).get("/api/admin/courses/world-deserts");
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects non-admin users with 403", async () => {
+    const res = await request(app)
+      .get("/api/admin/courses/world-deserts")
+      .set("x-test-user-id", NON_ADMIN_ID);
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 when course does not exist", async () => {
+    pushDbResult([]); // course lookup
+    const res = await request(app)
+      .get("/api/admin/courses/missing")
+      .set("x-test-user-id", ADMIN_ID);
+    expect(res.status).toBe(404);
+  });
+
+  it("returns nested modules, lessons, and questions for admins", async () => {
+    pushDbResult([{ id: 1, slug: "world-deserts", title: "World Deserts", description: "All deserts" }]); // course
+    pushDbResult([
+      { id: 5, courseId: 1, slug: "m1", title: "Module 1", description: "Intro", orderIndex: 0 },
+    ]); // modules
+    pushDbResult([{ id: 10, moduleId: 5, slug: "l1", title: "Lesson 1", orderIndex: 0 }]); // lessons
+    pushDbResult([
+      {
+        id: 100,
+        lessonId: 10,
+        text: "Largest hot desert?",
+        options: ["Sahara", "Gobi", "Atacama", "Kalahari"],
+        correctOption: 0,
+        explanation: "Sahara is largest.",
+        funFact: null,
+        learningObjective: null,
+        difficulty: "Easy",
+        questionType: null,
+        orderIndex: 0,
+      },
+    ]); // questions
+    const res = await request(app)
+      .get("/api/admin/courses/world-deserts")
+      .set("x-test-user-id", ADMIN_ID);
+    expect(res.status).toBe(200);
+    expect(res.body.slug).toBe("world-deserts");
+    expect(res.body.modules).toHaveLength(1);
+    expect(res.body.modules[0].lessons).toHaveLength(1);
+    expect(res.body.modules[0].lessons[0].questions).toHaveLength(1);
+    expect(res.body.modules[0].lessons[0].questions[0].correctOption).toBe(0);
+  });
+});
+
+describe("PATCH /api/course-questions/:id", () => {
+  it("rejects unauthenticated requests with 401", async () => {
+    const res = await request(app)
+      .patch("/api/course-questions/100")
+      .send({ text: "Updated" });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects non-admin users with 403", async () => {
+    const res = await request(app)
+      .patch("/api/course-questions/100")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ text: "Updated" });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 when question does not exist", async () => {
+    pushDbResult([]); // update returning -> empty
+    const res = await request(app)
+      .patch("/api/course-questions/999")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({ text: "Updated" });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for an out-of-range correctOption", async () => {
+    const res = await request(app)
+      .patch("/api/course-questions/100")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({ correctOption: 9 });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("returns 400 when options is not exactly 4 entries", async () => {
+    const res = await request(app)
+      .patch("/api/course-questions/100")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({ options: ["A", "B"] });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns the existing question for an empty body (no fields to update)", async () => {
+    pushDbResult([
+      {
+        id: 100,
+        lessonId: 10,
+        text: "Unchanged?",
+        options: ["A", "B", "C", "D"],
+        correctOption: 1,
+        explanation: "Stable.",
+        funFact: null,
+        learningObjective: null,
+        difficulty: null,
+        questionType: null,
+        orderIndex: 0,
+      },
+    ]); // select fallback
+    const res = await request(app)
+      .patch("/api/course-questions/100")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(100);
+    expect(res.body.text).toBe("Unchanged?");
+  });
+
+  it("updates a course question for admins", async () => {
+    pushDbResult([
+      {
+        id: 100,
+        lessonId: 10,
+        text: "Updated question?",
+        options: ["A", "B", "C", "D"],
+        correctOption: 2,
+        explanation: "Because C.",
+        funFact: "Neat.",
+        learningObjective: null,
+        difficulty: "Medium",
+        questionType: null,
+        orderIndex: 0,
+      },
+    ]); // update returning
+    const res = await request(app)
+      .patch("/api/course-questions/100")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({ text: "Updated question?", correctOption: 2, funFact: "Neat." });
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(100);
+    expect(res.body.text).toBe("Updated question?");
+    expect(res.body.correctOption).toBe(2);
+    expect(res.body.funFact).toBe("Neat.");
+  });
+});

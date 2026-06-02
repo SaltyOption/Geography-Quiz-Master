@@ -14,6 +14,9 @@ import {
   SubmitCourseModuleAttemptBody,
   BulkImportCourseBody,
   SaveCourseModuleProgressBody,
+  GetAdminCourseParams,
+  UpdateCourseQuestionParams,
+  UpdateCourseQuestionBody,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -881,6 +884,149 @@ router.post("/courses/bulk-import", requireAdmin, async (req, res): Promise<void
     const message = err instanceof Error ? err.message : "Course import failed";
     res.status(500).json({ error: `Import failed (no changes were saved): ${message}` });
   }
+});
+
+// Admin: full nested course (modules -> lessons -> questions) with no mastery gating,
+// powering the admin course-question editor.
+router.get("/admin/courses/:slug", requireAdmin, async (req, res): Promise<void> => {
+  const rawSlug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
+  const params = GetAdminCourseParams.safeParse({ slug: rawSlug });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [course] = await db
+    .select()
+    .from(coursesTable)
+    .where(eq(coursesTable.slug, params.data.slug))
+    .limit(1);
+  if (!course) {
+    res.status(404).json({ error: "Course not found" });
+    return;
+  }
+
+  const modules = await db
+    .select()
+    .from(courseModulesTable)
+    .where(eq(courseModulesTable.courseId, course.id))
+    .orderBy(asc(courseModulesTable.orderIndex), asc(courseModulesTable.id));
+
+  const moduleIds = modules.map((m) => m.id);
+  const lessons =
+    moduleIds.length > 0
+      ? await db
+          .select()
+          .from(courseLessonsTable)
+          .where(inArray(courseLessonsTable.moduleId, moduleIds))
+          .orderBy(asc(courseLessonsTable.orderIndex), asc(courseLessonsTable.id))
+      : [];
+
+  const lessonIds = lessons.map((l) => l.id);
+  const questions =
+    lessonIds.length > 0
+      ? await db
+          .select()
+          .from(courseQuestionsTable)
+          .where(inArray(courseQuestionsTable.lessonId, lessonIds))
+          .orderBy(asc(courseQuestionsTable.orderIndex), asc(courseQuestionsTable.id))
+      : [];
+
+  const qByLesson = new Map<number, typeof questions>();
+  for (const q of questions) {
+    const arr = qByLesson.get(q.lessonId) ?? [];
+    arr.push(q);
+    qByLesson.set(q.lessonId, arr);
+  }
+
+  const lessonsByModule = new Map<number, typeof lessons>();
+  for (const l of lessons) {
+    const arr = lessonsByModule.get(l.moduleId) ?? [];
+    arr.push(l);
+    lessonsByModule.set(l.moduleId, arr);
+  }
+
+  res.json({
+    id: course.id,
+    slug: course.slug,
+    title: course.title,
+    description: course.description,
+    modules: modules.map((m) => ({
+      id: m.id,
+      slug: m.slug,
+      title: m.title,
+      description: m.description,
+      orderIndex: m.orderIndex,
+      lessons: (lessonsByModule.get(m.id) ?? []).map((l) => ({
+        id: l.id,
+        slug: l.slug,
+        title: l.title,
+        orderIndex: l.orderIndex,
+        questions: (qByLesson.get(l.id) ?? []).map((q) => ({
+          id: q.id,
+          text: q.text,
+          options: q.options,
+          correctOption: q.correctOption,
+          explanation: q.explanation,
+          funFact: q.funFact ?? null,
+          learningObjective: q.learningObjective ?? null,
+          difficulty: q.difficulty ?? null,
+          questionType: q.questionType ?? null,
+          orderIndex: q.orderIndex,
+        })),
+      })),
+    })),
+  });
+});
+
+// Admin: update a single course (learning module) question.
+router.patch("/course-questions/:id", requireAdmin, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = UpdateCourseQuestionParams.safeParse({ id: rawId });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = UpdateCourseQuestionBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const updateFields = parsed.data;
+
+  let question: typeof courseQuestionsTable.$inferSelect | undefined;
+  if (Object.keys(updateFields).length > 0) {
+    [question] = await db
+      .update(courseQuestionsTable)
+      .set(updateFields)
+      .where(eq(courseQuestionsTable.id, params.data.id))
+      .returning();
+  } else {
+    [question] = await db
+      .select()
+      .from(courseQuestionsTable)
+      .where(eq(courseQuestionsTable.id, params.data.id));
+  }
+
+  if (!question) {
+    res.status(404).json({ error: "Question not found" });
+    return;
+  }
+
+  res.json({
+    id: question.id,
+    text: question.text,
+    options: question.options,
+    correctOption: question.correctOption,
+    explanation: question.explanation,
+    funFact: question.funFact ?? null,
+    learningObjective: question.learningObjective ?? null,
+    difficulty: question.difficulty ?? null,
+    questionType: question.questionType ?? null,
+    orderIndex: question.orderIndex,
+  });
 });
 
 export default router;

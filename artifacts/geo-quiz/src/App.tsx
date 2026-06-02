@@ -18,6 +18,8 @@ import AdminDashboard from "@/pages/admin/index";
 import AdminCategories from "@/pages/admin/categories";
 import AdminImport from "@/pages/admin/import";
 import AdminCoursesImport from "@/pages/admin/courses-import";
+import AdminCourses from "@/pages/admin/courses";
+import AdminCourseEditor from "@/pages/admin/course-editor";
 import CoursesPage from "@/pages/courses";
 import CourseDetailPage from "@/pages/courses/[slug]";
 import ModuleTakingPage from "@/pages/courses/[slug]/modules/[moduleSlug]";
@@ -177,6 +179,12 @@ function ClerkProviderWithRoutes() {
               </Route>
               <Route path="/admin/courses-import">
                 <AdminGuard><AdminCoursesImport /></AdminGuard>
+              </Route>
+              <Route path="/admin/courses">
+                <AdminGuard><AdminCourses /></AdminGuard>
+              </Route>
+              <Route path="/admin/courses/:slug">
+                <AdminGuard><AdminCourseEditor /></AdminGuard>
               </Route>
               <Route path="/admin/quizzes/new">
                 <AdminGuard><AdminCreateQuiz /></AdminGuard>

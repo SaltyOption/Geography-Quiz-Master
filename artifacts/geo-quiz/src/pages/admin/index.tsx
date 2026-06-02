@@ -135,6 +135,11 @@ export default function AdminDashboard() {
               <GraduationCap className="mr-2 h-4 w-4" /> Courses Import
             </Link>
           </Button>
+          <Button variant="outline" asChild data-testid="link-manage-courses">
+            <Link href="/admin/courses">
+              <GraduationCap className="mr-2 h-4 w-4" /> Manage Courses
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/admin/quizzes/new">
               <Plus className="mr-2 h-4 w-4" /> Create Quiz

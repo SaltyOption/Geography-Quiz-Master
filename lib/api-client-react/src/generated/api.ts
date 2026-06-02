@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminCourseDetail,
   BulkImportBody,
   BulkImportResult,
   Category,
@@ -27,6 +28,7 @@ import type {
   CourseDetail,
   CourseImportBody,
   CourseImportResult,
+  CourseQuestion,
   CourseSummary,
   CreateCategoryBody,
   CreateQuestionBody,
@@ -50,6 +52,7 @@ import type {
   SubmitModuleAttemptBody,
   SubmitQuizAttemptBody,
   UpdateCategoryBody,
+  UpdateCourseQuestionBody,
   UpdateQuestionBody,
   UpdateQuizBody,
   UserProgress,
@@ -2487,6 +2490,181 @@ export function useGetCourseModule<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Admin - get a course with full nested modules, lessons, and questions (no mastery gating)
+ */
+export const getGetAdminCourseUrl = (slug: string) => {
+  return `/api/admin/courses/${slug}`;
+};
+
+export const getAdminCourse = async (
+  slug: string,
+  options?: RequestInit,
+): Promise<AdminCourseDetail> => {
+  return customFetch<AdminCourseDetail>(getGetAdminCourseUrl(slug), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminCourseQueryKey = (slug: string) => {
+  return [`/api/admin/courses/${slug}`] as const;
+};
+
+export const getGetAdminCourseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminCourse>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminCourse>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminCourseQueryKey(slug);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminCourse>>> = ({
+    signal,
+  }) => getAdminCourse(slug, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!slug,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminCourse>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminCourseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminCourse>>
+>;
+export type GetAdminCourseQueryError = ErrorType<void>;
+
+/**
+ * @summary Admin - get a course with full nested modules, lessons, and questions (no mastery gating)
+ */
+
+export function useGetAdminCourse<
+  TData = Awaited<ReturnType<typeof getAdminCourse>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminCourse>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminCourseQueryOptions(slug, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Admin - update a single course (learning module) question
+ */
+export const getUpdateCourseQuestionUrl = (id: number) => {
+  return `/api/course-questions/${id}`;
+};
+
+export const updateCourseQuestion = async (
+  id: number,
+  updateCourseQuestionBody: UpdateCourseQuestionBody,
+  options?: RequestInit,
+): Promise<CourseQuestion> => {
+  return customFetch<CourseQuestion>(getUpdateCourseQuestionUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateCourseQuestionBody),
+  });
+};
+
+export const getUpdateCourseQuestionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCourseQuestion>>,
+    TError,
+    { id: number; data: BodyType<UpdateCourseQuestionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCourseQuestion>>,
+  TError,
+  { id: number; data: BodyType<UpdateCourseQuestionBody> },
+  TContext
+> => {
+  const mutationKey = ["updateCourseQuestion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCourseQuestion>>,
+    { id: number; data: BodyType<UpdateCourseQuestionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateCourseQuestion(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCourseQuestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCourseQuestion>>
+>;
+export type UpdateCourseQuestionMutationBody =
+  BodyType<UpdateCourseQuestionBody>;
+export type UpdateCourseQuestionMutationError = ErrorType<void>;
+
+/**
+ * @summary Admin - update a single course (learning module) question
+ */
+export const useUpdateCourseQuestion = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCourseQuestion>>,
+    TError,
+    { id: number; data: BodyType<UpdateCourseQuestionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateCourseQuestion>>,
+  TError,
+  { id: number; data: BodyType<UpdateCourseQuestionBody> },
+  TContext
+> => {
+  return useMutation(getUpdateCourseQuestionMutationOptions(options));
+};
 
 /**
  * @summary Get the signed-in user's saved in-progress answers for a module

@@ -810,6 +810,96 @@ export const GetCourseModuleResponse = zod.object({
 });
 
 /**
+ * @summary Admin - get a course with full nested modules, lessons, and questions (no mastery gating)
+ */
+export const GetAdminCourseParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetAdminCourseResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullable(),
+  modules: zod.array(
+    zod.object({
+      id: zod.number(),
+      slug: zod.string(),
+      title: zod.string(),
+      description: zod.string().nullable(),
+      orderIndex: zod.number(),
+      lessons: zod.array(
+        zod.object({
+          id: zod.number(),
+          slug: zod.string(),
+          title: zod.string(),
+          orderIndex: zod.number(),
+          questions: zod.array(
+            zod.object({
+              id: zod.number(),
+              text: zod.string(),
+              options: zod.array(zod.string()),
+              correctOption: zod.number(),
+              explanation: zod.string(),
+              funFact: zod.string().nullable(),
+              learningObjective: zod.string().nullable(),
+              difficulty: zod.string().nullable(),
+              questionType: zod.string().nullable(),
+              orderIndex: zod.number(),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * @summary Admin - update a single course (learning module) question
+ */
+export const UpdateCourseQuestionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const updateCourseQuestionBodyOptionsMin = 4;
+export const updateCourseQuestionBodyOptionsMax = 4;
+
+export const updateCourseQuestionBodyCorrectOptionMin = 0;
+export const updateCourseQuestionBodyCorrectOptionMax = 3;
+
+export const UpdateCourseQuestionBody = zod.object({
+  text: zod.string().min(1).optional(),
+  options: zod
+    .array(zod.string().min(1))
+    .min(updateCourseQuestionBodyOptionsMin)
+    .max(updateCourseQuestionBodyOptionsMax)
+    .optional(),
+  correctOption: zod
+    .number()
+    .min(updateCourseQuestionBodyCorrectOptionMin)
+    .max(updateCourseQuestionBodyCorrectOptionMax)
+    .optional(),
+  explanation: zod.string().optional(),
+  funFact: zod.string().nullish(),
+  learningObjective: zod.string().nullish(),
+  difficulty: zod.string().nullish(),
+  questionType: zod.string().nullish(),
+});
+
+export const UpdateCourseQuestionResponse = zod.object({
+  id: zod.number(),
+  text: zod.string(),
+  options: zod.array(zod.string()),
+  correctOption: zod.number(),
+  explanation: zod.string(),
+  funFact: zod.string().nullable(),
+  learningObjective: zod.string().nullable(),
+  difficulty: zod.string().nullable(),
+  questionType: zod.string().nullable(),
+  orderIndex: zod.number(),
+});
+
+/**
  * @summary Get the signed-in user's saved in-progress answers for a module
  */
 export const GetCourseModuleProgressParams = zod.object({

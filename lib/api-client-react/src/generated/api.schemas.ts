@@ -395,6 +395,57 @@ export interface LessonDetail {
   questions: CourseQuestion[];
 }
 
+export interface AdminCourseLesson {
+  id: number;
+  slug: string;
+  title: string;
+  orderIndex: number;
+  questions: CourseQuestion[];
+}
+
+export interface AdminCourseModule {
+  id: number;
+  slug: string;
+  title: string;
+  /** @nullable */
+  description: string | null;
+  orderIndex: number;
+  lessons: AdminCourseLesson[];
+}
+
+export interface AdminCourseDetail {
+  id: number;
+  slug: string;
+  title: string;
+  /** @nullable */
+  description: string | null;
+  modules: AdminCourseModule[];
+}
+
+export interface UpdateCourseQuestionBody {
+  /** @minLength 1 */
+  text?: string;
+  /**
+   * @minItems 4
+   * @maxItems 4
+   */
+  options?: string[];
+  /**
+   * @minimum 0
+   * @maximum 3
+   */
+  correctOption?: number;
+  explanation?: string;
+  /** @nullable */
+  funFact?: string | null;
+  /** @nullable */
+  learningObjective?: string | null;
+  /** @nullable */
+  difficulty?: string | null;
+  /** @nullable */
+  questionType?: string | null;
+}
+
 /**
  * @nullable
  */
