@@ -199,7 +199,7 @@ export default function Home() {
                       {countAll(root).quizzes} {countAll(root).quizzes === 1 ? "quiz" : "quizzes"} across {root.children.length} {root.children.length === 1 ? "category" : "categories"}
                     </p>
                   </div>
-                  {root.children.length > 3 ? (
+                  {root.children.length > 2 ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -235,7 +235,7 @@ export default function Home() {
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {root.children
-                      .slice(0, expandedRoots[root.id] ? undefined : 3)
+                      .slice(0, expandedRoots[root.id] ? undefined : 2)
                       .map((child) => (
                         <CategoryCard key={child.id} node={child} />
                       ))}
