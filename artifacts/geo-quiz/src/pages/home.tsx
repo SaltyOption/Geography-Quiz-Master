@@ -103,7 +103,15 @@ export default function Home() {
     );
   }
 
-  const roots = tree ?? [];
+  const ROOT_ORDER = ["By Topic", "By Region"];
+  const roots = [...(tree ?? [])].sort((a, b) => {
+    const ai = ROOT_ORDER.indexOf(a.name);
+    const bi = ROOT_ORDER.indexOf(b.name);
+    if (ai !== -1 || bi !== -1) {
+      return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
+    }
+    return a.name.localeCompare(b.name);
+  });
   const totalQuizzes = quizzes?.length ?? 0;
 
   const courseList = courses ?? [];
