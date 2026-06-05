@@ -18,9 +18,10 @@ import {
   GetQuizStatsParams,
   BulkImportQuizzesBody,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 import { getCategoriesByQuestionIds } from "../lib/questionCategories";
 import { slugify, uniqueSlugTx } from "../lib/categorySlug";
+import { getVisibleCategoryIds } from "../lib/categoryVisibility";
 
 const router: IRouter = Router();
 
@@ -28,6 +29,7 @@ type CategorySerialized = {
   id: number;
   name: string;
   parentId: number | null;
+  published: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,11 +38,20 @@ const serializeCategory = (c: typeof categoriesTable.$inferSelect): CategorySeri
   id: c.id,
   name: c.name,
   parentId: c.parentId,
+  published: c.published,
   createdAt: c.createdAt.toISOString(),
   updatedAt: c.updatedAt.toISOString(),
 });
 
-async function getCategoriesByQuizIds(quizIds: number[]): Promise<Map<number, CategorySerialized[]>> {
+/**
+ * @param visibleCatIds when non-null (non-admin), only categories in this set
+ *   are surfaced as chips, so drafts and published-children-of-draft-ancestors
+ *   never leak to visitors on a quiz card. Pass `null` for admins (no filter).
+ */
+async function getCategoriesByQuizIds(
+  quizIds: number[],
+  visibleCatIds: Set<number> | null,
+): Promise<Map<number, CategorySerialized[]>> {
   const map = new Map<number, CategorySerialized[]>();
   if (quizIds.length === 0) return map;
 
@@ -54,6 +65,7 @@ async function getCategoriesByQuizIds(quizIds: number[]): Promise<Map<number, Ca
     .where(inArray(quizCategoriesTable.quizId, quizIds));
 
   for (const row of rows) {
+    if (visibleCatIds !== null && !visibleCatIds.has(row.category.id)) continue;
     const arr = map.get(row.quizId) ?? [];
     arr.push(serializeCategory(row.category));
     map.set(row.quizId, arr);
@@ -78,8 +90,10 @@ async function setQuizCategories(quizId: number, categoryIds: number[]): Promise
     .values(toInsert.map((categoryId) => ({ quizId, categoryId })));
 }
 
-router.get("/quizzes", async (_req, res): Promise<void> => {
-  const quizzes = await db.select().from(quizzesTable).orderBy(quizzesTable.createdAt);
+router.get("/quizzes", async (req, res): Promise<void> => {
+  const admin = isRequestAdmin(req);
+  const allQuizzes = await db.select().from(quizzesTable).orderBy(quizzesTable.createdAt);
+  const quizzes = admin ? allQuizzes : allQuizzes.filter((q) => q.published);
 
   const counts = await db
     .select({ quizId: questionsTable.quizId, count: sql<number>`count(*)::int` })
@@ -87,7 +101,8 @@ router.get("/quizzes", async (_req, res): Promise<void> => {
     .groupBy(questionsTable.quizId);
   const countMap = new Map(counts.map((c) => [c.quizId, c.count]));
 
-  const catMap = await getCategoriesByQuizIds(quizzes.map((q) => q.id));
+  const visibleCatIds = await getVisibleCategoryIds(admin);
+  const catMap = await getCategoriesByQuizIds(quizzes.map((q) => q.id), visibleCatIds);
 
   const result = quizzes.map((q) => ({
     id: q.id,
@@ -95,6 +110,7 @@ router.get("/quizzes", async (_req, res): Promise<void> => {
     description: q.description,
     category: q.category,
     difficulty: q.difficulty,
+    published: q.published,
     questionCount: countMap.get(q.id) ?? 0,
     categories: catMap.get(q.id) ?? [],
     createdAt: q.createdAt.toISOString(),
@@ -124,6 +140,7 @@ router.post("/quizzes", requireAdmin, async (req, res): Promise<void> => {
     description: quiz.description,
     category: quiz.category,
     difficulty: quiz.difficulty,
+    published: quiz.published,
     createdAt: quiz.createdAt.toISOString(),
     updatedAt: quiz.updatedAt.toISOString(),
   });
@@ -387,8 +404,9 @@ router.get("/quizzes/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const admin = isRequestAdmin(req);
   const [quiz] = await db.select().from(quizzesTable).where(eq(quizzesTable.id, params.data.id));
-  if (!quiz) {
+  if (!quiz || (!quiz.published && !admin)) {
     res.status(404).json({ error: "Quiz not found" });
     return;
   }
@@ -399,8 +417,9 @@ router.get("/quizzes/:id", async (req, res): Promise<void> => {
     .where(eq(questionsTable.quizId, quiz.id))
     .orderBy(questionsTable.orderIndex);
 
-  const catMap = await getCategoriesByQuizIds([quiz.id]);
-  const questionCatMap = await getCategoriesByQuestionIds(questions.map((q) => q.id));
+  const visibleCatIds = await getVisibleCategoryIds(admin);
+  const catMap = await getCategoriesByQuizIds([quiz.id], visibleCatIds);
+  const questionCatMap = await getCategoriesByQuestionIds(questions.map((q) => q.id), visibleCatIds);
 
   res.json({
     id: quiz.id,
@@ -408,6 +427,7 @@ router.get("/quizzes/:id", async (req, res): Promise<void> => {
     description: quiz.description,
     category: quiz.category,
     difficulty: quiz.difficulty,
+    published: quiz.published,
     categories: catMap.get(quiz.id) ?? [],
     createdAt: quiz.createdAt.toISOString(),
     updatedAt: quiz.updatedAt.toISOString(),
@@ -470,6 +490,7 @@ router.patch("/quizzes/:id", requireAdmin, async (req, res): Promise<void> => {
     description: quiz.description,
     category: quiz.category,
     difficulty: quiz.difficulty,
+    published: quiz.published,
     createdAt: quiz.createdAt.toISOString(),
     updatedAt: quiz.updatedAt.toISOString(),
   });
@@ -504,8 +525,9 @@ router.get("/quizzes/:id/stats", async (req, res): Promise<void> => {
     return;
   }
 
+  const admin = isRequestAdmin(req);
   const [quiz] = await db.select().from(quizzesTable).where(eq(quizzesTable.id, params.data.id));
-  if (!quiz) {
+  if (!quiz || (!quiz.published && !admin)) {
     res.status(404).json({ error: "Quiz not found" });
     return;
   }

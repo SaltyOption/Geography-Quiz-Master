@@ -7,8 +7,14 @@ export type QuestionCategorySerialized = {
   slug: string;
 };
 
+/**
+ * @param visibleCatIds when non-null (non-admin), only categories in this set
+ *   are surfaced as question tags, so draft categories (and published children
+ *   of draft ancestors) never leak to visitors. Pass `null` for admins.
+ */
 export async function getCategoriesByQuestionIds(
-  questionIds: number[]
+  questionIds: number[],
+  visibleCatIds: Set<number> | null = null
 ): Promise<Map<number, QuestionCategorySerialized[]>> {
   const map = new Map<number, QuestionCategorySerialized[]>();
   if (questionIds.length === 0) return map;
@@ -23,6 +29,7 @@ export async function getCategoriesByQuestionIds(
     .where(inArray(questionCategoriesTable.questionId, questionIds));
 
   for (const row of rows) {
+    if (visibleCatIds !== null && !visibleCatIds.has(row.category.id)) continue;
     const arr = map.get(row.questionId) ?? [];
     arr.push({ id: row.category.id, name: row.category.name, slug: row.category.slug });
     map.set(row.questionId, arr);
@@ -31,9 +38,10 @@ export async function getCategoriesByQuestionIds(
 }
 
 export async function getCategoriesForQuestion(
-  questionId: number
+  questionId: number,
+  visibleCatIds: Set<number> | null = null
 ): Promise<QuestionCategorySerialized[]> {
-  const map = await getCategoriesByQuestionIds([questionId]);
+  const map = await getCategoriesByQuestionIds([questionId], visibleCatIds);
   return map.get(questionId) ?? [];
 }
 

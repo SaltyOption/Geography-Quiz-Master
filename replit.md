@@ -47,6 +47,16 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - Add, edit, delete questions per quiz
 - Questions have: text, 4 options, correct answer, explanation, fun fact, optional image
 
+## Draft / Published Visibility
+
+- Both `quizzes` and `categories` have a `published` boolean column (notNull, default **false** — new content is a draft and hidden until an admin publishes it). Existing rows were backfilled to `published = true` at rollout.
+- Server is the security boundary. The `isRequestAdmin(req)` helper (`middlewares/requireAdmin.ts`) drives read filtering:
+  - Quizzes: list, detail, `/quizzes/:id/questions`, and `/quizzes/:id/stats` hide drafts from non-admins (detail/questions/stats return `404`). Responses include `published`.
+  - Categories: list, `tree`, and `by-slug` hide drafts from non-admins. A category is visible only when it **and every ancestor** is published, so a published child of a draft parent never surfaces as an orphan. The tree counts only published quizzes for non-admins. `by-slug` returns `404` for a draft and filters draft descendants/quizzes/embedded category chips.
+  - Daily quiz: **always** excludes drafts, even for admins (it must match what visitors can actually play).
+- Create/update endpoints accept optional `published` (quizzes + categories) and pass it through. Bulk-imported quizzes default to draft.
+- Admin UI: publish-now switch on quiz create and category create (default off); a published toggle on the quiz edit form; quick publish switches + amber "Draft" badges on the admin dashboard and the category tree.
+
 ## Newsletter
 
 - Signed-in users only. Everyone is subscribed **by default**; they can opt out from their profile page.
@@ -57,10 +67,10 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 
 ## Database Schema
 
-- `quizzes` — id, title, description, category (legacy text label), difficulty, timestamps
+- `quizzes` — id, title, description, category (legacy text label), difficulty, published (boolean, default false), timestamps
 - `questions` — id, quiz_id, text, options[], correct_option, explanation, fun_fact, image_url, order_index, timestamps
 - `quiz_attempts` — id, quiz_id, user_id (nullable), score, total_questions, answers (jsonb), created_at
-- `categories` — id, name, parent_id (self-ref, ON DELETE SET NULL), timestamps. Forms an unlimited-depth tree.
+- `categories` — id, name, parent_id (self-ref, ON DELETE SET NULL), published (boolean, default false), timestamps. Forms an unlimited-depth tree.
 - `quiz_categories` — composite PK (quiz_id, category_id), both ON DELETE CASCADE. Many-to-many join table; quizzes can belong to multiple categories.
 - `question_categories` — composite PK (question_id, category_id), both ON DELETE CASCADE. Many-to-many join table; questions can be tagged with multiple categories and reused independently of their quiz.
 

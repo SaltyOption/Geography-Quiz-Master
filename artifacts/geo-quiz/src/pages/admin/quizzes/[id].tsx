@@ -37,6 +37,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
 
 const formSchema = z.object({
@@ -44,6 +45,7 @@ const formSchema = z.object({
   description: z.string().min(10).max(500),
   category: z.string().min(2),
   difficulty: z.enum(["easy", "medium", "hard"]),
+  published: z.boolean(),
 });
 
 export default function AdminEditQuiz() {
@@ -73,12 +75,14 @@ export default function AdminEditQuiz() {
       description: "",
       category: "",
       difficulty: "medium",
+      published: false,
     },
     values: quiz ? {
       title: quiz.title,
       description: quiz.description,
       category: quiz.category,
       difficulty: quiz.difficulty as any,
+      published: quiz.published,
     } : undefined
   });
 
@@ -180,6 +184,23 @@ export default function AdminEditQuiz() {
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="published"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Published</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            {field.value ? "Visible to everyone." : "Draft — hidden from visitors."}
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
                       </FormItem>
                     )}
                   />

@@ -16,6 +16,7 @@ export const ListCategoriesResponseItem = zod.object({
   slug: zod.string(),
   parentId: zod.number().nullable(),
   imageUrl: zod.string().nullable(),
+  published: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -31,6 +32,7 @@ export const CreateCategoryBody = zod.object({
     .optional()
     .describe("Optional. Auto-generated from name if omitted."),
   parentId: zod.number().nullish(),
+  published: zod.boolean().optional(),
 });
 
 /**
@@ -42,6 +44,7 @@ export const GetCategoryTreeResponseItem = zod.object({
   slug: zod.string(),
   parentId: zod.number().nullable(),
   imageUrl: zod.string().nullable(),
+  published: zod.boolean(),
   quizCount: zod.number(),
   taggedQuestionCount: zod.number(),
   children: zod.array(zod.unknown()),
@@ -62,6 +65,7 @@ export const GetCategoryBySlugResponse = zod.object({
     slug: zod.string(),
     parentId: zod.number().nullable(),
     imageUrl: zod.string().nullable(),
+    published: zod.boolean(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   }),
@@ -73,6 +77,7 @@ export const GetCategoryBySlugResponse = zod.object({
         slug: zod.string(),
         parentId: zod.number().nullable(),
         imageUrl: zod.string().nullable(),
+        published: zod.boolean(),
         createdAt: zod.string(),
         updatedAt: zod.string(),
       }),
@@ -86,6 +91,7 @@ export const GetCategoryBySlugResponse = zod.object({
         slug: zod.string(),
         parentId: zod.number().nullable(),
         imageUrl: zod.string().nullable(),
+        published: zod.boolean(),
         createdAt: zod.string(),
         updatedAt: zod.string(),
       }),
@@ -99,6 +105,7 @@ export const GetCategoryBySlugResponse = zod.object({
         description: zod.string(),
         category: zod.string(),
         difficulty: zod.string(),
+        published: zod.boolean(),
         questionCount: zod.number(),
         categories: zod.array(
           zod.object({
@@ -107,6 +114,7 @@ export const GetCategoryBySlugResponse = zod.object({
             slug: zod.string(),
             parentId: zod.number().nullable(),
             imageUrl: zod.string().nullable(),
+            published: zod.boolean(),
             createdAt: zod.string(),
             updatedAt: zod.string(),
           }),
@@ -128,6 +136,7 @@ export const UpdateCategoryBody = zod.object({
   name: zod.string().optional(),
   slug: zod.string().optional(),
   parentId: zod.number().nullish(),
+  published: zod.boolean().optional(),
 });
 
 export const UpdateCategoryResponse = zod.object({
@@ -136,6 +145,7 @@ export const UpdateCategoryResponse = zod.object({
   slug: zod.string(),
   parentId: zod.number().nullable(),
   imageUrl: zod.string().nullable(),
+  published: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -215,6 +225,7 @@ export const ListQuizzesResponseItem = zod.object({
   description: zod.string(),
   category: zod.string(),
   difficulty: zod.string(),
+  published: zod.boolean(),
   questionCount: zod.number(),
   categories: zod.array(
     zod.object({
@@ -223,6 +234,7 @@ export const ListQuizzesResponseItem = zod.object({
       slug: zod.string(),
       parentId: zod.number().nullable(),
       imageUrl: zod.string().nullable(),
+      published: zod.boolean(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -239,6 +251,7 @@ export const CreateQuizBody = zod.object({
   description: zod.string(),
   category: zod.string(),
   difficulty: zod.string(),
+  published: zod.boolean().optional(),
   categoryIds: zod.array(zod.number()).optional(),
 });
 
@@ -336,6 +349,7 @@ export const GetQuizResponse = zod.object({
   description: zod.string(),
   category: zod.string(),
   difficulty: zod.string(),
+  published: zod.boolean(),
   categories: zod.array(
     zod.object({
       id: zod.number(),
@@ -343,6 +357,7 @@ export const GetQuizResponse = zod.object({
       slug: zod.string(),
       parentId: zod.number().nullable(),
       imageUrl: zod.string().nullable(),
+      published: zod.boolean(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -385,6 +400,7 @@ export const UpdateQuizBody = zod.object({
   description: zod.string().optional(),
   category: zod.string().optional(),
   difficulty: zod.string().optional(),
+  published: zod.boolean().optional(),
   categoryIds: zod.array(zod.number()).optional(),
 });
 
@@ -394,6 +410,7 @@ export const UpdateQuizResponse = zod.object({
   description: zod.string(),
   category: zod.string(),
   difficulty: zod.string(),
+  published: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

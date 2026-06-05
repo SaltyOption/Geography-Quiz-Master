@@ -14,8 +14,9 @@ import {
   UpdateCategoryParams,
   DeleteCategoryParams,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 import { slugify, uniqueSlug } from "../lib/categorySlug";
+import { isCategoryVisible } from "../lib/categoryVisibility";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,7 @@ const serializeCategory = (c: typeof categoriesTable.$inferSelect) => ({
   slug: c.slug,
   parentId: c.parentId,
   imageUrl: c.imageUrl,
+  published: c.published,
   createdAt: c.createdAt.toISOString(),
   updatedAt: c.updatedAt.toISOString(),
 });
@@ -47,29 +49,50 @@ function collectDescendantIds(
   return descendantIds;
 }
 
-router.get("/categories", async (_req, res): Promise<void> => {
-  const categories = await db.select().from(categoriesTable).orderBy(asc(categoriesTable.name));
+router.get("/categories", async (req, res): Promise<void> => {
+  const admin = isRequestAdmin(req);
+  const all = await db.select().from(categoriesTable).orderBy(asc(categoriesTable.name));
+  const byId = new Map(all.map((c) => [c.id, c]));
+  const categories = admin ? all : all.filter((c) => isCategoryVisible(c, byId));
   res.json(categories.map(serializeCategory));
 });
 
-router.get("/categories/tree", async (_req, res): Promise<void> => {
-  const categories = await db.select().from(categoriesTable).orderBy(asc(categoriesTable.name));
+router.get("/categories/tree", async (req, res): Promise<void> => {
+  const admin = isRequestAdmin(req);
+  const allCategories = await db.select().from(categoriesTable).orderBy(asc(categoriesTable.name));
+  const byId = new Map(allCategories.map((c) => [c.id, c]));
+  const categories = admin
+    ? allCategories
+    : allCategories.filter((c) => isCategoryVisible(c, byId));
 
-  const counts = await db
-    .select({ categoryId: quizCategoriesTable.categoryId, count: sql<number>`count(*)::int` })
+  // Quiz counts per category. For non-admins, only published quizzes are counted
+  // so visitors never see inflated counts driven by hidden drafts.
+  const quizLinks = await db
+    .select({ categoryId: quizCategoriesTable.categoryId, published: quizzesTable.published })
     .from(quizCategoriesTable)
-    .groupBy(quizCategoriesTable.categoryId);
-  const countMap = new Map(counts.map((c) => [c.categoryId, c.count]));
+    .innerJoin(quizzesTable, eq(quizCategoriesTable.quizId, quizzesTable.id));
+  const countMap = new Map<number, number>();
+  for (const link of quizLinks) {
+    if (!admin && !link.published) continue;
+    countMap.set(link.categoryId, (countMap.get(link.categoryId) ?? 0) + 1);
+  }
 
-  // Direct question tags per category: categoryId -> set of question ids.
+  // Direct question tags per category: categoryId -> set of question ids. Each
+  // question belongs to a quiz, so for non-admins we count only questions whose
+  // parent quiz is published — otherwise draft-quiz question volume would leak
+  // through taggedQuestionCount even on visible categories.
   const tagRows = await db
     .select({
       categoryId: questionCategoriesTable.categoryId,
       questionId: questionCategoriesTable.questionId,
+      published: quizzesTable.published,
     })
-    .from(questionCategoriesTable);
+    .from(questionCategoriesTable)
+    .innerJoin(questionsTable, eq(questionCategoriesTable.questionId, questionsTable.id))
+    .innerJoin(quizzesTable, eq(questionsTable.quizId, quizzesTable.id));
   const directTags = new Map<number, Set<number>>();
   for (const row of tagRows) {
+    if (!admin && !row.published) continue;
     const set = directTags.get(row.categoryId) ?? new Set<number>();
     set.add(row.questionId);
     directTags.set(row.categoryId, set);
@@ -98,7 +121,7 @@ router.get("/categories/tree", async (_req, res): Promise<void> => {
   const taggedCountMap = new Map<number, number>();
   for (const c of categories) taggedCountMap.set(c.id, taggedQuestionSet(c.id).size);
 
-  type Node = { id: number; name: string; slug: string; parentId: number | null; imageUrl: string | null; quizCount: number; taggedQuestionCount: number; children: Node[] };
+  type Node = { id: number; name: string; slug: string; parentId: number | null; imageUrl: string | null; published: boolean; quizCount: number; taggedQuestionCount: number; children: Node[] };
   const nodes: Map<number, Node> = new Map();
   for (const c of categories) {
     nodes.set(c.id, {
@@ -107,6 +130,7 @@ router.get("/categories/tree", async (_req, res): Promise<void> => {
       slug: c.slug,
       parentId: c.parentId,
       imageUrl: c.imageUrl,
+      published: c.published,
       quizCount: countMap.get(c.id) ?? 0,
       taggedQuestionCount: taggedCountMap.get(c.id) ?? 0,
       children: [],
@@ -126,15 +150,25 @@ router.get("/categories/tree", async (_req, res): Promise<void> => {
 });
 
 router.get("/categories/by-slug/:slug", async (req, res): Promise<void> => {
+  const admin = isRequestAdmin(req);
   const slug = String(req.params.slug);
   const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.slug, slug));
-  if (!category) {
+  if (!category || (!category.published && !admin)) {
     res.status(404).json({ error: "Category not found" });
     return;
   }
 
   const all = await db.select().from(categoriesTable).orderBy(asc(categoriesTable.name));
   const byId = new Map(all.map((c) => [c.id, c]));
+
+  // Non-admins may reach a directly-addressable page only when the category and
+  // every ancestor is published. A published child of a draft parent is hidden.
+  const isVisible = (c: typeof categoriesTable.$inferSelect) =>
+    admin || isCategoryVisible(c, byId);
+  if (!isVisible(category)) {
+    res.status(404).json({ error: "Category not found" });
+    return;
+  }
 
   // Build ancestors chain (root → ... → parent)
   const ancestors: typeof all = [];
@@ -149,12 +183,15 @@ router.get("/categories/by-slug/:slug", async (req, res): Promise<void> => {
     cursor = c.parentId;
   }
 
-  // Collect descendants (BFS)
+  // Collect descendants (BFS). Non-admins never see draft subtrees.
   const descendantIds = collectDescendantIds(category.id, all);
-  const descendants = descendantIds.map((id) => byId.get(id)!).filter(Boolean);
+  const descendants = descendantIds
+    .map((id) => byId.get(id)!)
+    .filter((c) => c && isVisible(c));
 
-  // Quizzes: this category + all descendants
-  const includedCategoryIds = [category.id, ...descendantIds];
+  // Quizzes: this category + all visible descendants
+  const visibleDescendantIds = descendants.map((c) => c.id);
+  const includedCategoryIds = [category.id, ...visibleDescendantIds];
   const links = await db
     .select({ quizId: quizCategoriesTable.quizId })
     .from(quizCategoriesTable)
@@ -163,7 +200,9 @@ router.get("/categories/by-slug/:slug", async (req, res): Promise<void> => {
 
   let quizzes: any[] = [];
   if (quizIds.length > 0) {
-    const rows = await db.select().from(quizzesTable).where(inArray(quizzesTable.id, quizIds));
+    const allRows = await db.select().from(quizzesTable).where(inArray(quizzesTable.id, quizIds));
+    // Non-admins only ever see published quizzes here.
+    const rows = admin ? allRows : allRows.filter((q) => q.published);
     const counts = await db
       .select({ quizId: questionsTable.quizId, count: sql<number>`count(*)::int` })
       .from(questionsTable)
@@ -179,6 +218,7 @@ router.get("/categories/by-slug/:slug", async (req, res): Promise<void> => {
     for (const link of quizCatLinks) {
       const c = byId.get(link.categoryId);
       if (!c) continue;
+      if (!isVisible(c)) continue;
       const arr = catsByQuiz.get(link.quizId) ?? [];
       arr.push({ id: c.id, name: c.name, slug: c.slug });
       catsByQuiz.set(link.quizId, arr);
@@ -213,7 +253,7 @@ router.post("/categories", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, parentId, slug } = parsed.data;
+  const { name, parentId, slug, published } = parsed.data;
 
   if (parentId !== null && parentId !== undefined) {
     const [parent] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, parentId));
@@ -227,7 +267,12 @@ router.post("/categories", requireAdmin, async (req, res): Promise<void> => {
 
   const [created] = await db
     .insert(categoriesTable)
-    .values({ name, slug: finalSlug, parentId: parentId ?? null })
+    .values({
+      name,
+      slug: finalSlug,
+      parentId: parentId ?? null,
+      ...(published !== undefined ? { published } : {}),
+    })
     .returning();
 
   res.status(201).json(serializeCategory(created));
@@ -247,7 +292,7 @@ router.patch("/categories/:id", requireAdmin, async (req, res): Promise<void> =>
     return;
   }
 
-  const { name, parentId, slug } = parsed.data;
+  const { name, parentId, slug, published } = parsed.data;
 
   if (parentId === params.data.id) {
     res.status(400).json({ error: "Category cannot be its own parent" });
@@ -273,6 +318,7 @@ router.patch("/categories/:id", requireAdmin, async (req, res): Promise<void> =>
   const updateData: Partial<typeof categoriesTable.$inferInsert> = {};
   if (name !== undefined) updateData.name = name;
   if (parentId !== undefined) updateData.parentId = parentId;
+  if (published !== undefined) updateData.published = published;
   if (slug !== undefined) {
     const desired = slugify(slug);
     if (!desired) {

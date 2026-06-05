@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, inArray } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
-import { db, questionsTable, quizAttemptsTable } from "@workspace/db";
+import { db, questionsTable, quizAttemptsTable, quizzesTable } from "@workspace/db";
 import { SubmitQuizAttemptBody } from "@workspace/api-zod";
+import { isRequestAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
 
@@ -17,13 +18,29 @@ router.post("/quiz-attempts", async (req, res): Promise<void> => {
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
 
+  // Visibility gate: non-admins may only submit against a published quiz, so
+  // draft question content (correctOption/explanation/funFact) can't be probed.
+  const admin = isRequestAdmin(req);
+  const [quiz] = await db
+    .select({ published: quizzesTable.published })
+    .from(quizzesTable)
+    .where(eq(quizzesTable.id, quizId));
+  if (!quiz || (!quiz.published && !admin)) {
+    res.status(404).json({ error: "Quiz not found" });
+    return;
+  }
+
   const questionIds = answers.map((a) => a.questionId);
   const questions = await db
     .select()
     .from(questionsTable)
     .where(inArray(questionsTable.id, questionIds));
 
-  const questionMap = new Map(questions.map((q) => [q.id, q]));
+  // Only questions that actually belong to this quiz are scorable; this blocks
+  // cross-quiz question-id injection from exfiltrating other quizzes' answers.
+  const questionMap = new Map(
+    questions.filter((q) => q.quizId === quizId).map((q) => [q.id, q]),
+  );
 
   let score = 0;
   const questionResults = answers

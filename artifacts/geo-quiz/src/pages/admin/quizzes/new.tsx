@@ -25,12 +25,14 @@ import { Link } from "wouter";
 import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
 import { CategoryTagCombobox } from "@/components/CategoryTagCombobox";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100),
   description: z.string().min(10, "Description must be at least 10 characters").max(500),
   category: z.string().min(2, "Category is required"),
   difficulty: z.enum(["easy", "medium", "hard"]),
+  published: z.boolean(),
 });
 
 export default function AdminCreateQuiz() {
@@ -52,6 +54,7 @@ export default function AdminCreateQuiz() {
       description: "",
       category: "",
       difficulty: "easy",
+      published: false,
     },
   });
 
@@ -197,6 +200,25 @@ export default function AdminCreateQuiz() {
                   Pick one or more categories to organize this quiz in the hierarchy.
                 </p>
               </div>
+
+              <FormField
+                control={form.control}
+                name="published"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel>Publish now</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Off keeps this quiz as a draft, hidden from visitors. You can publish it
+                        anytime.
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
               <div className="space-y-2">
                 <Label>Pre-fill questions by tag (optional)</Label>

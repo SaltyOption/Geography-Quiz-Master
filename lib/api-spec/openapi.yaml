@@ -845,6 +845,8 @@ components:
           type: string
         difficulty:
           type: string
+        published:
+          type: boolean
         questionCount:
           type: integer
         categories:
@@ -859,6 +861,7 @@ components:
         - description
         - category
         - difficulty
+        - published
         - questionCount
         - categories
         - createdAt
@@ -876,6 +879,8 @@ components:
           type: string
         difficulty:
           type: string
+        published:
+          type: boolean
         createdAt:
           type: string
         updatedAt:
@@ -886,6 +891,7 @@ components:
         - description
         - category
         - difficulty
+        - published
         - createdAt
         - updatedAt
 
@@ -902,6 +908,8 @@ components:
           type: string
         difficulty:
           type: string
+        published:
+          type: boolean
         categories:
           type: array
           items:
@@ -920,6 +928,7 @@ components:
         - description
         - category
         - difficulty
+        - published
         - categories
         - createdAt
         - updatedAt
@@ -936,6 +945,8 @@ components:
           type: string
         difficulty:
           type: string
+        published:
+          type: boolean
         categoryIds:
           type: array
           items:
@@ -1096,6 +1107,8 @@ components:
           type: string
         difficulty:
           type: string
+        published:
+          type: boolean
         categoryIds:
           type: array
           items:
@@ -1114,6 +1127,8 @@ components:
           type: ["integer", "null"]
         imageUrl:
           type: ["string", "null"]
+        published:
+          type: boolean
         createdAt:
           type: string
         updatedAt:
@@ -1124,6 +1139,7 @@ components:
         - slug
         - parentId
         - imageUrl
+        - published
         - createdAt
         - updatedAt
 
@@ -1140,6 +1156,8 @@ components:
           type: ["integer", "null"]
         imageUrl:
           type: ["string", "null"]
+        published:
+          type: boolean
         quizCount:
           type: integer
         taggedQuestionCount:
@@ -1154,6 +1172,7 @@ components:
         - slug
         - parentId
         - imageUrl
+        - published
         - quizCount
         - taggedQuestionCount
         - children
@@ -1194,6 +1213,8 @@ components:
           description: "Optional. Auto-generated from name if omitted."
         parentId:
           type: ["integer", "null"]
+        published:
+          type: boolean
       required:
         - name
 
@@ -1206,6 +1227,8 @@ components:
           type: string
         parentId:
           type: ["integer", "null"]
+        published:
+          type: boolean
 
     Question:
       type: object

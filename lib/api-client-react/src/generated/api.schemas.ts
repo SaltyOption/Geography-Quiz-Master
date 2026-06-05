@@ -28,6 +28,7 @@ export interface Category {
   parentId: number | null;
   /** @nullable */
   imageUrl: string | null;
+  published: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +39,7 @@ export interface QuizSummary {
   description: string;
   category: string;
   difficulty: string;
+  published: boolean;
   questionCount: number;
   categories: Category[];
   createdAt: string;
@@ -49,6 +51,7 @@ export interface Quiz {
   description: string;
   category: string;
   difficulty: string;
+  published: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -82,6 +85,7 @@ export interface QuizWithQuestions {
   description: string;
   category: string;
   difficulty: string;
+  published: boolean;
   categories: Category[];
   createdAt: string;
   updatedAt: string;
@@ -93,6 +97,7 @@ export interface CreateQuizBody {
   description: string;
   category: string;
   difficulty: string;
+  published?: boolean;
   categoryIds?: number[];
 }
 
@@ -178,6 +183,7 @@ export interface UpdateQuizBody {
   description?: string;
   category?: string;
   difficulty?: string;
+  published?: boolean;
   categoryIds?: number[];
 }
 
@@ -189,6 +195,7 @@ export interface CategoryNode {
   parentId: number | null;
   /** @nullable */
   imageUrl: string | null;
+  published: boolean;
   quizCount: number;
   taggedQuestionCount: number;
   children: CategoryNode[];
@@ -210,6 +217,7 @@ export interface CreateCategoryBody {
   slug?: string;
   /** @nullable */
   parentId?: number | null;
+  published?: boolean;
 }
 
 export interface UpdateCategoryBody {
@@ -217,6 +225,7 @@ export interface UpdateCategoryBody {
   slug?: string;
   /** @nullable */
   parentId?: number | null;
+  published?: boolean;
 }
 
 export interface CreateQuestionBody {

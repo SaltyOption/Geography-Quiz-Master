@@ -17,6 +17,7 @@ function categoryRow(overrides: Record<string, unknown> = {}) {
     slug: "cat",
     parentId: null,
     imageUrl: null,
+    published: true,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -36,14 +37,14 @@ describe("GET /api/categories/tree", () => {
       categoryRow({ id: 3, name: "Cities", slug: "cities", parentId: 2 }),
       categoryRow({ id: 4, name: "Topic", slug: "topic", parentId: null }),
     ]);
-    // quiz counts per category
-    pushDbResult([{ categoryId: 2, count: 1 }]);
+    // quiz links joined with quizzes.published; counted in JS per category.
+    pushDbResult([{ categoryId: 2, published: true }]);
     // question_categories tag rows. Question 100 tagged on both Africa(2) and
     // Cities(3) must only count once at the ancestor level.
     pushDbResult([
-      { categoryId: 3, questionId: 100 },
-      { categoryId: 3, questionId: 101 },
-      { categoryId: 2, questionId: 100 },
+      { categoryId: 3, questionId: 100, published: true },
+      { categoryId: 3, questionId: 101, published: true },
+      { categoryId: 2, questionId: 100, published: true },
     ]);
 
     const res = await request(app).get("/api/categories/tree");

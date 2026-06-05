@@ -18,12 +18,13 @@ import {
   ImportQuestionsByCategoryBody,
   ImportQuestionsByCategoryParams,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 import {
   getCategoriesByQuestionIds,
   getCategoriesForQuestion,
   setQuestionCategories,
 } from "../lib/questionCategories";
+import { getVisibleCategoryIds } from "../lib/categoryVisibility";
 
 function collectDescendantIds(
   rootId: number,
@@ -53,13 +54,25 @@ router.get("/quizzes/:id/questions", async (req, res): Promise<void> => {
     return;
   }
 
+  // Non-admins must not enumerate questions of a draft quiz (direct-link leak).
+  const admin = isRequestAdmin(req);
+  const [quiz] = await db
+    .select({ published: quizzesTable.published })
+    .from(quizzesTable)
+    .where(eq(quizzesTable.id, params.data.id));
+  if (!quiz || (!quiz.published && !admin)) {
+    res.status(404).json({ error: "Quiz not found" });
+    return;
+  }
+
   const questions = await db
     .select()
     .from(questionsTable)
     .where(eq(questionsTable.quizId, params.data.id))
     .orderBy(questionsTable.orderIndex);
 
-  const catMap = await getCategoriesByQuestionIds(questions.map((q) => q.id));
+  const visibleCatIds = await getVisibleCategoryIds(admin);
+  const catMap = await getCategoriesByQuestionIds(questions.map((q) => q.id), visibleCatIds);
 
   res.json(
     questions.map((q) => ({
@@ -274,6 +287,21 @@ router.get("/questions/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  // A question of a draft quiz must not leak to non-admins via its direct link.
+  const admin = isRequestAdmin(req);
+  if (!admin) {
+    const [quiz] = await db
+      .select({ published: quizzesTable.published })
+      .from(quizzesTable)
+      .where(eq(quizzesTable.id, question.quizId));
+    if (!quiz || !quiz.published) {
+      res.status(404).json({ error: "Question not found" });
+      return;
+    }
+  }
+
+  const visibleCatIds = await getVisibleCategoryIds(admin);
+
   res.json({
     id: question.id,
     quizId: question.quizId,
@@ -284,7 +312,7 @@ router.get("/questions/:id", async (req, res): Promise<void> => {
     funFact: question.funFact ?? null,
     imageUrl: question.imageUrl ?? null,
     orderIndex: question.orderIndex,
-    categories: await getCategoriesForQuestion(question.id),
+    categories: await getCategoriesForQuestion(question.id, visibleCatIds),
     createdAt: question.createdAt.toISOString(),
     updatedAt: question.updatedAt.toISOString(),
   });

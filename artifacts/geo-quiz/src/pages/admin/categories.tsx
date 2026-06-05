@@ -30,6 +30,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -64,8 +65,10 @@ function CategoryTreeNode({
   onSave,
   onDelete,
   onAddChild,
+  onTogglePublished,
   isSavingId,
   isDeletingId,
+  togglingId,
 }: {
   node: CategoryNode;
   depth: number;
@@ -76,8 +79,10 @@ function CategoryTreeNode({
   onSave: (id: number, name: string) => void;
   onDelete: (id: number) => void;
   onAddChild: (parentId: number) => void;
+  onTogglePublished: (id: number, published: boolean) => void;
   isSavingId: number | null;
   isDeletingId: number | null;
+  togglingId: number | null;
 }) {
   const isExpanded = expanded.has(node.id);
   const hasChildren = node.children.length > 0;
@@ -128,10 +133,22 @@ function CategoryTreeNode({
         ) : (
           <>
             <span className="flex-1 font-medium">{node.name}</span>
+            {!node.published && (
+              <Badge variant="outline" className="border-amber-500 text-amber-600 text-xs">
+                Draft
+              </Badge>
+            )}
             <Badge variant="outline" className="text-xs">
               {node.quizCount} {node.quizCount === 1 ? "quiz" : "quizzes"}
             </Badge>
             <div className="flex items-center gap-1">
+              <Switch
+                checked={node.published}
+                disabled={togglingId === node.id}
+                onCheckedChange={(checked) => onTogglePublished(node.id, checked)}
+                aria-label="Toggle published"
+                className="mr-1"
+              />
               <Button
                 size="icon"
                 variant="ghost"
@@ -202,8 +219,10 @@ function CategoryTreeNode({
               onSave={onSave}
               onDelete={onDelete}
               onAddChild={onAddChild}
+              onTogglePublished={onTogglePublished}
               isSavingId={isSavingId}
               isDeletingId={isDeletingId}
+              togglingId={togglingId}
             />
           ))}
         </div>
@@ -226,9 +245,11 @@ export default function AdminCategories() {
   const [editing, setEditing] = useState<EditState | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const [newName, setNewName] = useState("");
   const [newParentId, setNewParentId] = useState<string>(NO_PARENT);
+  const [newPublished, setNewPublished] = useState(false);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetCategoryTreeQueryKey() });
@@ -250,9 +271,10 @@ export default function AdminCategories() {
     if (name.length === 0) return;
     try {
       const parentId = newParentId === NO_PARENT ? null : parseInt(newParentId, 10);
-      await createCategory.mutateAsync({ data: { name, parentId } });
+      await createCategory.mutateAsync({ data: { name, parentId, published: newPublished } });
       setNewName("");
       setNewParentId(NO_PARENT);
+      setNewPublished(false);
       if (parentId !== null) setExpanded((prev) => new Set(prev).add(parentId));
       invalidate();
       toast({ title: "Category created" });
@@ -300,6 +322,19 @@ export default function AdminCategories() {
       toast({ title: "Failed to delete", variant: "destructive" });
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleTogglePublished = async (id: number, published: boolean) => {
+    setTogglingId(id);
+    try {
+      await updateCategory.mutateAsync({ id, data: { published } });
+      invalidate();
+      toast({ title: published ? "Category published" : "Category moved to draft" });
+    } catch {
+      toast({ title: "Failed to update visibility", variant: "destructive" });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -356,6 +391,19 @@ export default function AdminCategories() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="new-published">Publish now</Label>
+                <p className="text-xs text-muted-foreground">
+                  Off keeps it as a draft, hidden from visitors.
+                </p>
+              </div>
+              <Switch
+                id="new-published"
+                checked={newPublished}
+                onCheckedChange={setNewPublished}
+              />
+            </div>
             <Button
               className="w-full"
               onClick={handleCreate}
@@ -399,8 +447,10 @@ export default function AdminCategories() {
                     onSave={handleSaveRename}
                     onDelete={handleDelete}
                     onAddChild={handleAddChild}
+                    onTogglePublished={handleTogglePublished}
                     isSavingId={savingId}
                     isDeletingId={deletingId}
+                    togglingId={togglingId}
                   />
                 ))}
               </div>

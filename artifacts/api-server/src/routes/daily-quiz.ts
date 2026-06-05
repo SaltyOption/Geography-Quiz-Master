@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { eq } from "drizzle-orm";
 import { db, quizzesTable } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -19,9 +20,12 @@ function hashString(s: string): number {
 }
 
 router.get("/daily-quiz", async (_req, res): Promise<void> => {
+  // The daily quiz is a public surface, so drafts are excluded for everyone
+  // (including admins) — it must always match what visitors can actually play.
   const quizzes = await db
     .select({ id: quizzesTable.id })
     .from(quizzesTable)
+    .where(eq(quizzesTable.published, true))
     .orderBy(quizzesTable.id);
 
   if (quizzes.length === 0) {

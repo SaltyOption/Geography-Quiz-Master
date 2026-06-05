@@ -3,6 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { db, quizAttemptsTable, quizzesTable } from "@workspace/db";
 import { GetUserQuizProgressParams } from "@workspace/api-zod";
+import { isRequestAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
 
@@ -19,12 +20,14 @@ const requireAuth = (req: any, res: any, next: any) => {
 
 router.get("/user/progress", requireAuth, async (req: any, res): Promise<void> => {
   const userId = req.userId as string;
+  const admin = isRequestAdmin(req);
 
-  const attempts = await db
+  const allAttempts = await db
     .select({
       id: quizAttemptsTable.id,
       quizId: quizAttemptsTable.quizId,
       quizTitle: quizzesTable.title,
+      published: quizzesTable.published,
       score: quizAttemptsTable.score,
       totalQuestions: quizAttemptsTable.totalQuestions,
       completedAt: quizAttemptsTable.createdAt,
@@ -34,6 +37,9 @@ router.get("/user/progress", requireAuth, async (req: any, res): Promise<void> =
     .where(eq(quizAttemptsTable.userId, userId))
     .orderBy(desc(quizAttemptsTable.createdAt))
     .limit(50);
+
+  // Non-admins never see attempts whose quiz has since been moved to draft.
+  const attempts = admin ? allAttempts : allAttempts.filter((a) => a.published);
 
   const totalAttempts = attempts.length;
   const uniqueQuizIds = new Set(attempts.map((a) => a.quizId));
@@ -71,6 +77,7 @@ router.get("/user/progress", requireAuth, async (req: any, res): Promise<void> =
 
 router.get("/user/progress/:quizId", requireAuth, async (req: any, res): Promise<void> => {
   const userId = req.userId as string;
+  const admin = isRequestAdmin(req);
   const rawId = Array.isArray(req.params.quizId) ? req.params.quizId[0] : req.params.quizId;
   const params = GetUserQuizProgressParams.safeParse({ quizId: rawId });
   if (!params.success) {
@@ -83,6 +90,7 @@ router.get("/user/progress/:quizId", requireAuth, async (req: any, res): Promise
       id: quizAttemptsTable.id,
       quizId: quizAttemptsTable.quizId,
       quizTitle: quizzesTable.title,
+      published: quizzesTable.published,
       score: quizAttemptsTable.score,
       totalQuestions: quizAttemptsTable.totalQuestions,
       completedAt: quizAttemptsTable.createdAt,
@@ -92,7 +100,10 @@ router.get("/user/progress/:quizId", requireAuth, async (req: any, res): Promise
     .where(eq(quizAttemptsTable.userId, userId))
     .orderBy(desc(quizAttemptsTable.createdAt));
 
-  const quizAttempts = attempts.filter((a) => a.quizId === params.data.quizId);
+  // Non-admins never see history for a quiz that has since been moved to draft.
+  const quizAttempts = attempts.filter(
+    (a) => a.quizId === params.data.quizId && (admin || a.published),
+  );
 
   const bestScore = quizAttempts.length > 0 ? Math.max(...quizAttempts.map((a) => a.score)) : 0;
   const bestPercentage =

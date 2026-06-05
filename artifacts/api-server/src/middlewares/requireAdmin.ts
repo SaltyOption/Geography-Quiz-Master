@@ -16,6 +16,15 @@ export function isAdminUserId(userId: string | null | undefined): boolean {
   return getAdminUserIds().has(userId);
 }
 
+/**
+ * Returns true when the request is made by a configured admin user. Used to
+ * decide whether draft (unpublished) content should be included in responses.
+ */
+export function isRequestAdmin(req: Request): boolean {
+  const auth = getAuth(req);
+  return isAdminUserId(auth?.userId);
+}
+
 export const requireAdmin: RequestHandler = (
   req: Request,
   res: Response,

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, primaryKey, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, primaryKey, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { quizzesTable } from "./quizzes";
@@ -10,6 +10,7 @@ export const categoriesTable = pgTable("categories", {
   slug: text("slug").notNull().unique(),
   parentId: integer("parent_id").references((): AnyPgColumn => categoriesTable.id, { onDelete: "set null" }),
   imageUrl: text("image_url"),
+  published: boolean("published").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

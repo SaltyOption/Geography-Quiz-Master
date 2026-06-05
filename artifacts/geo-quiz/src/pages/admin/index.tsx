@@ -3,7 +3,9 @@ import { Link, useLocation } from "wouter";
 import {
   useListQuizzes,
   useDeleteQuiz,
+  useUpdateQuiz,
   getListQuizzesQueryKey,
+  getGetCategoryTreeQueryKey,
   exportQuizzes,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,9 +41,25 @@ import { useToast } from "@/hooks/use-toast";
 export default function AdminDashboard() {
   const { data: quizzes, isLoading } = useListQuizzes();
   const deleteQuiz = useDeleteQuiz();
+  const updateQuiz = useUpdateQuiz();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  const handleTogglePublished = async (id: number, published: boolean) => {
+    setTogglingId(id);
+    try {
+      await updateQuiz.mutateAsync({ id, data: { published } });
+      queryClient.invalidateQueries({ queryKey: getListQuizzesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetCategoryTreeQueryKey() });
+      toast({ title: published ? "Quiz published" : "Quiz moved to draft" });
+    } catch (error) {
+      toast({ title: "Failed to update visibility", variant: "destructive" });
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -177,6 +196,11 @@ export default function AdminDashboard() {
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <h2 className="text-xl font-bold">{quiz.title}</h2>
+                  {!quiz.published && (
+                    <Badge variant="outline" className="border-amber-500 text-amber-600">
+                      Draft
+                    </Badge>
+                  )}
                   <Badge variant={
                     quiz.difficulty === 'hard' ? 'destructive' :
                     quiz.difficulty === 'medium' ? 'default' : 'secondary'
@@ -199,6 +223,15 @@ export default function AdminDashboard() {
               </div>
               
               <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground mr-2">
+                  <Switch
+                    checked={quiz.published}
+                    disabled={togglingId === quiz.id}
+                    onCheckedChange={(checked) => handleTogglePublished(quiz.id, checked)}
+                    aria-label="Toggle published"
+                  />
+                  {quiz.published ? "Published" : "Draft"}
+                </label>
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/admin/quizzes/${quiz.id}`}>
                     <Edit2 className="mr-2 h-4 w-4" /> Edit
