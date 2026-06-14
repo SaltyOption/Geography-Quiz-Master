@@ -563,14 +563,18 @@ export const DeleteQuestionParams = zod.object({
 /**
  * @summary Submit answers for a quiz attempt and get score
  */
+export const submitQuizAttemptBodyAnswersMax = 200;
+
 export const SubmitQuizAttemptBody = zod.object({
   quizId: zod.number(),
-  answers: zod.array(
-    zod.object({
-      questionId: zod.number(),
-      selectedOption: zod.number(),
-    }),
-  ),
+  answers: zod
+    .array(
+      zod.object({
+        questionId: zod.number(),
+        selectedOption: zod.number(),
+      }),
+    )
+    .max(submitQuizAttemptBodyAnswersMax),
 });
 
 export const SubmitQuizAttemptResponse = zod.object({

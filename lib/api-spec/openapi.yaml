@@ -1415,6 +1415,7 @@ components:
           type: integer
         answers:
           type: array
+          maxItems: 200
           items:
             $ref: "#/components/schemas/QuestionAnswer"
       required:

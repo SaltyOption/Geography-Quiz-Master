@@ -544,7 +544,7 @@ router.get("/quizzes/:id/stats", async (req, res): Promise<void> => {
     ? attempts.reduce((sum, a) => sum + a.score, 0) / totalAttempts
     : 0;
   const averagePercentage = totalAttempts > 0
-    ? attempts.reduce((sum, a) => sum + (a.score / a.totalQuestions) * 100, 0) / totalAttempts
+    ? attempts.reduce((sum, a) => sum + (a.totalQuestions > 0 ? (a.score / a.totalQuestions) * 100 : 0), 0) / totalAttempts
     : 0;
 
   res.json({

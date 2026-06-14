@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { eq, inArray } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { db, questionsTable, quizAttemptsTable, quizzesTable } from "@workspace/db";
@@ -6,6 +6,36 @@ import { SubmitQuizAttemptBody } from "@workspace/api-zod";
 import { isRequestAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
+
+// ---------------------------------------------------------------------------
+// Simple in-memory sliding-window rate limiter for attempt submissions.
+// Key: authenticated userId, or remote IP for unauthenticated callers.
+// Limits: 30 attempts per 10-minute window per key.
+// ---------------------------------------------------------------------------
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX = 30;
+const rateLimitCounters = new Map<string, { count: number; windowStart: number }>();
+
+function getRateLimitKey(req: Request, userId: string | null): string {
+  if (userId) return `user:${userId}`;
+  const forwarded = req.headers["x-forwarded-for"];
+  const ip = Array.isArray(forwarded)
+    ? forwarded[0]
+    : (forwarded?.split(",")[0] ?? req.socket.remoteAddress ?? "unknown");
+  return `ip:${ip}`;
+}
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitCounters.get(key);
+  if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
+    rateLimitCounters.set(key, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count += 1;
+  return true;
+}
 
 router.post("/quiz-attempts", async (req, res): Promise<void> => {
   const parsed = SubmitQuizAttemptBody.safeParse(req.body);
@@ -17,6 +47,12 @@ router.post("/quiz-attempts", async (req, res): Promise<void> => {
   const { quizId, answers } = parsed.data;
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
+
+  const rateLimitKey = getRateLimitKey(req, userId);
+  if (!checkRateLimit(rateLimitKey)) {
+    res.status(429).json({ error: "Too many attempts. Please try again later." });
+    return;
+  }
 
   // Visibility gate: non-admins may only submit against a published quiz, so
   // draft question content (correctOption/explanation/funFact) can't be probed.
@@ -30,7 +66,17 @@ router.post("/quiz-attempts", async (req, res): Promise<void> => {
     return;
   }
 
-  const questionIds = answers.map((a) => a.questionId);
+  // Deduplicate answers by questionId — take the first occurrence only.
+  // Duplicate entries would let a caller artificially inflate their score by
+  // submitting the same correct question multiple times in one request.
+  const seenQuestionIds = new Set<number>();
+  const deduplicatedAnswers = answers.filter((a) => {
+    if (seenQuestionIds.has(a.questionId)) return false;
+    seenQuestionIds.add(a.questionId);
+    return true;
+  });
+
+  const questionIds = deduplicatedAnswers.map((a) => a.questionId);
   const questions = await db
     .select()
     .from(questionsTable)
@@ -43,7 +89,7 @@ router.post("/quiz-attempts", async (req, res): Promise<void> => {
   );
 
   let score = 0;
-  const questionResults = answers
+  const questionResults = deduplicatedAnswers
     .map((answer) => {
       const question = questionMap.get(answer.questionId);
       if (!question) return null;
@@ -62,13 +108,26 @@ router.post("/quiz-attempts", async (req, res): Promise<void> => {
 
   const totalQuestions = questionResults.length;
 
-  await db.insert(quizAttemptsTable).values({
-    quizId,
-    userId,
-    score,
-    totalQuestions,
-    answers: answers,
-  });
+  // Reject submissions that contain no scorable in-quiz answers. Persisting
+  // a row with totalQuestions = 0 would cause a zero-division NaN in the
+  // stats aggregation route and contributes nothing meaningful.
+  if (totalQuestions === 0) {
+    res.status(400).json({ error: "No valid answers for this quiz" });
+    return;
+  }
+
+  // Only persist attempts for authenticated users. Anonymous users still receive
+  // their scored results for the current session, but we do not write to the
+  // database — preventing unauthenticated write amplification and stats poisoning.
+  if (userId !== null) {
+    await db.insert(quizAttemptsTable).values({
+      quizId,
+      userId,
+      score,
+      totalQuestions,
+      answers: deduplicatedAnswers,
+    });
+  }
 
   res.json({
     quizId,

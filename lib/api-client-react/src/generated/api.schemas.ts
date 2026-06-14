@@ -291,6 +291,7 @@ export interface QuestionAnswer {
 
 export interface SubmitQuizAttemptBody {
   quizId: number;
+  /** @maxItems 200 */
   answers: QuestionAnswer[];
 }
 
