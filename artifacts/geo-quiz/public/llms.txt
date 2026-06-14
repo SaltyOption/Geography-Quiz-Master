@@ -15,12 +15,7 @@ World Geography Trivia is a free educational site where anyone can test and impr
 
 ## Quiz Categories
 
-Quizzes are organised under two top-level trees:
-
-- By Region: Africa, Antarctica, Asia, Caribbean, Central America, East Asia, Europe, Middle East, North America, Oceania, South America, South Asia, South East Asia
-- By Topic: Ancient Sites, Capitals, Climate and Biomes, Countries, Flags, Lakes and Rivers, Landmarks, Map Skills and Coordinates, Oceans and Seas, Physical Geography, Population and Cities, Regional Geography, World Capitals II
-
-Each category has a dedicated landing page at `/category/{slug}` with subcategories and all quizzes belonging to that branch of the tree.
+Quizzes are organised into categories under a tree of regions and topics. Each category has a dedicated landing page at `/category/{slug}` with subcategories and all quizzes belonging to that branch of the tree. The category inventory changes as new content is published, so the live sitemap is the authoritative source.
 
 ## Content
 
@@ -28,7 +23,7 @@ All quiz questions include the correct answer, a written explanation, and a fun 
 
 ## Sitemap
 
-A full machine-readable URL inventory is available at `/sitemap.xml`.
+A full, always-current machine-readable URL inventory is available at `/sitemap.xml`. This sitemap is generated live from the database and reflects the latest published quizzes, categories, and courses.
 
 ## Attribution and Usage
 

@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, quizzesTable, categoriesTable, coursesTable } from "@workspace/db";
+import { buildVisibleCategoryIds } from "../lib/categoryVisibility";
 
 const router: IRouter = Router();
 
@@ -8,32 +9,35 @@ const router: IRouter = Router();
  * GET /sitemap.xml
  *
  * Serves a dynamically generated sitemap from live database state.
- * This is always current — unlike the static sitemap.xml emitted by prerender.mjs,
- * it reflects quizzes, categories, and courses added since the last deployment.
+ * This is always current — it reflects quizzes, categories, and courses
+ * added since the last deployment.
  *
- * The static file at /sitemap.xml (built by prerender.mjs) is a snapshot taken at
- * deploy time. This endpoint lives at /api/sitemap.xml and can be submitted to
- * search consoles alongside or instead of the static file.
+ * Category URLs apply the same ancestor-aware visibility rule used by the
+ * public category pages: a category is only included when it AND every
+ * ancestor in its chain are published. This prevents the sitemap from
+ * advertising /category/{slug} URLs that would return 404 to crawlers.
  */
 router.get("/sitemap.xml", async (req, res) => {
   const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
   const base = domain || `${req.protocol}://${req.get("host")}`;
 
-  const [publishedQuizzes, publishedCategories, allCourses] = await Promise.all(
+  const [publishedQuizzes, allCategories, allCourses] = await Promise.all(
     [
       db
         .select({ id: quizzesTable.id })
         .from(quizzesTable)
         .where(eq(quizzesTable.published, true)),
-      db
-        .select({ slug: categoriesTable.slug, parentId: categoriesTable.parentId })
-        .from(categoriesTable)
-        .where(eq(categoriesTable.published, true)),
+      db.select().from(categoriesTable),
       db
         .select({ slug: coursesTable.slug })
         .from(coursesTable)
         .orderBy(coursesTable.orderIndex),
     ],
+  );
+
+  const visibleCategoryIds = buildVisibleCategoryIds(allCategories);
+  const publishedCategories = allCategories.filter((c) =>
+    visibleCategoryIds.has(c.id),
   );
 
   const now = new Date().toISOString().split("T")[0];

@@ -1,7 +1,7 @@
 /**
- * SSR page routes for public quiz, category, and course discovery pages.
+ * SSR page routes for public quiz, category, course, and homepage discovery.
  *
- * These routes intercept /quiz/:id, /category/:slug, /courses, and
+ * These routes intercept /, /quiz/:id, /category/:slug, /courses, and
  * /courses/:slug BEFORE the static file server, so crawlers and social bots
  * always receive fresh HTML generated from the current database state —
  * not a prerendered snapshot that may have gone stale since the last deploy.
@@ -26,6 +26,7 @@ import {
 } from "@workspace/db";
 import { buildPageHtml, esc, sharedNav, getRawTemplate } from "../lib/ssrTemplate";
 import { isRequestAdmin } from "../middlewares/requireAdmin";
+import { buildVisibleCategoryIds, type CategoryRow } from "../lib/categoryVisibility";
 
 const router: IRouter = Router();
 
@@ -38,6 +39,75 @@ const HTML_HEADERS = {
 // ---------------------------------------------------------------------------
 // Body builders — mirrors prerender.mjs body generators
 // ---------------------------------------------------------------------------
+
+function homeBody(
+  categories: CategoryRow[],
+  courses: { id: number; slug: string; title: string }[],
+): string {
+  const visibleIds = buildVisibleCategoryIds(categories);
+  const visible = categories.filter((c) => visibleIds.has(c.id));
+
+  const byId = new Map(visible.map((c) => [c.id, c]));
+  const roots: (CategoryRow & { children: CategoryRow[] })[] = [];
+  const childrenMap = new Map<number, CategoryRow[]>();
+
+  for (const c of visible) {
+    if (c.parentId === null) {
+      roots.push({ ...c, children: [] });
+    } else if (byId.has(c.parentId)) {
+      const list = childrenMap.get(c.parentId) ?? [];
+      list.push(c);
+      childrenMap.set(c.parentId, list);
+    }
+  }
+
+  const categorySections = roots
+    .map((root) => {
+      const children = childrenMap.get(root.id) ?? [];
+      const childLinks = children
+        .map(
+          (child) =>
+            `<li><a href="/category/${esc(child.slug)}" style="color:#0e7490">${esc(child.name)}</a></li>`,
+        )
+        .join("\n        ");
+      return (
+        `<section style="margin-bottom:1.5rem">` +
+        `<h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">` +
+        `<a href="/category/${esc(root.slug)}" style="color:#1f2937;text-decoration:none">${esc(root.name)}</a>` +
+        `</h2>` +
+        (childLinks
+          ? `<ul style="padding:0 0 0 1rem;list-style:none;display:flex;flex-direction:column;gap:0.25rem">${childLinks}</ul>`
+          : "") +
+        `</section>`
+      );
+    })
+    .join("\n  ");
+
+  const courseItems = courses
+    .map(
+      (c) =>
+        `<li><a href="/courses/${esc(c.slug)}" style="color:#0e7490">${esc(c.title)}</a></li>`,
+    )
+    .join("\n      ");
+
+  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
+  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Explore the World</h1>
+  <p style="color:#6b7280;margin-bottom:1.5rem">Continents, capitals, cultures, and landmarks — one quick quiz at a time.</p>
+  <nav aria-label="Quick links" style="margin-bottom:1.5rem">
+    <ul style="padding:0;list-style:none;display:flex;gap:1rem">
+      <li><a href="/daily" style="color:#0e7490">Daily Quiz</a></li>
+      <li><a href="/courses" style="color:#0e7490">Courses</a></li>
+    </ul>
+  </nav>
+  ${categorySections ? `<section aria-label="Browse by category" style="margin-bottom:2rem">${categorySections}</section>` : ""}
+  ${courseItems ? `<section aria-label="Learning courses" style="margin-bottom:2rem">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem"><a href="/courses" style="color:#1f2937;text-decoration:none">Learning Courses</a></h2>
+    <ul style="padding:0 0 0 1rem;list-style:none;display:flex;flex-direction:column;gap:0.25rem">
+      ${courseItems}
+    </ul>
+  </section>` : ""}
+</main>`;
+}
 
 function quizBody(quiz: {
   id: number;
@@ -356,14 +426,45 @@ router.get("/courses/:slug", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
+// Route: GET /  (homepage — live category + course inventory)
+//
+// This intercepts the homepage before the static file server so crawlers
+// always see the current published category/course tree, not a snapshot
+// frozen at the last deploy. The ancestor-aware visibility filter matches
+// the same rules used by /category/:slug and the sitemap.
+// ---------------------------------------------------------------------------
+
+router.get("/", async (_req: Request, res: Response) => {
+  const [allCategories, courses] = await Promise.all([
+    db.select().from(categoriesTable),
+    db
+      .select({ id: coursesTable.id, slug: coursesTable.slug, title: coursesTable.title })
+      .from(coursesTable)
+      .orderBy(coursesTable.orderIndex),
+  ]);
+
+  const html = buildPageHtml(
+    {
+      title: SITE_NAME,
+      description:
+        "Play world geography quizzes and short courses covering capitals, countries, landmarks, and regions.",
+      path: "/",
+    },
+    homeBody(allCategories, courses),
+  );
+
+  res.set(HTML_HEADERS).send(html);
+});
+
+// ---------------------------------------------------------------------------
 // Catch-all fallbacks — serve the SPA template for subroutes that are not
 // handled by the specific SSR handlers above.
 //
-// Because the artifact.toml routes /quiz, /category, and /courses to this
-// server as prefix paths, deeper SPA routes like /quiz/:id/results or
-// /courses/:slug/modules/:moduleSlug also land here. Those routes are
-// client-side-only, so we must serve the raw index.html so the React app
-// can take over. Without these, unmatched subroutes return 404.
+// The artifact.toml routes /, /quiz, /category, /courses, /sitemap.xml, and
+// /api to this server. Deeper SPA-only routes (/quiz/:id/results, /profile,
+// /admin/*, /daily, etc.) land here and must receive index.html so the React
+// app can take over client-side. Without this catch-all, unmatched routes
+// return 404.
 // ---------------------------------------------------------------------------
 
 const SPA_HEADERS = {
@@ -376,8 +477,12 @@ function serveSpaFallback(res: Response): void {
   if (template) {
     res.set(SPA_HEADERS).send(template);
   } else {
-    // Template not available (dev without a build) — redirect to the frontend
-    res.redirect(302, "/");
+    // Template not available (dev without a build): serve a minimal prompt.
+    // Run `pnpm --filter @workspace/geo-quiz run build` to enable the full SPA.
+    res.set({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }).send(
+      `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>World Geography Trivia</title></head>` +
+        `<body><p>Frontend not built. Run <code>pnpm --filter @workspace/geo-quiz run build</code> to enable the full app.</p></body></html>`,
+    );
   }
 }
 
@@ -388,5 +493,8 @@ router.get("/category/*splat", (_req: Request, res: Response) =>
 router.get("/courses/*splat", (_req: Request, res: Response) =>
   serveSpaFallback(res),
 );
+// Root catch-all: handles /profile, /admin/*, /daily, /privacy, and any other
+// SPA routes that aren't covered by a specific SSR handler above.
+router.get("/*splat", (_req: Request, res: Response) => serveSpaFallback(res));
 
 export default router;
