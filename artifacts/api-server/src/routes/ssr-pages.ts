@@ -718,12 +718,56 @@ router.get("/", async (_req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
+// Route: GET /daily
+// ---------------------------------------------------------------------------
+
+router.get("/daily", (_req: Request, res: Response) => {
+  const html = buildPageHtml(
+    {
+      title: "Daily Quiz",
+      description:
+        "Take today's daily geography quiz on World Geography Trivia. A new quiz every day — test your knowledge of capitals, countries, landmarks, and regions.",
+      path: "/daily",
+    },
+    `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
+  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Daily Quiz</h1>
+  <p style="color:#6b7280">A new geography quiz every day. Test your knowledge of capitals, countries, landmarks, and regions.</p>
+  <p style="margin-top:1rem"><a href="/daily" style="color:#0e7490;font-weight:600">Take today's quiz →</a></p>
+</main>`,
+  );
+
+  res.set(HTML_HEADERS).send(html);
+});
+
+// ---------------------------------------------------------------------------
+// Route: GET /privacy
+// ---------------------------------------------------------------------------
+
+router.get("/privacy", (_req: Request, res: Response) => {
+  const html = buildPageHtml(
+    {
+      title: "Privacy Policy",
+      description:
+        "Read the World Geography Trivia privacy policy. We never sell your data, collect only what we need to run the site, and let you delete your account at any time.",
+      path: "/privacy",
+    },
+    `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
+  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Privacy Policy</h1>
+  <p style="color:#6b7280">We never sell your data. We collect only what we need to run the site, and you can delete your account at any time.</p>
+  <p style="margin-top:1rem"><a href="/" style="color:#0e7490">Back to home →</a></p>
+</main>`,
+  );
+
+  res.set(HTML_HEADERS).send(html);
+});
+
+// ---------------------------------------------------------------------------
 // Catch-all fallbacks — serve the SPA template for subroutes that are not
 // handled by the specific SSR handlers above.
 //
 // The artifact.toml routes /, /quiz, /category, /courses, /sitemap.xml, and
 // /api to this server. Deeper SPA-only routes (/quiz/:id/results, /profile,
-// /admin/*, /daily, etc.) land here and must receive index.html so the React
+// /admin/*, etc.) land here and must receive index.html so the React
 // app can take over client-side. Without this catch-all, unmatched routes
 // return 404.
 // ---------------------------------------------------------------------------

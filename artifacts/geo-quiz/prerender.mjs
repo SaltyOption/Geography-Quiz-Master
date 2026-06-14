@@ -764,11 +764,7 @@ console.log("\nGenerating sitemap.xml and robots.txt…");
 // 9. robots.txt — generated with the correct canonical Sitemap URL
 // ---------------------------------------------------------------------------
 {
-  // Include both the static build-time sitemap and the dynamic live sitemap
-  // so crawlers always have access to the most current URL inventory.
-  const sitemapLine = domain
-    ? `\nSitemap: ${domain}/sitemap.xml\nSitemap: ${domain}/api/sitemap.xml`
-    : "";
+  const sitemapLine = domain ? `\nSitemap: ${domain}/sitemap.xml` : "";
 
   const robots =
     `User-agent: *\n` +
