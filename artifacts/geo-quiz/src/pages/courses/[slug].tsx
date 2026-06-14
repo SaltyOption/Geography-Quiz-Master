@@ -1,6 +1,7 @@
 import { Link, useParams } from "wouter";
 import { Show } from "@clerk/react";
 import { useGetCourse } from "@workspace/api-client-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import {
   Loader2,
   ArrowLeft,
@@ -19,6 +20,18 @@ import { Progress } from "@/components/ui/progress";
 export default function CourseDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: course, isLoading, error } = useGetCourse(slug!);
+
+  usePageMeta(
+    course
+      ? {
+          title: course.title,
+          description:
+            course.description ??
+            `Study ${course.title} on World Geography Trivia. Work through structured modules with explanations and fun facts to master geography one step at a time.`,
+          canonical: `${window.location.origin}/courses/${slug}`,
+        }
+      : null,
+  );
 
   if (isLoading) {
     return (

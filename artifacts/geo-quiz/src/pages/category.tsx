@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getGetCategoryBySlugQueryKey, useGetCategoryBySlug, useGetUserProgress } from "@workspace/api-client-react";
 import { Link, useRoute } from "wouter";
 import { Loader2, Play, CheckCircle2, ChevronRight, MapPin, FolderTree, ArrowLeft, Share2, Check } from "lucide-react";
@@ -7,26 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Show } from "@clerk/react";
 import { useToast } from "@/hooks/use-toast";
-
-function setMeta(name: string, content: string) {
-  let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
-  if (!el) {
-    el = document.createElement("meta");
-    el.setAttribute("name", name);
-    document.head.appendChild(el);
-  }
-  el.setAttribute("content", content);
-}
-
-function setOg(property: string, content: string) {
-  let el = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
-  if (!el) {
-    el = document.createElement("meta");
-    el.setAttribute("property", property);
-    document.head.appendChild(el);
-  }
-  el.setAttribute("content", content);
-}
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function CategoryPage() {
   const [, params] = useRoute("/category/:slug");
@@ -38,32 +19,24 @@ export default function CategoryPage() {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  // SEO meta tags
-  useEffect(() => {
-    if (!data) return;
-    const { category, quizzes, ancestors } = data;
-    const path = ancestors.map((a) => a.name).concat(category.name).join(" › ");
-    const title = `${category.name} — World Geography Trivia`;
-    const description =
-      quizzes.length > 0
-        ? `Explore ${quizzes.length} ${quizzes.length === 1 ? "quiz" : "quizzes"} in ${path}. Test your knowledge of ${category.name.toLowerCase()} on World Geography Trivia.`
-        : `Browse the ${category.name} category on World Geography Trivia.`;
+  const categoryMeta = data
+    ? (() => {
+        const { category, quizzes, ancestors } = data;
+        const path = ancestors.map((a) => a.name).concat(category.name).join(" › ");
+        const description =
+          quizzes.length > 0
+            ? `Explore ${quizzes.length} ${quizzes.length === 1 ? "quiz" : "quizzes"} in ${path}. Test your knowledge of ${category.name.toLowerCase()} on World Geography Trivia.`
+            : `Browse the ${category.name} category on World Geography Trivia.`;
+        return {
+          title: category.name,
+          description,
+          canonical: `${window.location.origin}/category/${slug}`,
+          ogImage: `${window.location.origin}/opengraph.jpg`,
+        };
+      })()
+    : null;
 
-    const prevTitle = document.title;
-    document.title = title;
-    setMeta("description", description);
-    setOg("og:title", title);
-    setOg("og:description", description);
-    setOg("og:type", "website");
-    setOg("og:url", window.location.href);
-    setMeta("twitter:card", "summary");
-    setMeta("twitter:title", title);
-    setMeta("twitter:description", description);
-
-    return () => {
-      document.title = prevTitle;
-    };
-  }, [data]);
+  usePageMeta(categoryMeta);
 
   const handleShare = async () => {
     const url = window.location.href;

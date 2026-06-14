@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Shield, Mail, Database, Cookie, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,14 @@ const sections: Array<{
 ];
 
 export default function PrivacyPage() {
+  usePageMeta({
+    title: "Privacy Policy",
+    description:
+      "Read the World Geography Trivia privacy policy. We never sell your data, collect only what we need to run the site, and let you delete your account at any time.",
+    canonical: window.location.origin + "/privacy",
+    twitterCard: "summary",
+  });
+
   return (
     <div className="container max-w-3xl py-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-10 text-center">

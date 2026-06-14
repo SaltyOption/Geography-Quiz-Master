@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useGetDailyQuiz, getGetDailyQuizQueryKey } from "@workspace/api-client-react";
 import { Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 function utcDateKey(): string {
   const d = new Date();
@@ -10,6 +11,13 @@ function utcDateKey(): string {
 }
 
 export default function DailyQuizPage() {
+  usePageMeta({
+    title: "Daily Quiz",
+    description:
+      "Take today's daily geography quiz on World Geography Trivia. A new quiz every day — test your knowledge of capitals, countries, landmarks, and regions.",
+    canonical: window.location.origin + "/daily",
+  });
+
   const [, setLocation] = useLocation();
   const dateKey = utcDateKey();
   const { data, isLoading, isFetching, error } = useGetDailyQuiz({

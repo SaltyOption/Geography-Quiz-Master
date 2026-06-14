@@ -4,6 +4,7 @@ import {
   useListCourses,
   type CourseSummary,
 } from "@workspace/api-client-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Loader2, BookOpen, ChevronRight, GraduationCap, Trophy, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,13 @@ function CourseCard({ course }: { course: CourseSummary }) {
 }
 
 export default function CoursesPage() {
+  usePageMeta({
+    title: "Geography Courses",
+    description:
+      "Learn world geography through structured courses. Master modules on capitals, regions, landmarks, and more — each course builds knowledge step by step.",
+    canonical: window.location.origin + "/courses",
+  });
+
   const { data: courses, isLoading, error } = useListCourses();
 
   if (isLoading) {
