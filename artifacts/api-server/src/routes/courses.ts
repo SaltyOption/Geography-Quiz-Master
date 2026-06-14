@@ -557,6 +557,30 @@ router.post("/course-modules/:moduleId/attempts", async (req, res): Promise<void
     return;
   }
 
+  // Enforce module ordering: the user must have mastered the previous module
+  // before they can submit an attempt for this one. This mirrors the lock
+  // check on GET /courses/:slug/modules/:moduleSlug.
+  const allModules = await db
+    .select()
+    .from(courseModulesTable)
+    .where(eq(courseModulesTable.courseId, mod.courseId))
+    .orderBy(asc(courseModulesTable.orderIndex), asc(courseModulesTable.id));
+
+  const modIdx = allModules.findIndex((m) => m.id === mod.id);
+  const prevMod = modIdx > 0 ? allModules[modIdx - 1] : null;
+
+  if (prevMod) {
+    const prevStats = await getModuleStatsForUser([prevMod.id], userId);
+    const prevMastered = prevStats.get(prevMod.id)?.mastered ?? false;
+    if (!prevMastered) {
+      res.status(403).json({
+        error: "Module is locked. Master the previous module first.",
+        previousModuleSlug: prevMod.slug,
+      });
+      return;
+    }
+  }
+
   const lessons = await db
     .select({ id: courseLessonsTable.id })
     .from(courseLessonsTable)

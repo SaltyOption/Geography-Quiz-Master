@@ -128,6 +128,8 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
   it("scores signed-in attempts and reports mastery threshold", async () => {
     // module lookup
     pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]);
+    // allModules (only this module — no prev, no lock check)
+    pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]);
     // lessons
     pushDbResult([{ id: 10 }]);
     // questions
@@ -173,6 +175,8 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
   });
 
   it("marks attempt mastered when percentage >= 80", async () => {
+    pushDbResult([{ id: 7, courseId: 1, slug: "m2", title: "M2", orderIndex: 1 }]);
+    // allModules (only this module — no prev, no lock check)
     pushDbResult([{ id: 7, courseId: 1, slug: "m2", title: "M2", orderIndex: 1 }]);
     pushDbResult([{ id: 20 }]);
     pushDbResult([
@@ -246,6 +250,8 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
 describe("POST /api/course-modules/:moduleId/attempts — bypass protection", () => {
   it("ignores duplicate answers for the same question", async () => {
     pushDbResult([{ id: 8, courseId: 1, slug: "m3", title: "M3", orderIndex: 2 }]);
+    // allModules (only this module — no prev, no lock check)
+    pushDbResult([{ id: 8, courseId: 1, slug: "m3", title: "M3", orderIndex: 2 }]);
     pushDbResult([{ id: 30 }]);
     pushDbResult([
       { id: 300, lessonId: 30, text: "Q", options: ["a", "b", "c", "d"], correctOption: 0, explanation: "ex", funFact: null },
@@ -277,6 +283,8 @@ describe("POST /api/course-modules/:moduleId/attempts — bypass protection", ()
 
   it("ignores answers for unknown questionIds and partial submissions count as wrong", async () => {
     pushDbResult([{ id: 9, courseId: 1, slug: "m4", title: "M4", orderIndex: 3 }]);
+    // allModules (only this module — no prev, no lock check)
+    pushDbResult([{ id: 9, courseId: 1, slug: "m4", title: "M4", orderIndex: 3 }]);
     pushDbResult([{ id: 40 }]);
     pushDbResult([
       { id: 400, lessonId: 40, text: "Q", options: ["a", "b", "c", "d"], correctOption: 0, explanation: "ex", funFact: null },
@@ -303,6 +311,84 @@ describe("POST /api/course-modules/:moduleId/attempts — bypass protection", ()
     const unanswered = res.body.questionResults.find((r: { questionId: number }) => r.questionId === 401);
     expect(unanswered.isCorrect).toBe(false);
     expect(unanswered.selectedOption).toBe(-1);
+  });
+});
+
+describe("POST /api/course-modules/:moduleId/attempts — lock enforcement", () => {
+  it("returns 403 when the previous module has not been mastered", async () => {
+    // module lookup — module 12 is the second in course 2
+    pushDbResult([{ id: 12, courseId: 2, slug: "mod-2", title: "Mod 2", orderIndex: 1 }]);
+    // allModules — two modules, so module 12 has a predecessor (module 11)
+    pushDbResult([
+      { id: 11, courseId: 2, slug: "mod-1", title: "Mod 1", orderIndex: 0 },
+      { id: 12, courseId: 2, slug: "mod-2", title: "Mod 2", orderIndex: 1 },
+    ]);
+    // getModuleStatsForUser for prevMod (11) — no attempts yet, not mastered
+    pushDbResult([]);
+
+    const res = await request(app)
+      .post("/api/course-modules/12/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ answers: [] });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/locked/i);
+    expect(res.body.previousModuleSlug).toBe("mod-1");
+  });
+
+  it("allows attempt when the previous module has been mastered", async () => {
+    // module lookup — module 22 is the second in course 3
+    pushDbResult([{ id: 22, courseId: 3, slug: "mod-b", title: "Mod B", orderIndex: 1 }]);
+    // allModules — two modules
+    pushDbResult([
+      { id: 21, courseId: 3, slug: "mod-a", title: "Mod A", orderIndex: 0 },
+      { id: 22, courseId: 3, slug: "mod-b", title: "Mod B", orderIndex: 1 },
+    ]);
+    // getModuleStatsForUser for prevMod (21) — mastered (bestPercentage >= 80)
+    pushDbResult([{ moduleId: 21, attempts: 1, bestPercentage: 100 }]);
+    // lessons
+    pushDbResult([{ id: 50 }]);
+    // questions — 1 question
+    pushDbResult([
+      { id: 500, lessonId: 50, text: "Q", options: ["a", "b", "c", "d"], correctOption: 0, explanation: "ex", funFact: null },
+    ]);
+    // getModuleStatsForUser for current mod (previouslyMastered check) — empty
+    pushDbResult([]);
+
+    const res = await request(app)
+      .post("/api/course-modules/22/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ answers: [{ questionId: 500, selectedOption: 0 }] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(1);
+    expect(res.body.totalQuestions).toBe(1);
+    expect(res.body.percentage).toBe(100);
+    expect(res.body.mastered).toBe(true);
+  });
+
+  it("allows attempt for the first module in a course (no lock)", async () => {
+    // module lookup — module 31 is the only module in course 4
+    pushDbResult([{ id: 31, courseId: 4, slug: "first-mod", title: "First", orderIndex: 0 }]);
+    // allModules — only one module, no previous
+    pushDbResult([{ id: 31, courseId: 4, slug: "first-mod", title: "First", orderIndex: 0 }]);
+    // lessons
+    pushDbResult([{ id: 60 }]);
+    // questions
+    pushDbResult([
+      { id: 600, lessonId: 60, text: "Q", options: ["a", "b", "c", "d"], correctOption: 2, explanation: "ex", funFact: null },
+    ]);
+    // getModuleStatsForUser for current mod (previouslyMastered check)
+    pushDbResult([]);
+
+    const res = await request(app)
+      .post("/api/course-modules/31/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ answers: [{ questionId: 600, selectedOption: 2 }] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(1);
+    expect(res.body.mastered).toBe(true);
   });
 });
 
