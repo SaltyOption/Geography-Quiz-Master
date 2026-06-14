@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, Link } from "wouter";
 import { useGetQuiz, useSubmitQuizAttempt, getGetQuizQueryKey } from "@workspace/api-client-react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, ChevronRight, Home, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import mascotThinkingUrl from "@assets/mascot_swallow_thinking.png";
 
@@ -82,8 +83,41 @@ export default function QuizPage() {
 
   if (!currentQuestion) return null;
 
+  const primaryCategory = quizData.categories?.[0];
+
   return (
     <div className="container max-w-3xl py-8">
+      {/* Breadcrumb */}
+      <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground flex-wrap">
+        <Link href="/" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+          <Home className="h-3.5 w-3.5" />
+          Home
+        </Link>
+        {primaryCategory && (
+          <>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            <Link href={`/category/${primaryCategory.slug}`} className="hover:text-foreground transition-colors">
+              {primaryCategory.name}
+            </Link>
+          </>
+        )}
+        <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+        <span className="text-foreground font-medium truncate max-w-[200px]">{quizData.title}</span>
+      </nav>
+
+      {/* Category chips */}
+      {quizData.categories && quizData.categories.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {quizData.categories.map((cat) => (
+            <Link key={cat.id} href={`/category/${cat.slug}`}>
+              <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80 transition-colors">
+                {cat.name}
+              </Badge>
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* Header & Progress */}
       <div className="mb-8 space-y-4">
         <div className="flex items-center justify-between text-sm font-medium">

@@ -200,20 +200,27 @@ export default function Home() {
                     </p>
                   </div>
                   {root.children.length > 2 ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      data-testid={`button-home-root-toggle-${root.id}`}
-                      onClick={() =>
-                        setExpandedRoots((prev) => ({ ...prev, [root.id]: !prev[root.id] }))
-                      }
-                    >
-                      {expandedRoots[root.id] ? (
-                        <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
-                      ) : (
-                        <>View all <ChevronDown className="ml-1 h-4 w-4" /></>
-                      )}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/category/${root.slug}`}>
+                          View all <ChevronRight className="ml-1 h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid={`button-home-root-toggle-${root.id}`}
+                        onClick={() =>
+                          setExpandedRoots((prev) => ({ ...prev, [root.id]: !prev[root.id] }))
+                        }
+                      >
+                        {expandedRoots[root.id] ? (
+                          <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
+                        ) : (
+                          <>Expand <ChevronDown className="ml-1 h-4 w-4" /></>
+                        )}
+                      </Button>
+                    </div>
                   ) : (
                     <Button asChild variant="ghost" size="sm">
                       <Link href={`/category/${root.slug}`}>
@@ -234,11 +241,11 @@ export default function Home() {
                   </Card>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {root.children
-                      .slice(0, expandedRoots[root.id] ? undefined : 2)
-                      .map((child) => (
-                        <CategoryCard key={child.id} node={child} />
-                      ))}
+                    {root.children.map((child, i) => (
+                      <div key={child.id} className={!expandedRoots[root.id] && i >= 2 ? "hidden" : undefined}>
+                        <CategoryCard node={child} />
+                      </div>
+                    ))}
                   </div>
                 )}
               </section>
