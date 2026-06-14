@@ -9,10 +9,12 @@ import meRouter from "./me";
 import newsletterRouter from "./newsletter";
 import dailyQuizRouter from "./daily-quiz";
 import coursesRouter from "./courses";
+import sitemapRouter from "./sitemap";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(sitemapRouter);
 router.use(meRouter);
 router.use(newsletterRouter);
 router.use(dailyQuizRouter);

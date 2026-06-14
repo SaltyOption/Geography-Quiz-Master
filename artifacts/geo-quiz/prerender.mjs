@@ -488,4 +488,132 @@ for (const course of data.courses) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// 8. sitemap.xml — generated from live DB data + VITE_CANONICAL_DOMAIN
+// ---------------------------------------------------------------------------
+console.log("\nGenerating sitemap.xml and robots.txt…");
+{
+  const now = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+  if (!domain) {
+    console.warn(
+      "  ⚠  VITE_CANONICAL_DOMAIN not set — sitemap <loc> values will be relative paths only.",
+    );
+  }
+
+  const base = domain || "";
+
+  /** Encode a bare URL (no escaping of slash/colon needed for <loc>). */
+  function xmlEsc(str) {
+    return String(str ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function urlEntry({ loc, changefreq, priority }) {
+    return [
+      "  <url>",
+      `    <loc>${xmlEsc(loc)}</loc>`,
+      `    <changefreq>${changefreq}</changefreq>`,
+      `    <priority>${priority}</priority>`,
+      `    <lastmod>${now}</lastmod>`,
+      "  </url>",
+    ].join("\n");
+  }
+
+  const staticUrls = [
+    { loc: `${base}/`, changefreq: "daily", priority: "1.0" },
+    { loc: `${base}/daily`, changefreq: "daily", priority: "0.9" },
+    { loc: `${base}/courses`, changefreq: "weekly", priority: "0.8" },
+    { loc: `${base}/privacy`, changefreq: "monthly", priority: "0.3" },
+  ];
+
+  const categoryUrls = data.categories.map((cat) => ({
+    loc: `${base}/category/${cat.slug}`,
+    changefreq: "weekly",
+    priority: cat.parent_id ? "0.7" : "0.8",
+  }));
+
+  const quizUrls = data.quizzes.map((quiz) => ({
+    loc: `${base}/quiz/${quiz.id}`,
+    changefreq: "monthly",
+    priority: "0.6",
+  }));
+
+  const courseUrls = data.courses.map((course) => ({
+    loc: `${base}/courses/${course.slug}`,
+    changefreq: "monthly",
+    priority: "0.7",
+  }));
+
+  const allUrls = [...staticUrls, ...categoryUrls, ...quizUrls, ...courseUrls];
+
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    allUrls.map(urlEntry).join("\n") +
+    `\n</urlset>\n`;
+
+  writeFileSync(join(distDir, "sitemap.xml"), xml, "utf-8");
+  console.log(
+    `  ✓  sitemap.xml (${allUrls.length} URLs: ${data.quizzes.length} quizzes, ${data.categories.length} categories, ${data.courses.length} courses)`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 9. robots.txt — generated with the correct canonical Sitemap URL
+// ---------------------------------------------------------------------------
+{
+  // Include both the static build-time sitemap and the dynamic live sitemap
+  // so crawlers always have access to the most current URL inventory.
+  const sitemapLine = domain
+    ? `\nSitemap: ${domain}/sitemap.xml\nSitemap: ${domain}/api/sitemap.xml`
+    : "";
+
+  const robots =
+    `User-agent: *\n` +
+    `Allow: /\n` +
+    `Disallow: /admin\n` +
+    `Disallow: /sign-in\n` +
+    `Disallow: /sign-up\n` +
+    `Disallow: /profile\n` +
+    `\n` +
+    `# AI crawlers — public educational geography content is welcome to index\n` +
+    `User-agent: GPTBot\n` +
+    `Allow: /\n` +
+    `Disallow: /admin\n` +
+    `Disallow: /sign-in\n` +
+    `Disallow: /sign-up\n` +
+    `Disallow: /profile\n` +
+    `\n` +
+    `User-agent: ClaudeBot\n` +
+    `Allow: /\n` +
+    `Disallow: /admin\n` +
+    `Disallow: /sign-in\n` +
+    `Disallow: /sign-up\n` +
+    `Disallow: /profile\n` +
+    `\n` +
+    `User-agent: PerplexityBot\n` +
+    `Allow: /\n` +
+    `Disallow: /admin\n` +
+    `Disallow: /sign-in\n` +
+    `Disallow: /sign-up\n` +
+    `Disallow: /profile\n` +
+    `\n` +
+    `User-agent: Applebot-Extended\n` +
+    `Allow: /\n` +
+    `Disallow: /admin\n` +
+    `Disallow: /sign-in\n` +
+    `Disallow: /sign-up\n` +
+    `Disallow: /profile\n` +
+    sitemapLine +
+    `\n`;
+
+  writeFileSync(join(distDir, "robots.txt"), robots, "utf-8");
+  console.log(
+    `  ✓  robots.txt${domain ? ` (Sitemap: ${domain}/sitemap.xml)` : " (no VITE_CANONICAL_DOMAIN — Sitemap line omitted)"}`,
+  );
+}
+
 console.log("\n✓ Prerender complete.");
