@@ -1266,9 +1266,6 @@ components:
         - quizId
         - text
         - options
-        - correctOption
-        - explanation
-        - funFact
         - imageUrl
         - orderIndex
         - categories
@@ -1698,9 +1695,6 @@ components:
         - id
         - text
         - options
-        - correctOption
-        - explanation
-        - funFact
         - learningObjective
         - difficulty
         - questionType

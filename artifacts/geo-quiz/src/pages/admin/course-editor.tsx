@@ -48,8 +48,8 @@ function toEditState(q: CourseQuestion): EditState {
   return {
     text: q.text,
     options: [...q.options],
-    correctOption: q.correctOption,
-    explanation: q.explanation,
+    correctOption: q.correctOption ?? 0,
+    explanation: q.explanation ?? "",
     funFact: q.funFact ?? "",
     learningObjective: q.learningObjective ?? "",
     difficulty: q.difficulty ?? "",

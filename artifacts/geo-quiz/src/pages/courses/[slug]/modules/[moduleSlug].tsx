@@ -16,7 +16,6 @@ import {
   ArrowRight,
   CheckCircle2,
   XCircle,
-  Sparkles,
   Trophy,
   Target,
   RotateCcw,
@@ -184,7 +183,6 @@ export default function ModuleTakingPage() {
   const current = questions[idx];
   const total = questions.length;
   const progress = (idx / total) * 100;
-  const isCorrect = answered && current && selected === current.correctOption;
 
   const handleSelect = (optionIndex: number) => {
     if (answered || !current) return;
@@ -413,18 +411,14 @@ export default function ModuleTakingPage() {
         <div className="grid gap-3">
           {current.options.map((option, i) => {
             const isSelected = selected === i;
-            const isAnswerCorrect = i === current.correctOption;
             let cls =
               "justify-start h-auto min-h-[3.5rem] text-left p-4 whitespace-normal text-base border-2 transition-all ";
             if (!answered) {
               cls +=
                 "hover:border-primary/50 hover:bg-primary/5 bg-card border-card-border shadow-sm";
             } else {
-              if (isAnswerCorrect)
-                cls +=
-                  "border-green-500 bg-green-500/10 text-green-900 dark:text-green-300 ring-2 ring-green-500/30";
-              else if (isSelected)
-                cls += "border-destructive bg-destructive/10 text-destructive ring-2 ring-destructive/30";
+              if (isSelected)
+                cls += "border-primary bg-primary/10 ring-2 ring-primary/30";
               else cls += "opacity-50 border-card-border bg-card";
             }
             return (
@@ -436,19 +430,11 @@ export default function ModuleTakingPage() {
                 disabled={answered}
                 data-testid={`button-option-${i}`}
               >
-                <div className="flex w-full items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    <span>{option}</span>
-                  </div>
-                  {answered && isAnswerCorrect && (
-                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
-                  )}
-                  {answered && isSelected && !isAnswerCorrect && (
-                    <XCircle className="h-5 w-5 shrink-0 text-destructive" />
-                  )}
+                <div className="flex w-full items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span>{option}</span>
                 </div>
               </Button>
             );
@@ -456,59 +442,22 @@ export default function ModuleTakingPage() {
         </div>
 
         {answered && (
-          <div className="mt-6 animate-in slide-in-from-bottom-4 fade-in duration-300 space-y-4">
-            <Card
-              className={
-                isCorrect
-                  ? "border-green-200 bg-green-50/50 dark:border-green-900/30 dark:bg-green-900/10"
-                  : "border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-900/10"
-              }
+          <div className="mt-6 flex justify-end pt-2">
+            <Button
+              size="lg"
+              onClick={handleNext}
+              disabled={submit.isPending}
+              data-testid="button-next"
             >
-              <CardContent className="p-5">
-                <h3
-                  className={`text-base font-bold mb-2 flex items-center gap-2 ${
-                    isCorrect ? "text-green-700 dark:text-green-400" : "text-destructive"
-                  }`}
-                >
-                  {isCorrect ? (
-                    <>
-                      <CheckCircle2 className="h-5 w-5" /> Correct!
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-5 w-5" /> Not quite.
-                    </>
-                  )}
-                </h3>
-                <p className="text-sm text-foreground leading-relaxed">{current.explanation}</p>
-                {current.funFact && (
-                  <div className="mt-3 rounded-lg bg-primary/5 p-3 border border-primary/10">
-                    <h4 className="flex items-center gap-2 font-bold text-primary mb-1 text-xs uppercase tracking-wider">
-                      <Sparkles className="h-3.5 w-3.5" /> Fun fact
-                    </h4>
-                    <p className="text-sm text-muted-foreground">{current.funFact}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="flex justify-end pt-2">
-              <Button
-                size="lg"
-                onClick={handleNext}
-                disabled={submit.isPending}
-                data-testid="button-next"
-              >
-                {submit.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                {idx < total - 1 ? (
-                  <>
-                    Next question <ArrowRight className="ml-2 h-5 w-5" />
-                  </>
-                ) : (
-                  "Finish module"
-                )}
-              </Button>
-            </div>
+              {submit.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+              {idx < total - 1 ? (
+                <>
+                  Next question <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              ) : (
+                "Finish module"
+              )}
+            </Button>
           </div>
         )}
       </div>

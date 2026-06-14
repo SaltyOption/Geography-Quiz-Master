@@ -18,7 +18,7 @@ import {
   UpdateCourseQuestionParams,
   UpdateCourseQuestionBody,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
 
@@ -327,6 +327,7 @@ router.get("/courses/:slug/modules/:moduleSlug", async (req, res): Promise<void>
     qByLesson.set(q.lessonId, arr);
   }
 
+  const admin = isRequestAdmin(req);
   const lessonsOut = lessons.map((l) => ({
     id: l.id,
     slug: l.slug,
@@ -336,9 +337,11 @@ router.get("/courses/:slug/modules/:moduleSlug", async (req, res): Promise<void>
       id: q.id,
       text: q.text,
       options: q.options,
-      correctOption: q.correctOption,
-      explanation: q.explanation,
-      funFact: q.funFact ?? null,
+      ...(admin ? {
+        correctOption: q.correctOption,
+        explanation: q.explanation,
+        funFact: q.funFact ?? null,
+      } : {}),
       learningObjective: q.learningObjective ?? null,
       difficulty: q.difficulty ?? null,
       questionType: q.questionType ?? null,

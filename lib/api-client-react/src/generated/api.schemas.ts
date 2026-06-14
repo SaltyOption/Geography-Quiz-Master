@@ -67,10 +67,10 @@ export interface Question {
   quizId: number;
   text: string;
   options: string[];
-  correctOption: number;
-  explanation: string;
+  correctOption?: number;
+  explanation?: string;
   /** @nullable */
-  funFact: string | null;
+  funFact?: string | null;
   /** @nullable */
   imageUrl: string | null;
   orderIndex: number;
@@ -395,10 +395,10 @@ export interface CourseQuestion {
   id: number;
   text: string;
   options: string[];
-  correctOption: number;
-  explanation: string;
+  correctOption?: number;
+  explanation?: string;
   /** @nullable */
-  funFact: string | null;
+  funFact?: string | null;
   /** @nullable */
   learningObjective: string | null;
   /** @nullable */

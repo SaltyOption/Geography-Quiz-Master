@@ -262,7 +262,7 @@ export default function AdminEditQuiz() {
                         {q.options.map((opt, idx) => (
                           <div 
                             key={idx} 
-                            className={`p-2 rounded border ${idx === q.correctOption ? 'bg-green-50/50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-muted/50'}`}
+                            className={`p-2 rounded border ${idx === (q.correctOption ?? -1) ? 'bg-green-50/50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-muted/50'}`}
                           >
                             <span className="font-bold mr-2 text-muted-foreground">{String.fromCharCode(65 + idx)}</span>
                             {opt}
