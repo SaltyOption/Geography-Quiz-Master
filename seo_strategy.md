@@ -31,9 +31,10 @@
 - category-specific geography quizzes
 
 ## Current technical posture
-- The public site is currently a React + Vite SPA with client-side routing.
-- Public discovery pages do not have server-rendered or prerendered route HTML today.
-- Route-level SEO improvements will have the most impact if they are implemented through SSR, SSG, or a prerender pipeline rather than client-only head mutation.
+- The public site is a React + Vite app deployed as static files with client-side routing and a build-time prerender step.
+- `prerender.mjs` currently emits route-specific HTML for `/`, `/daily`, `/courses`, `/privacy`, `/quiz/:id`, `/category/:slug`, and `/courses/:slug`, so public pages are no longer a pure client-only SPA for first-request metadata.
+- The remaining architectural SEO risk is freshness: prerendered HTML and crawl assets are generated only at build time, while admins can keep changing quizzes, categories, and courses after deploy.
+- Route-level SEO improvements now depend on keeping prerendered HTML, canonicals, structured data, and sitemap data aligned with the configured production domain and regenerated when public content changes.
 
 ## Dismissed categories
 - (None yet)
