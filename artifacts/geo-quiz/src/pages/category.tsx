@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Show } from "@clerk/react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useJsonLd } from "@/hooks/useJsonLd";
 
 export default function CategoryPage() {
   const [, params] = useRoute("/category/:slug");
@@ -37,6 +38,35 @@ export default function CategoryPage() {
     : null;
 
   usePageMeta(categoryMeta);
+
+  const breadcrumbLd = data
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "All Quizzes",
+            item: window.location.origin + "/",
+          },
+          ...data.ancestors.map((a, i) => ({
+            "@type": "ListItem",
+            position: i + 2,
+            name: a.name,
+            item: `${window.location.origin}/category/${a.slug}`,
+          })),
+          {
+            "@type": "ListItem",
+            position: data.ancestors.length + 2,
+            name: data.category.name,
+            item: `${window.location.origin}/category/${slug}`,
+          },
+        ],
+      }
+    : null;
+
+  useJsonLd(breadcrumbLd);
 
   const handleShare = async () => {
     const url = window.location.href;

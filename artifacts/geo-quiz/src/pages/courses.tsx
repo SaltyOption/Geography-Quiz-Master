@@ -5,6 +5,7 @@ import {
   type CourseSummary,
 } from "@workspace/api-client-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useJsonLd } from "@/hooks/useJsonLd";
 import { Loader2, BookOpen, ChevronRight, GraduationCap, Trophy, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,27 @@ export default function CoursesPage() {
   });
 
   const { data: courses, isLoading, error } = useListCourses();
+
+  const itemListLd =
+    courses && courses.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: "Geography Courses",
+          description:
+            "Learn world geography through structured courses covering capitals, regions, landmarks, and more.",
+          url: window.location.origin + "/courses",
+          numberOfItems: courses.length,
+          itemListElement: courses.map((c, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            url: `${window.location.origin}/courses/${c.slug}`,
+            name: c.title,
+          })),
+        }
+      : null;
+
+  useJsonLd(itemListLd);
 
   if (isLoading) {
     return (

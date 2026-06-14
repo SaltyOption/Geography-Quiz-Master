@@ -2,6 +2,7 @@ import { Link, useParams } from "wouter";
 import { Show } from "@clerk/react";
 import { useGetCourse } from "@workspace/api-client-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useJsonLd } from "@/hooks/useJsonLd";
 import {
   Loader2,
   ArrowLeft,
@@ -21,17 +22,63 @@ export default function CourseDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: course, isLoading, error } = useGetCourse(slug!);
 
+  const courseDescription =
+    course?.description ??
+    `Study ${course?.title ?? ""} on World Geography Trivia. Work through structured modules with explanations and fun facts to master geography one step at a time.`;
+
   usePageMeta(
     course
       ? {
           title: course.title,
-          description:
-            course.description ??
-            `Study ${course.title} on World Geography Trivia. Work through structured modules with explanations and fun facts to master geography one step at a time.`,
+          description: courseDescription,
           canonical: `${window.location.origin}/courses/${slug}`,
         }
       : null,
   );
+
+  const courseLd = course
+    ? {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Course",
+            name: course.title,
+            description: courseDescription,
+            url: `${window.location.origin}/courses/${slug}`,
+            provider: {
+              "@type": "Organization",
+              name: "World Geography Trivia",
+              url: window.location.origin,
+            },
+            hasCourseInstance: course.modules.map((m) => ({
+              "@type": "CourseInstance",
+              name: m.title,
+              ...(m.description ? { description: m.description } : {}),
+              url: `${window.location.origin}/courses/${slug}/modules/${m.slug}`,
+            })),
+          },
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Courses",
+                item: `${window.location.origin}/courses`,
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: course.title,
+                item: `${window.location.origin}/courses/${slug}`,
+              },
+            ],
+          },
+        ],
+      }
+    : null;
+
+  useJsonLd(courseLd);
 
   if (isLoading) {
     return (
