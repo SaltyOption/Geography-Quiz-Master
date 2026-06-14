@@ -375,9 +375,45 @@ router.get("/quiz/:id", async (req: Request, res: Response) => {
     quiz.description ||
     `Test your knowledge with the "${quiz.title}" geography quiz. ${questionCount} multiple-choice questions.`;
 
+  const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
+  const url = (p: string) => (domain ? `${domain}${p}` : p);
+
+  const primaryCategory = categories[0];
+  const breadcrumbItems: object[] = [
+    { "@type": "ListItem", position: 1, name: "Home", item: url("/") },
+  ];
+  if (primaryCategory) {
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 2,
+      name: primaryCategory.name,
+      item: url(`/category/${primaryCategory.slug}`),
+    });
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 3,
+      name: quiz.title,
+      item: url(`/quiz/${quiz.id}`),
+    });
+  } else {
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 2,
+      name: quiz.title,
+      item: url(`/quiz/${quiz.id}`),
+    });
+  }
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbItems,
+  };
+
   const html = buildPageHtml(
     { title: quiz.title, description, path: `/quiz/${quiz.id}` },
     quizBody({ ...quiz, questionCount, categories, questions }),
+    breadcrumbLd,
   );
 
   res.set(HTML_HEADERS).send(html);
@@ -461,6 +497,34 @@ router.get("/category/:slug", async (req: Request, res: Response) => {
       ? `Explore ${quizzes.length} ${quizzes.length === 1 ? "quiz" : "quizzes"} in the ${category.name} category on ${SITE_NAME}.`
       : `Browse the ${category.name} category on ${SITE_NAME}.`;
 
+  const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
+  const catUrl = (p: string) => (domain ? `${domain}${p}` : p);
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "All Quizzes",
+        item: catUrl("/"),
+      },
+      ...ancestors.map((a, i) => ({
+        "@type": "ListItem",
+        position: i + 2,
+        name: a.name,
+        item: catUrl(`/category/${a.slug}`),
+      })),
+      {
+        "@type": "ListItem",
+        position: ancestors.length + 2,
+        name: category.name,
+        item: catUrl(`/category/${category.slug}`),
+      },
+    ],
+  };
+
   const html = buildPageHtml(
     {
       title: category.name,
@@ -468,6 +532,7 @@ router.get("/category/:slug", async (req: Request, res: Response) => {
       path: `/category/${category.slug}`,
     },
     categoryBody(category, ancestors, directChildren, quizzes),
+    breadcrumbLd,
   );
 
   res.set(HTML_HEADERS).send(html);
@@ -488,6 +553,28 @@ router.get("/courses", async (_req: Request, res: Response) => {
     .from(coursesTable)
     .orderBy(coursesTable.orderIndex);
 
+  const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
+  const courseUrl = (p: string) => (domain ? `${domain}${p}` : p);
+
+  const itemListLd =
+    courses.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: "Geography Courses",
+          description:
+            "Learn world geography through structured courses covering capitals, regions, landmarks, and more.",
+          url: courseUrl("/courses"),
+          numberOfItems: courses.length,
+          itemListElement: courses.map((c, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            url: courseUrl(`/courses/${c.slug}`),
+            name: c.title,
+          })),
+        }
+      : undefined;
+
   const html = buildPageHtml(
     {
       title: "Geography Courses",
@@ -496,6 +583,7 @@ router.get("/courses", async (_req: Request, res: Response) => {
       path: "/courses",
     },
     coursesListBody(courses),
+    itemListLd,
   );
 
   res.set(HTML_HEADERS).send(html);
@@ -538,6 +626,53 @@ router.get("/courses/:slug", async (req: Request, res: Response) => {
     course.description ||
     `Study ${course.title} on ${SITE_NAME}. Work through structured modules with explanations and fun facts to master geography step by step.`;
 
+  const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
+  const url = (p: string) => (domain ? `${domain}${p}` : p);
+  const courseUrl = url(`/courses/${course.slug}`);
+
+  const courseLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Course",
+        name: course.title,
+        description,
+        url: courseUrl,
+        provider: {
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: domain || "/",
+        },
+        ...(modules.length > 0
+          ? {
+              hasCourseInstance: modules.map((m) => ({
+                "@type": "CourseInstance",
+                name: m.title,
+                ...(m.description ? { description: m.description } : {}),
+              })),
+            }
+          : {}),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Courses",
+            item: url("/courses"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: course.title,
+            item: courseUrl,
+          },
+        ],
+      },
+    ],
+  };
+
   const html = buildPageHtml(
     {
       title: course.title,
@@ -545,6 +680,7 @@ router.get("/courses/:slug", async (req: Request, res: Response) => {
       path: `/courses/${course.slug}`,
     },
     courseDetailBody(course, modules),
+    courseLd,
   );
 
   res.set(HTML_HEADERS).send(html);

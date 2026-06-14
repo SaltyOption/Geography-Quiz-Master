@@ -519,7 +519,42 @@ for (const quiz of data.quizzes) {
     description,
     path: `/quiz/${quiz.id}`,
   };
-  writeRoute(`/quiz/${quiz.id}`, injectBody(injectHead(template, meta), quizBody(fullQuiz)));
+
+  const primaryCategory = (fullQuiz.categories ?? [])[0];
+  const breadcrumbItems = [
+    { "@type": "ListItem", position: 1, name: "Home", item: domain ? `${domain}/` : "/" },
+  ];
+  if (primaryCategory) {
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 2,
+      name: primaryCategory.name,
+      item: domain ? `${domain}/category/${primaryCategory.slug}` : `/category/${primaryCategory.slug}`,
+    });
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 3,
+      name: quiz.title,
+      item: domain ? `${domain}/quiz/${quiz.id}` : `/quiz/${quiz.id}`,
+    });
+  } else {
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 2,
+      name: quiz.title,
+      item: domain ? `${domain}/quiz/${quiz.id}` : `/quiz/${quiz.id}`,
+    });
+  }
+
+  const quizBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbItems,
+  };
+
+  let quizHtml = injectBody(injectHead(template, meta), quizBody(fullQuiz));
+  quizHtml = injectJsonLd(quizHtml, quizBreadcrumbLd);
+  writeRoute(`/quiz/${quiz.id}`, quizHtml);
 }
 
 // ---------------------------------------------------------------------------

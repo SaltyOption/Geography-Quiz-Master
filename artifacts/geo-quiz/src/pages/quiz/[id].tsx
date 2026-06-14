@@ -3,6 +3,7 @@ import { useLocation, useParams, Link } from "wouter";
 import { useGetQuiz, useSubmitQuizAttempt, getGetQuizQueryKey } from "@workspace/api-client-react";
 import { ArrowRight, ChevronRight, Home, Loader2 } from "lucide-react";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
+import { useJsonLd } from "@/hooks/useJsonLd";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -28,7 +29,43 @@ export default function QuizPage() {
         }
       : null,
   );
-  
+
+  const primaryCat = quizData?.categories?.[0];
+  const breadcrumbLd = quizData
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${canonicalOrigin()}/` },
+          ...(primaryCat
+            ? [
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: primaryCat.name,
+                  item: `${canonicalOrigin()}/category/${primaryCat.slug}`,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: quizData.title,
+                  item: `${canonicalOrigin()}/quiz/${quizId}`,
+                },
+              ]
+            : [
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: quizData.title,
+                  item: `${canonicalOrigin()}/quiz/${quizId}`,
+                },
+              ]),
+        ],
+      }
+    : null;
+
+  useJsonLd(breadcrumbLd);
+
   const submitQuiz = useSubmitQuizAttempt();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);

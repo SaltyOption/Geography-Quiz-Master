@@ -59,13 +59,24 @@ function sharedNav(): string {
   </header>`;
 }
 
+/** Serialize one or more JSON-LD objects into a single <script> tag. */
+function buildJsonLdTag(jsonLd: object | object[]): string {
+  const payload = Array.isArray(jsonLd) && jsonLd.length === 1 ? jsonLd[0] : jsonLd;
+  return `<script id="json-ld-structured-data" type="application/ld+json">${JSON.stringify(payload)}</script>`;
+}
+
 /** Build a nav-only fallback HTML page (no template available). */
-function buildFallbackHtml(meta: PageMeta, bodyHtml: string): string {
+function buildFallbackHtml(
+  meta: PageMeta,
+  bodyHtml: string,
+  jsonLd?: object | object[],
+): string {
   const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
   const fullTitle =
     meta.title === SITE_NAME ? meta.title : `${meta.title} | ${SITE_NAME}`;
   const canonical = domain ? `${domain}${meta.path}` : "";
   const ogImage = domain ? `${domain}/opengraph.jpg` : "";
+  const jsonLdTag = jsonLd ? `\n  ${buildJsonLdTag(jsonLd)}` : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -81,11 +92,12 @@ function buildFallbackHtml(meta: PageMeta, bodyHtml: string): string {
   <meta property="og:description" content="${esc(meta.description)}" />
   ${canonical ? `<meta property="og:url" content="${esc(canonical)}" />` : ""}
   ${ogImage ? `<meta property="og:image" content="${esc(ogImage)}" />` : ""}
+  <meta property="og:locale" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${esc(fullTitle)}" />
   <meta name="twitter:description" content="${esc(meta.description)}" />
   ${ogImage ? `<meta name="twitter:image" content="${esc(ogImage)}" />` : ""}
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />${jsonLdTag}
 </head>
 <body>
   <div id="root">${bodyHtml}</div>
@@ -98,8 +110,17 @@ function buildFallbackHtml(meta: PageMeta, bodyHtml: string): string {
  * Build the full SSR HTML for a route.
  * Uses the prebuilt frontend template when available (preserving JS bundles for
  * SPA hydration), otherwise returns a minimal standalone page with all SEO tags.
+ *
+ * Pass `jsonLd` to inject one or more JSON-LD objects as a
+ * `<script type="application/ld+json">` tag in `<head>`. The tag uses the same
+ * element ID as the client-side `useJsonLd()` hook so React updates the existing
+ * tag on hydration instead of duplicating it.
  */
-export function buildPageHtml(meta: PageMeta, bodyHtml: string): string {
+export function buildPageHtml(
+  meta: PageMeta,
+  bodyHtml: string,
+  jsonLd?: object | object[],
+): string {
   const template = getTemplate();
   const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
   const fullTitle =
@@ -108,7 +129,7 @@ export function buildPageHtml(meta: PageMeta, bodyHtml: string): string {
   const ogImage = domain ? `${domain}/opengraph.jpg` : "";
 
   if (!template) {
-    return buildFallbackHtml(meta, bodyHtml);
+    return buildFallbackHtml(meta, bodyHtml, jsonLd);
   }
 
   let html = template;
@@ -157,6 +178,29 @@ export function buildPageHtml(meta: PageMeta, bodyHtml: string): string {
     /(<meta\s+name="twitter:description"\s+content=")[^"]*(")/,
     `$1${esc(meta.description)}$2`,
   );
+
+  // Inject og:locale if the template doesn't already have it
+  if (!html.includes('property="og:locale"')) {
+    html = html.replace(
+      /(<meta\s+name="twitter:card")/,
+      `<meta property="og:locale" content="en_US" />\n    $1`,
+    );
+  }
+
+  // Inject JSON-LD into <head> before </head>, using the same element ID as
+  // useJsonLd() so React hydration finds and updates rather than duplicates.
+  if (jsonLd) {
+    const tag = buildJsonLdTag(jsonLd);
+    // Replace any existing json-ld tag if present, otherwise inject before </head>
+    if (html.includes('id="json-ld-structured-data"')) {
+      html = html.replace(
+        /<script id="json-ld-structured-data"[^>]*>[\s\S]*?<\/script>/,
+        tag,
+      );
+    } else {
+      html = html.replace("</head>", `${tag}\n</head>`);
+    }
+  }
 
   html = html.replace(
     /<div id="root"><\/div>/,
