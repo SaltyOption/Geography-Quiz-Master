@@ -135,14 +135,66 @@ function writeRoute(routePath, html) {
 // Static route body generators
 // ---------------------------------------------------------------------------
 
-function homeBody() {
+function homeBody(categories, courses) {
+  // Build a tree from the flat categories list for grouped rendering
+  const catMap = {};
+  for (const c of categories) catMap[c.id] = { ...c, children: [] };
+  const roots = [];
+  for (const c of categories) {
+    if (c.parent_id && catMap[c.parent_id]) {
+      catMap[c.parent_id].children.push(catMap[c.id]);
+    } else if (!c.parent_id) {
+      roots.push(catMap[c.id]);
+    }
+  }
+
+  // Render each root category with its children as a section
+  const categorySections = roots
+    .map((root) => {
+      const childLinks = root.children.length
+        ? root.children
+            .map(
+              (child) =>
+                `<li><a href="/category/${esc(child.slug)}" style="color:#0e7490">${esc(child.name)}</a></li>`,
+            )
+            .join("\n        ")
+        : "";
+      return (
+        `<section style="margin-bottom:1.5rem">` +
+        `<h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">` +
+        `<a href="/category/${esc(root.slug)}" style="color:#1f2937;text-decoration:none">${esc(root.name)}</a>` +
+        `</h2>` +
+        (childLinks
+          ? `<ul style="padding:0 0 0 1rem;list-style:none;display:flex;flex-direction:column;gap:0.25rem">${childLinks}</ul>`
+          : "") +
+        `</section>`
+      );
+    })
+    .join("\n  ");
+
+  const courseItems = courses
+    .map(
+      (c) =>
+        `<li><a href="/courses/${esc(c.slug)}" style="color:#0e7490">${esc(c.title)}</a></li>`,
+    )
+    .join("\n      ");
+
   return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
   <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Explore the World</h1>
   <p style="color:#6b7280;margin-bottom:1.5rem">Continents, capitals, cultures, and landmarks — one quick quiz at a time.</p>
-  <nav aria-label="Site sections"><ul style="padding:0;list-style:none;display:flex;gap:1rem">
-    <li><a href="/daily" style="color:#0e7490">Daily Quiz</a></li>
-    <li><a href="/courses" style="color:#0e7490">Courses</a></li>
-  </ul></nav>
+  <nav aria-label="Quick links" style="margin-bottom:1.5rem">
+    <ul style="padding:0;list-style:none;display:flex;gap:1rem">
+      <li><a href="/daily" style="color:#0e7490">Daily Quiz</a></li>
+      <li><a href="/courses" style="color:#0e7490">Courses</a></li>
+    </ul>
+  </nav>
+  ${categorySections ? `<section aria-label="Browse by category" style="margin-bottom:2rem">${categorySections}</section>` : ""}
+  ${courseItems ? `<section aria-label="Learning courses" style="margin-bottom:2rem">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem"><a href="/courses" style="color:#1f2937;text-decoration:none">Learning Courses</a></h2>
+    <ul style="padding:0 0 0 1rem;list-style:none;display:flex;flex-direction:column;gap:0.25rem">
+      ${courseItems}
+    </ul>
+  </section>` : ""}
 </main>`;
 }
 
@@ -379,7 +431,7 @@ console.log("\nPrerendering static routes…");
       "Play world geography quizzes and short courses covering capitals, countries, landmarks, and regions.",
     path: "/",
   };
-  const html = injectBody(injectHead(template, meta), homeBody());
+  const html = injectBody(injectHead(template, meta), homeBody(data.categories, data.courses));
   writeFileSync(join(distDir, "index.html"), html, "utf-8");
   console.log("  ✓  / (home)");
 }

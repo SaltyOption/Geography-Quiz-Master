@@ -287,8 +287,8 @@ export default function Home() {
                   )}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {courseList.slice(0, showAllCourses ? undefined : 2).map((c) => (
-                    <Link key={c.id} href={`/courses/${c.slug}`}>
+                  {courseList.map((c, i) => (
+                    <Link key={c.id} href={`/courses/${c.slug}`} className={!showAllCourses && i >= 2 ? "hidden" : undefined}>
                       <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
                         <CardHeader>
                           <div className="mb-2 flex items-start justify-between gap-2">
