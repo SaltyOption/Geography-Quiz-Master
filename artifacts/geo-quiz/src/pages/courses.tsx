@@ -4,7 +4,7 @@ import {
   useListCourses,
   type CourseSummary,
 } from "@workspace/api-client-react";
-import { usePageMeta } from "@/hooks/usePageMeta";
+import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { useJsonLd } from "@/hooks/useJsonLd";
 import { Loader2, BookOpen, ChevronRight, GraduationCap, Trophy, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,7 +82,7 @@ export default function CoursesPage() {
     title: "Geography Courses",
     description:
       "Learn world geography through structured courses. Master modules on capitals, regions, landmarks, and more — each course builds knowledge step by step.",
-    canonical: window.location.origin + "/courses",
+    canonical: canonicalOrigin() + "/courses",
   });
 
   const { data: courses, isLoading, error } = useListCourses();
@@ -95,12 +95,12 @@ export default function CoursesPage() {
           name: "Geography Courses",
           description:
             "Learn world geography through structured courses covering capitals, regions, landmarks, and more.",
-          url: window.location.origin + "/courses",
+          url: canonicalOrigin() + "/courses",
           numberOfItems: courses.length,
           itemListElement: courses.map((c, i) => ({
             "@type": "ListItem",
             position: i + 1,
-            url: `${window.location.origin}/courses/${c.slug}`,
+            url: `${canonicalOrigin()}/courses/${c.slug}`,
             name: c.title,
           })),
         }

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { usePageMeta } from "@/hooks/usePageMeta";
+import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Shield, Mail, Database, Cookie, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
     title: "Privacy Policy",
     description:
       "Read the World Geography Trivia privacy policy. We never sell your data, collect only what we need to run the site, and let you delete your account at any time.",
-    canonical: window.location.origin + "/privacy",
+    canonical: canonicalOrigin() + "/privacy",
     twitterCard: "summary",
   });
 

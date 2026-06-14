@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useParams, Link } from "wouter";
 import { useGetQuiz, useSubmitQuizAttempt, getGetQuizQueryKey } from "@workspace/api-client-react";
 import { ArrowRight, ChevronRight, Home, Loader2 } from "lucide-react";
-import { usePageMeta } from "@/hooks/usePageMeta";
+import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -24,7 +24,7 @@ export default function QuizPage() {
       ? {
           title: quizTitle,
           description: `Test your knowledge with the "${quizTitle}" geography quiz${quizCategory ? ` on ${quizCategory}` : ""}. Answer multiple-choice questions and see how well you know the world.`,
-          canonical: `${window.location.origin}/quiz/${quizId}`,
+          canonical: `${canonicalOrigin()}/quiz/${quizId}`,
         }
       : null,
   );

@@ -1,7 +1,7 @@
 import { Link, useParams } from "wouter";
 import { Show } from "@clerk/react";
 import { useGetCourse } from "@workspace/api-client-react";
-import { usePageMeta } from "@/hooks/usePageMeta";
+import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { useJsonLd } from "@/hooks/useJsonLd";
 import {
   Loader2,
@@ -31,7 +31,7 @@ export default function CourseDetailPage() {
       ? {
           title: course.title,
           description: courseDescription,
-          canonical: `${window.location.origin}/courses/${slug}`,
+          canonical: `${canonicalOrigin()}/courses/${slug}`,
         }
       : null,
   );
@@ -44,17 +44,17 @@ export default function CourseDetailPage() {
             "@type": "Course",
             name: course.title,
             description: courseDescription,
-            url: `${window.location.origin}/courses/${slug}`,
+            url: `${canonicalOrigin()}/courses/${slug}`,
             provider: {
               "@type": "Organization",
               name: "World Geography Trivia",
-              url: window.location.origin,
+              url: canonicalOrigin(),
             },
             hasCourseInstance: course.modules.map((m) => ({
               "@type": "CourseInstance",
               name: m.title,
               ...(m.description ? { description: m.description } : {}),
-              url: `${window.location.origin}/courses/${slug}/modules/${m.slug}`,
+              url: `${canonicalOrigin()}/courses/${slug}/modules/${m.slug}`,
             })),
           },
           {
@@ -64,13 +64,13 @@ export default function CourseDetailPage() {
                 "@type": "ListItem",
                 position: 1,
                 name: "Courses",
-                item: `${window.location.origin}/courses`,
+                item: `${canonicalOrigin()}/courses`,
               },
               {
                 "@type": "ListItem",
                 position: 2,
                 name: course.title,
-                item: `${window.location.origin}/courses/${slug}`,
+                item: `${canonicalOrigin()}/courses/${slug}`,
               },
             ],
           },

@@ -13,12 +13,25 @@ const SITE_NAME = "World Geography Trivia";
 const DEFAULT_DESCRIPTION =
   "Play world geography quizzes and short courses covering capitals, countries, landmarks, and regions.";
 
-function origin(): string {
+/**
+ * Returns the canonical origin for this site.
+ *
+ * Reads `VITE_CANONICAL_DOMAIN` first — the same env var that `prerender.mjs`
+ * uses to embed canonical/og:url tags in the static HTML.  This ensures the
+ * client never overwrites a prerendered production canonical with whatever
+ * hostname the visitor happened to use (e.g. a preview or staging URL).
+ *
+ * Falls back to `window.location.origin` only when the env var is absent so
+ * local development still works without configuration.
+ */
+export function canonicalOrigin(): string {
+  const configured = import.meta.env.VITE_CANONICAL_DOMAIN as string | undefined;
+  if (configured) return configured.replace(/\/$/, "");
   return typeof window !== "undefined" ? window.location.origin : "";
 }
 
 function defaultOgImage(): string {
-  return `${origin()}/opengraph.jpg`;
+  return `${canonicalOrigin()}/opengraph.jpg`;
 }
 
 function setMetaName(name: string, content: string) {
@@ -61,7 +74,10 @@ function applyMeta(opts: PageMetaOptions) {
   const {
     title,
     description,
-    canonical = window.location.href,
+    canonical = canonicalOrigin() +
+      (typeof window !== "undefined"
+        ? window.location.pathname + window.location.search
+        : ""),
     ogImage = defaultOgImage(),
     ogType = "website",
     twitterCard = "summary_large_image",
@@ -87,7 +103,7 @@ function applyMeta(opts: PageMetaOptions) {
 }
 
 function resetToDefaults() {
-  const canonical = origin() + "/";
+  const canonical = canonicalOrigin() + "/";
   const ogImage = defaultOgImage();
 
   document.title = SITE_NAME;

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Show } from "@clerk/react";
 import { useToast } from "@/hooks/use-toast";
-import { usePageMeta } from "@/hooks/usePageMeta";
+import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { useJsonLd } from "@/hooks/useJsonLd";
 
 export default function CategoryPage() {
@@ -31,8 +31,8 @@ export default function CategoryPage() {
         return {
           title: category.name,
           description,
-          canonical: `${window.location.origin}/category/${slug}`,
-          ogImage: `${window.location.origin}/opengraph.jpg`,
+          canonical: `${canonicalOrigin()}/category/${slug}`,
+          ogImage: `${canonicalOrigin()}/opengraph.jpg`,
         };
       })()
     : null;
@@ -48,19 +48,19 @@ export default function CategoryPage() {
             "@type": "ListItem",
             position: 1,
             name: "All Quizzes",
-            item: window.location.origin + "/",
+            item: canonicalOrigin() + "/",
           },
           ...data.ancestors.map((a, i) => ({
             "@type": "ListItem",
             position: i + 2,
             name: a.name,
-            item: `${window.location.origin}/category/${a.slug}`,
+            item: `${canonicalOrigin()}/category/${a.slug}`,
           })),
           {
             "@type": "ListItem",
             position: data.ancestors.length + 2,
             name: data.category.name,
-            item: `${window.location.origin}/category/${slug}`,
+            item: `${canonicalOrigin()}/category/${slug}`,
           },
         ],
       }

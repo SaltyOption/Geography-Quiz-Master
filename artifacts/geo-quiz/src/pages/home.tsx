@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useGetCategoryTree, useListQuizzes, useListCourses, type CategoryNode } from "@workspace/api-client-react";
-import { usePageMeta } from "@/hooks/usePageMeta";
+import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Link } from "wouter";
 import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass } from "lucide-react";
 import mascotUrl from "@assets/mascot_swallow.png";
@@ -83,7 +83,7 @@ export default function Home() {
     title: "World Geography Trivia",
     description:
       "Play world geography quizzes and short courses covering capitals, countries, landmarks, and regions.",
-    canonical: window.location.origin + "/",
+    canonical: canonicalOrigin() + "/",
   });
 
   const { data: tree, isLoading, error } = useGetCategoryTree();
