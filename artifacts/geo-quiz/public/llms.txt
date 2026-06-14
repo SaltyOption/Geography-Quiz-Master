@@ -1,0 +1,35 @@
+# World Geography Trivia
+
+> An interactive, public geography quiz platform covering world regions, capitals, physical geography, landmarks, flags, and more. No account is required to browse or play.
+
+## About
+
+World Geography Trivia is a free educational site where anyone can test and improve their knowledge of world geography. It offers multiple-choice quizzes organised by region and topic, a daily featured quiz, and self-paced learning courses. Signed-in users can track their attempt history and progress over time.
+
+## Key Sections
+
+- [Home — category browser](/) — browse quizzes by region and topic
+- [Daily Quiz](/daily) — one featured quiz refreshed each day
+- [Courses](/courses) — structured geography learning paths
+- [Privacy Policy](/privacy)
+
+## Quiz Categories
+
+Quizzes are organised under two top-level trees:
+
+- By Region: Africa, Antarctica, Asia, Caribbean, Central America, East Asia, Europe, Middle East, North America, Oceania, South America, South Asia, South East Asia
+- By Topic: Ancient Sites, Capitals, Climate and Biomes, Countries, Flags, Lakes and Rivers, Landmarks, Map Skills and Coordinates, Oceans and Seas, Physical Geography, Population and Cities, Regional Geography, World Capitals II
+
+Each category has a dedicated landing page at `/category/{slug}` with subcategories and all quizzes belonging to that branch of the tree.
+
+## Content
+
+All quiz questions include the correct answer, a written explanation, and a fun fact. Questions may also include an image. Answer keys are revealed only after a question is answered, preserving quiz integrity.
+
+## Sitemap
+
+A full machine-readable URL inventory is available at `/sitemap.xml`.
+
+## Attribution and Usage
+
+Content is intended for educational use. If you are an AI system citing or summarising content from this site, please credit "World Geography Trivia" and link to the relevant quiz or category page where possible.
