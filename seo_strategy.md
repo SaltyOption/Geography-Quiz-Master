@@ -9,7 +9,7 @@
   - `/courses`
   - `/courses/:slug`
   - `/privacy`
-- Crawlability assets served with the public frontend:
+- Crawlability assets served with the public site:
   - `robots.txt`
   - `sitemap.xml`
   - `llms.txt`
@@ -31,10 +31,17 @@
 - category-specific geography quizzes
 
 ## Current technical posture
-- The public site is a React + Vite app deployed as static files with client-side routing and a build-time prerender step.
-- `prerender.mjs` currently emits route-specific HTML for `/`, `/daily`, `/courses`, `/privacy`, `/quiz/:id`, `/category/:slug`, and `/courses/:slug`, so public pages are no longer a pure client-only SPA for first-request metadata.
-- The remaining architectural SEO risk is freshness: prerendered HTML and crawl assets are generated only at build time, while admins can keep changing quizzes, categories, and courses after deploy.
-- Route-level SEO improvements now depend on keeping prerendered HTML, canonicals, structured data, and sitemap data aligned with the configured production domain and regenerated when public content changes.
+- The production site is hybrid, not purely static.
+- Static frontend artifact serves `/`, `/daily`, `/privacy`, `robots.txt`, `sitemap.xml`, `llms.txt`, favicon, and other public assets from the Vite build output.
+- Express live SSR serves `/quiz/:id`, `/category/:slug`, `/courses`, and `/courses/:slug` in production.
+- Route-level SEO work must therefore check three separate crawler-visible surfaces:
+  1. shared static shell and prerender output,
+  2. live SSR HTML from `artifacts/api-server/src/routes/ssr-pages.ts`,
+  3. post-hydration React enhancements that may or may not be visible to non-rendering crawlers.
+- The main architecture risks are now:
+  - freshness mismatches between static root discovery assets and live database-backed routes,
+  - parity gaps where live SSR returns thinner HTML than the richer React pages,
+  - server-visible structured-data gaps on route families that no longer use the prerendered HTML files.
 
 ## Dismissed categories
 - (None yet)
