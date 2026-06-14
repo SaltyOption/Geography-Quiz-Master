@@ -26,7 +26,7 @@ import {
 } from "@workspace/db";
 import { buildPageHtml, esc, sharedNav, getRawTemplate } from "../lib/ssrTemplate";
 import { isRequestAdmin } from "../middlewares/requireAdmin";
-import { buildVisibleCategoryIds, type CategoryRow } from "../lib/categoryVisibility";
+import { buildVisibleCategoryIds, isCategoryVisible, type CategoryRow } from "../lib/categoryVisibility";
 
 const router: IRouter = Router();
 
@@ -35,6 +35,28 @@ const HTML_HEADERS = {
   "Content-Type": "text/html; charset=utf-8",
   "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
 } as const;
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+function collectDescendantIds(
+  rootId: number,
+  all: { id: number; parentId: number | null }[],
+): number[] {
+  const descendantIds: number[] = [];
+  const queue: number[] = [rootId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    for (const c of all) {
+      if (c.parentId === id) {
+        descendantIds.push(c.id);
+        queue.push(c.id);
+      }
+    }
+  }
+  return descendantIds;
+}
 
 // ---------------------------------------------------------------------------
 // Body builders — mirrors prerender.mjs body generators
@@ -116,6 +138,7 @@ function quizBody(quiz: {
   difficulty: string;
   questionCount: number;
   categories: { id: number; name: string; slug: string }[];
+  questions: { text: string; options: string[]; imageUrl: string | null }[];
 }): string {
   const cats = quiz.categories
     .map(
@@ -123,6 +146,28 @@ function quizBody(quiz: {
         `<a href="/category/${esc(c.slug)}" style="color:#0e7490">${esc(c.name)}</a>`,
     )
     .join(", ");
+
+  const questionItems = quiz.questions
+    .map((q, i) => {
+      const optionItems = q.options
+        .map(
+          (opt) =>
+            `<li style="padding:0.25rem 0;color:#374151">• ${esc(opt)}</li>`,
+        )
+        .join("\n          ");
+      return (
+        `<div style="margin-bottom:1.25rem;padding:1rem;background:#f9fafb;border-radius:0.5rem;border:1px solid #e5e7eb">` +
+        (q.imageUrl
+          ? `<img src="${esc(q.imageUrl)}" alt="" style="max-width:100%;border-radius:0.375rem;margin-bottom:0.75rem" loading="lazy">` : "") +
+        `<p style="font-weight:600;margin:0 0 0.5rem"><span style="color:#9ca3af;font-size:0.8rem">Q${i + 1}.</span> ${esc(q.text)}</p>` +
+        `<ul style="padding:0;list-style:none;margin:0">
+          ${optionItems}
+        </ul>` +
+        `</div>`
+      );
+    })
+    .join("\n  ");
+
   return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
   <nav aria-label="Breadcrumb" style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem">
     <a href="/" style="color:#0e7490">Home</a>${cats ? ` › ${cats}` : ""}
@@ -136,14 +181,36 @@ function quizBody(quiz: {
     <dd style="display:inline;margin-left:0.25rem">${esc(quiz.questionCount)}</dd>
   </dl>
   <p><a href="/quiz/${esc(quiz.id)}" style="color:#fff;background:#0e7490;padding:0.5rem 1.25rem;border-radius:0.5rem;text-decoration:none;font-weight:600">Start Quiz →</a></p>
+  ${questionItems ? `<section aria-label="Quiz questions" style="margin-top:2rem">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:1rem">Questions in this quiz</h2>
+    ${questionItems}
+  </section>` : ""}
 </main>`;
 }
 
 function categoryBody(
   category: { id: number; name: string; slug: string; parentId: number | null },
+  ancestors: { id: number; name: string; slug: string }[],
+  subcategories: { id: number; name: string; slug: string }[],
   quizzes: { id: number; title: string; difficulty: string }[],
 ): string {
-  const items = quizzes
+  const breadcrumbs =
+    [
+      `<a href="/" style="color:#0e7490">Home</a>`,
+      ...ancestors.map(
+        (a) => `<a href="/category/${esc(a.slug)}" style="color:#0e7490">${esc(a.name)}</a>`,
+      ),
+      esc(category.name),
+    ].join(" › ");
+
+  const subcategoryItems = subcategories
+    .map(
+      (s) =>
+        `<li><a href="/category/${esc(s.slug)}" style="color:#0e7490;font-weight:600">${esc(s.name)}</a></li>`,
+    )
+    .join("\n      ");
+
+  const quizItems = quizzes
     .map(
       (q) =>
         `<li><a href="/quiz/${esc(q.id)}" style="color:#0e7490;font-weight:600">${esc(q.title)}</a>` +
@@ -153,17 +220,26 @@ function categoryBody(
         `</li>`,
     )
     .join("\n      ");
+
   return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
   <nav aria-label="Breadcrumb" style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem">
-    <a href="/" style="color:#0e7490">Home</a> › ${esc(category.name)}
+    ${breadcrumbs}
   </nav>
   <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">${esc(category.name)}</h1>
+  ${subcategoryItems ? `<section aria-label="Subcategories" style="margin-bottom:1.5rem">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">Subcategories</h2>
+    <ul style="padding:0;list-style:none;display:flex;flex-direction:column;gap:0.25rem">
+      ${subcategoryItems}
+    </ul>
+  </section>` : ""}
   ${
-    items
-      ? `<p style="color:#6b7280;margin-bottom:1rem">${esc(quizzes.length)} ${quizzes.length === 1 ? "quiz" : "quizzes"} in this category</p>
-  <ul style="padding:0;list-style:none;display:flex;flex-direction:column;gap:0.5rem">
-      ${items}
-    </ul>`
+    quizItems
+      ? `<section aria-label="Quizzes">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">${esc(quizzes.length)} ${quizzes.length === 1 ? "quiz" : "quizzes"}</h2>
+    <ul style="padding:0;list-style:none;display:flex;flex-direction:column;gap:0.5rem">
+      ${quizItems}
+    </ul>
+  </section>`
       : `<p style="color:#6b7280">No quizzes in this category yet.</p>`
   }
 </main>`;
@@ -235,7 +311,7 @@ router.get("/quiz/:id", async (req: Request, res: Response) => {
 
   const admin = isRequestAdmin(req);
 
-  const [quizRows, questionCountRows, catRows] = await Promise.all([
+  const [quizRows, questionCountRows, catRows, questionRows] = await Promise.all([
     db
       .select({
         id: quizzesTable.id,
@@ -264,6 +340,16 @@ router.get("/quiz/:id", async (req: Request, res: Response) => {
         eq(quizCategoriesTable.categoryId, categoriesTable.id),
       )
       .where(eq(quizCategoriesTable.quizId, id)),
+    db
+      .select({
+        text: questionsTable.text,
+        options: questionsTable.options,
+        imageUrl: questionsTable.imageUrl,
+        orderIndex: questionsTable.orderIndex,
+      })
+      .from(questionsTable)
+      .where(eq(questionsTable.quizId, id))
+      .orderBy(questionsTable.orderIndex),
   ]);
 
   const quiz = quizRows[0];
@@ -279,13 +365,19 @@ router.get("/quiz/:id", async (req: Request, res: Response) => {
     slug: c.slug,
   }));
 
+  const questions = questionRows.map((q) => ({
+    text: q.text,
+    options: q.options as string[],
+    imageUrl: q.imageUrl,
+  }));
+
   const description =
     quiz.description ||
     `Test your knowledge with the "${quiz.title}" geography quiz. ${questionCount} multiple-choice questions.`;
 
   const html = buildPageHtml(
     { title: quiz.title, description, path: `/quiz/${quiz.id}` },
-    quizBody({ ...quiz, questionCount, categories }),
+    quizBody({ ...quiz, questionCount, categories, questions }),
   );
 
   res.set(HTML_HEADERS).send(html);
@@ -299,37 +391,70 @@ router.get("/category/:slug", async (req: Request, res: Response) => {
   const slug = req.params.slug as string;
   const admin = isRequestAdmin(req);
 
-  const catRows = await db
-    .select({
-      id: categoriesTable.id,
-      name: categoriesTable.name,
-      slug: categoriesTable.slug,
-      parentId: categoriesTable.parentId,
-      published: categoriesTable.published,
-    })
-    .from(categoriesTable)
-    .where(eq(categoriesTable.slug, slug))
-    .limit(1);
+  const allCategories = await db.select().from(categoriesTable);
+  const byId = new Map(allCategories.map((c) => [c.id, c]));
 
-  const category = catRows[0];
-  if (!category || (!category.published && !admin)) {
+  const category = allCategories.find((c) => c.slug === slug);
+  if (!category) {
     res.status(404).end();
     return;
   }
 
-  // Fetch quizzes in this category (only published quizzes for non-admins)
-  const quizRows = await db
-    .select({
-      id: quizzesTable.id,
-      title: quizzesTable.title,
-      difficulty: quizzesTable.difficulty,
-      published: quizzesTable.published,
-    })
-    .from(quizCategoriesTable)
-    .innerJoin(quizzesTable, eq(quizCategoriesTable.quizId, quizzesTable.id))
-    .where(eq(quizCategoriesTable.categoryId, category.id));
+  const isVisible = (c: CategoryRow) => admin || isCategoryVisible(c, byId);
 
-  const quizzes = quizRows.filter((q) => admin || q.published);
+  if (!isVisible(category)) {
+    res.status(404).end();
+    return;
+  }
+
+  // Ancestor chain (root → … → parent), for breadcrumb
+  const ancestors: { id: number; name: string; slug: string }[] = [];
+  let cursor: number | null = category.parentId;
+  const seen = new Set<number>();
+  while (cursor !== null) {
+    if (seen.has(cursor)) break;
+    seen.add(cursor);
+    const anc = byId.get(cursor);
+    if (!anc) break;
+    ancestors.unshift({ id: anc.id, name: anc.name, slug: anc.slug });
+    cursor = anc.parentId;
+  }
+
+  // Direct visible children, for subcategory links
+  const directChildren = allCategories.filter(
+    (c) => c.parentId === category.id && isVisible(c),
+  ).map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
+
+  // Descendants (BFS) — for the descendant-inclusive quiz query
+  const descendantIds = collectDescendantIds(category.id, allCategories);
+  const visibleDescendantIds = descendantIds.filter((did) => {
+    const d = byId.get(did);
+    return d && isVisible(d);
+  });
+
+  // Quizzes: this category + all visible descendants
+  const includedCategoryIds = [category.id, ...visibleDescendantIds];
+  const links = await db
+    .select({ quizId: quizCategoriesTable.quizId })
+    .from(quizCategoriesTable)
+    .where(inArray(quizCategoriesTable.categoryId, includedCategoryIds));
+  const quizIds = Array.from(new Set(links.map((l) => l.quizId)));
+
+  let quizzes: { id: number; title: string; difficulty: string }[] = [];
+  if (quizIds.length > 0) {
+    const allRows = await db
+      .select({
+        id: quizzesTable.id,
+        title: quizzesTable.title,
+        difficulty: quizzesTable.difficulty,
+        published: quizzesTable.published,
+      })
+      .from(quizzesTable)
+      .where(inArray(quizzesTable.id, quizIds));
+    quizzes = (admin ? allRows : allRows.filter((q) => q.published))
+      .map((q) => ({ id: q.id, title: q.title, difficulty: q.difficulty }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }
 
   const description =
     quizzes.length > 0
@@ -342,7 +467,7 @@ router.get("/category/:slug", async (req: Request, res: Response) => {
       description,
       path: `/category/${category.slug}`,
     },
-    categoryBody(category, quizzes),
+    categoryBody(category, ancestors, directChildren, quizzes),
   );
 
   res.set(HTML_HEADERS).send(html);
