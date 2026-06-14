@@ -1,5 +1,1 @@
-- [api-server test harness](api-server-test-harness.md) — vitest mocks @workspace/db (FIFO pushDbResult) and @clerk/express; a route calling a new clerkClient method must add it to the mock.
-- [shadcn Form context](shadcn-form-context.md) — FormLabel/FormControl/FormMessage crash at render outside FormField; use plain Label for standalone labels.
-- [Draft/published visibility — all read surfaces](draft-visibility-read-surfaces.md) — a published flag must be gated on every read path (direct-by-id, ancestors, chips, tags, attempt scoring, history, aggregate counts), not just list/detail.
-- [Import questions by tag](import-questions-by-tag.md) — copies tagged questions into a quiz as new rows; dedup-by-text is best-effort UX, intentionally no DB unique constraint.
-- [Admin edit-quiz phantom crash](admin-edit-quiz-phantom-crash.md) — recurring "Max update depth / Invalid hook call" is an HMR Fast-Refresh artifact; verify on a clean reload before chasing render loops.
+- [Dev vs prod frontend routing split](dev-prod-routing-split.md) — api-server owns `/` for prod SSR; in dev it proxies non-API traffic to Vite. Don't revert route ownership to fix dev.

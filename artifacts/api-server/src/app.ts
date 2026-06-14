@@ -1,8 +1,9 @@
-import express, { type Express } from "express";
+import express, { type Express, type RequestHandler } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
+import { createDevViteProxy } from "./middlewares/devViteProxy";
 import router from "./routes";
 import ssrPagesRouter from "./routes/ssr-pages";
 import sitemapRouter from "./routes/sitemap";
@@ -46,9 +47,20 @@ app.use(sitemapRouter);
 // SPA catch-all in ssrPagesRouter never intercepts /api/* requests.
 app.use("/api", router);
 
-// SSR page routes — serve /, /quiz/:id, /category/:slug, /courses, /courses/:slug
-// as fresh SSR HTML, and fall back to the SPA template for all other paths
-// (/profile, /admin/*, /daily, etc.) so the React app handles them client-side.
-app.use(ssrPagesRouter);
+// Frontend delivery differs by environment:
+// - Production: the API server owns "/" and renders fresh SSR HTML for crawlers
+//   (ssrPagesRouter), built from the prebuilt frontend in geo-quiz/dist/public.
+// - Development: that build doesn't exist, so forward all non-API traffic to the
+//   running Vite dev server instead. This keeps the preview a fully styled,
+//   hot-reloading SPA. The instance is exported so index.ts can also forward HMR
+//   WebSocket upgrades.
+export const devViteProxy: ReturnType<typeof createDevViteProxy> | undefined =
+  process.env.NODE_ENV === "development" ? createDevViteProxy() : undefined;
+
+if (devViteProxy) {
+  app.use(devViteProxy as unknown as RequestHandler);
+} else {
+  app.use(ssrPagesRouter);
+}
 
 export default app;
