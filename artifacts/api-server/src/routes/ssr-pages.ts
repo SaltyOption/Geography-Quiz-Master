@@ -381,11 +381,11 @@ function serveSpaFallback(res: Response): void {
   }
 }
 
-router.get("/quiz/*", (_req: Request, res: Response) => serveSpaFallback(res));
-router.get("/category/*", (_req: Request, res: Response) =>
+router.get("/quiz/*splat", (_req: Request, res: Response) => serveSpaFallback(res));
+router.get("/category/*splat", (_req: Request, res: Response) =>
   serveSpaFallback(res),
 );
-router.get("/courses/*", (_req: Request, res: Response) =>
+router.get("/courses/*splat", (_req: Request, res: Response) =>
   serveSpaFallback(res),
 );
 
