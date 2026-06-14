@@ -116,6 +116,16 @@ function injectBody(html, bodyHtml) {
   );
 }
 
+/**
+ * Injects a JSON-LD <script> block into <head> before </head>.
+ * Uses the same element ID as the client-side useJsonLd hook so React
+ * finds and updates the existing tag on hydration instead of duplicating it.
+ */
+function injectJsonLd(html, ldData) {
+  const scriptTag = `<script id="json-ld-structured-data" type="application/ld+json">${JSON.stringify(ldData)}</script>`;
+  return html.replace("</head>", `${scriptTag}\n</head>`);
+}
+
 /** Build a minimal shared nav that's consistent across prerendered pages. */
 function sharedNav() {
   return `<header style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1rem;background:#fff">
@@ -459,10 +469,27 @@ console.log("\nPrerendering static routes…");
       "Learn world geography through structured courses. Master modules on capitals, regions, landmarks, and more — each course builds knowledge step by step.",
     path: "/courses",
   };
-  writeRoute(
-    "/courses",
-    injectBody(injectHead(template, meta), coursesBody(data.courses)),
-  );
+  const itemListLd =
+    data.courses.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: "Geography Courses",
+          description:
+            "Learn world geography through structured courses covering capitals, regions, landmarks, and more.",
+          url: domain ? `${domain}/courses` : "/courses",
+          numberOfItems: data.courses.length,
+          itemListElement: data.courses.map((c, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            url: domain ? `${domain}/courses/${c.slug}` : `/courses/${c.slug}`,
+            name: c.title,
+          })),
+        }
+      : null;
+  let coursesHtml = injectBody(injectHead(template, meta), coursesBody(data.courses));
+  if (itemListLd) coursesHtml = injectJsonLd(coursesHtml, itemListLd);
+  writeRoute("/courses", coursesHtml);
 }
 
 // ---------------------------------------------------------------------------
@@ -499,6 +526,21 @@ for (const quiz of data.quizzes) {
 // 6. Categories (/category/:slug)
 // ---------------------------------------------------------------------------
 console.log(`\nPrerendering ${data.categories.length} category pages…`);
+
+// Build a map for ancestor chain lookup (used for BreadcrumbList JSON-LD)
+const catById = {};
+for (const cat of data.categories) catById[cat.id] = cat;
+
+function getCategoryAncestors(cat) {
+  const chain = [];
+  let current = catById[cat.parent_id];
+  while (current) {
+    chain.unshift(current);
+    current = catById[current.parent_id];
+  }
+  return chain;
+}
+
 for (const cat of data.categories) {
   const quizIds = data.categoryQuizIds[cat.id] ?? [];
   const quizzes = quizIds.map((id) => data.quizMap[id]).filter(Boolean);
@@ -511,10 +553,36 @@ for (const cat of data.categories) {
     description,
     path: `/category/${cat.slug}`,
   };
-  writeRoute(
-    `/category/${cat.slug}`,
-    injectBody(injectHead(template, meta), categoryBody(cat, quizzes)),
-  );
+
+  const ancestors = getCategoryAncestors(cat);
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "All Quizzes",
+        item: domain ? `${domain}/` : "/",
+      },
+      ...ancestors.map((a, i) => ({
+        "@type": "ListItem",
+        position: i + 2,
+        name: a.name,
+        item: domain ? `${domain}/category/${a.slug}` : `/category/${a.slug}`,
+      })),
+      {
+        "@type": "ListItem",
+        position: ancestors.length + 2,
+        name: cat.name,
+        item: domain ? `${domain}/category/${cat.slug}` : `/category/${cat.slug}`,
+      },
+    ],
+  };
+
+  let catHtml = injectBody(injectHead(template, meta), categoryBody(cat, quizzes));
+  catHtml = injectJsonLd(catHtml, breadcrumbLd);
+  writeRoute(`/category/${cat.slug}`, catHtml);
 }
 
 // ---------------------------------------------------------------------------
@@ -531,13 +599,57 @@ for (const course of data.courses) {
     description,
     path: `/courses/${course.slug}`,
   };
-  writeRoute(
-    `/courses/${course.slug}`,
-    injectBody(
-      injectHead(template, meta),
-      courseDetailBody(course, modules),
-    ),
-  );
+
+  const courseUrl = domain ? `${domain}/courses/${course.slug}` : `/courses/${course.slug}`;
+  const courseLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Course",
+        name: course.title,
+        description,
+        url: courseUrl,
+        provider: {
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: domain || "/",
+        },
+        ...(modules.length > 0
+          ? {
+              hasCourseInstance: modules.map((m) => ({
+                "@type": "CourseInstance",
+                name: m.title,
+                ...(m.description ? { description: m.description } : {}),
+                url: domain
+                  ? `${domain}/courses/${course.slug}/modules/${m.slug}`
+                  : `/courses/${course.slug}/modules/${m.slug}`,
+              })),
+            }
+          : {}),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Courses",
+            item: domain ? `${domain}/courses` : "/courses",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: course.title,
+            item: courseUrl,
+          },
+        ],
+      },
+    ],
+  };
+
+  let courseHtml = injectBody(injectHead(template, meta), courseDetailBody(course, modules));
+  courseHtml = injectJsonLd(courseHtml, courseLd);
+  writeRoute(`/courses/${course.slug}`, courseHtml);
 }
 
 // ---------------------------------------------------------------------------
