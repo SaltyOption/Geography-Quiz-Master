@@ -2,28 +2,46 @@
  * SSR template utilities — mirrors the head-injection logic in prerender.mjs
  * but runs at request time so crawlers always receive fresh content.
  *
- * At startup the built frontend index.html is read from
- * artifacts/geo-quiz/dist/public/index.html (relative to CWD, which is
- * the workspace root when the server starts via the production run command).
- * If the file is not found (e.g. a dev environment where the frontend has
- * not been built yet) the helpers fall back to a minimal self-contained
- * HTML page that still contains all the important SEO meta tags.
+ * The template is the frontend's empty-root SPA shell. In production it ships
+ * inside this server's own bundle as `web-template.html` (copied by build.mjs),
+ * resolved relative to the running bundle — this is required because on the
+ * autoscale deployment the geo-quiz static files live in a separate static
+ * layer that is NOT present in this process's container. As a dev/local
+ * fallback we read the frontend build output directly. If neither exists the
+ * helpers fall back to a minimal self-contained HTML page that still contains
+ * all the important SEO meta tags (but no JS bundle, so it stays unstyled —
+ * which is why the bundled template must be present in production).
  */
 
 import { readFileSync, existsSync } from "fs";
-import { resolve } from "path";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
 const SITE_NAME = "World Geography Trivia";
-const FRONTEND_DIST = resolve(process.cwd(), "artifacts/geo-quiz/dist/public");
-const TEMPLATE_PATH = resolve(FRONTEND_DIST, "index.html");
+
+// Primary (production): the SPA shell shipped next to the running bundle.
+// esbuild bundles this module into dist/index.mjs, so import.meta.url resolves
+// to the dist dir regardless of the process CWD.
+const BUNDLE_DIR = dirname(fileURLToPath(import.meta.url));
+const BUNDLED_TEMPLATE_PATH = resolve(BUNDLE_DIR, "web-template.html");
+
+// Fallback (dev / local prod-like runs): read the frontend build output
+// directly from the workspace tree.
+const FRONTEND_TEMPLATE_PATH = resolve(
+  process.cwd(),
+  "artifacts/geo-quiz/dist/public/spa-template.html",
+);
 
 let _template: string | null = null;
 
-/** Load (and cache) the built frontend index.html template. */
+/** Load (and cache) the built frontend SPA shell template. */
 function getTemplate(): string | null {
   if (_template !== null) return _template;
-  if (existsSync(TEMPLATE_PATH)) {
-    _template = readFileSync(TEMPLATE_PATH, "utf-8");
+  for (const candidate of [BUNDLED_TEMPLATE_PATH, FRONTEND_TEMPLATE_PATH]) {
+    if (existsSync(candidate)) {
+      _template = readFileSync(candidate, "utf-8");
+      break;
+    }
   }
   return _template;
 }

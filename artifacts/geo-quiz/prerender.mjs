@@ -410,6 +410,15 @@ async function loadData(pool) {
 
 const template = readFileSync(join(distDir, "index.html"), "utf-8");
 
+// Preserve the pristine, empty-root SPA shell (the just-built index.html, before
+// any body injection below) as spa-template.html. The api-server ships this file
+// inside its own bundle and uses it as the SSR template — it injects
+// route-specific bodies into the EMPTY `<div id="root"></div>`, which only works
+// if the shell has NOT yet had the home body baked in. It also carries the exact
+// hashed asset references the static layer serves, so styles/scripts resolve.
+writeFileSync(join(distDir, "spa-template.html"), template, "utf-8");
+console.log("  ✓  spa-template.html (SSR shell for the API server)");
+
 // Connect to database for dynamic route data
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

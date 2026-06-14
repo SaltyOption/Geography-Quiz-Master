@@ -15,7 +15,13 @@ run = "pnpm --filter @workspace/api-server run dev"
 [services.production]
 
 [services.production.build]
-args = ["pnpm", "--filter", "@workspace/api-server", "run", "build"]
+# Build the geo-quiz frontend FIRST when its SPA shell is missing, then build the
+# api-server. The api-server bundles that shell (dist/public/spa-template.html)
+# as its SSR template so the deployed site is styled instead of an unstyled
+# fallback — the geo static files are not present in this process's container at
+# runtime. The geo artifact's own build guards on the same file, so the frontend
+# is built exactly once regardless of which artifact the deployer builds first.
+args = ["bash", "-c", "if [ ! -f artifacts/geo-quiz/dist/public/spa-template.html ]; then PORT=26064 BASE_PATH=/ pnpm --filter @workspace/geo-quiz run build; fi && pnpm --filter @workspace/api-server run build"]
 
 [services.production.build.env]
 NODE_ENV = "production"

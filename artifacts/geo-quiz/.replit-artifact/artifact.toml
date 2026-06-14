@@ -18,7 +18,12 @@ localPort = 26064
 run = "pnpm --filter @workspace/geo-quiz run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/geo-quiz", "run", "build" ]
+# Build the frontend only if it hasn't already been built. The api-server's
+# production build may build the geo frontend first (it needs the SPA shell it
+# produces), so this guard avoids a redundant second build while still building
+# when the geo artifact happens to be built first. Either way exactly one
+# canonical geo build feeds both this static layer and the api-server SSR shell.
+build = [ "bash", "-c", "[ -f artifacts/geo-quiz/dist/public/spa-template.html ] || pnpm --filter @workspace/geo-quiz run build" ]
 publicDir = "artifacts/geo-quiz/dist/public"
 serve = "static"
 
