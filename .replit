@@ -89,3 +89,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 ADMIN_USER_IDS = "user_3CjsELmuGrPOJTewA8276Wj6QeF"
+VITE_CANONICAL_DOMAIN = "https://worldgeographytrivia.com"
