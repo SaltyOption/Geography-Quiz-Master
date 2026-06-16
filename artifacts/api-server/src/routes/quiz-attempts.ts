@@ -1,41 +1,20 @@
-import { Router, type IRouter, type Request } from "express";
+import { Router, type IRouter } from "express";
 import { eq, inArray } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { db, questionsTable, quizAttemptsTable, quizzesTable } from "@workspace/db";
 import { SubmitQuizAttemptBody } from "@workspace/api-zod";
 import { isRequestAdmin } from "../middlewares/requireAdmin";
+import { createRateLimiter, getRateLimitKey } from "../lib/rateLimit";
 
 const router: IRouter = Router();
 
-// ---------------------------------------------------------------------------
-// Simple in-memory sliding-window rate limiter for attempt submissions.
-// Key: authenticated userId, or remote IP for unauthenticated callers.
-// Limits: 30 attempts per 10-minute window per key.
-// ---------------------------------------------------------------------------
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const RATE_LIMIT_MAX = 30;
-const rateLimitCounters = new Map<string, { count: number; windowStart: number }>();
-
-function getRateLimitKey(req: Request, userId: string | null): string {
-  if (userId) return `user:${userId}`;
-  const forwarded = req.headers["x-forwarded-for"];
-  const ip = Array.isArray(forwarded)
-    ? forwarded[0]
-    : (forwarded?.split(",")[0] ?? req.socket.remoteAddress ?? "unknown");
-  return `ip:${ip}`;
-}
-
-function checkRateLimit(key: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitCounters.get(key);
-  if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
-    rateLimitCounters.set(key, { count: 1, windowStart: now });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count += 1;
-  return true;
-}
+// Simple in-memory sliding-window rate limiter for attempt submissions, keyed
+// by authenticated userId (or remote IP for anonymous callers): 30 attempts
+// per 10-minute window per key.
+const checkRateLimit = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+});
 
 router.post("/quiz-attempts", async (req, res): Promise<void> => {
   const parsed = SubmitQuizAttemptBody.safeParse(req.body);

@@ -433,6 +433,40 @@ paths:
         "404":
           description: Quiz or category not found
 
+  /quizzes/{id}/questions/{questionId}/check:
+    post:
+      operationId: checkAnswer
+      tags: [quizzes]
+      summary: Check a single answer and reveal its explanation and fun fact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckAnswerBody"
+      responses:
+        "200":
+          description: Answer feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckAnswerResult"
+        "400":
+          description: Invalid request
+        "404":
+          description: Quiz or question not found
+
   /questions/{id}:
     get:
       operationId: getQuestion
@@ -1475,6 +1509,39 @@ components:
         - isCorrect
         - selectedOption
         - correctOption
+        - explanation
+        - funFact
+
+    CheckAnswerBody:
+      type: object
+      properties:
+        selectedOption:
+          type: integer
+          minimum: 0
+          maximum: 3
+      required:
+        - selectedOption
+
+    CheckAnswerResult:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        selectedOption:
+          type: integer
+        correctOption:
+          type: integer
+        isCorrect:
+          type: boolean
+        explanation:
+          type: string
+        funFact:
+          type: ["string", "null"]
+      required:
+        - questionId
+        - selectedOption
+        - correctOption
+        - isCorrect
         - explanation
         - funFact
 

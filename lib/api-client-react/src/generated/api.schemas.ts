@@ -313,6 +313,24 @@ export interface QuizAttemptResult {
   questionResults: QuestionResult[];
 }
 
+export interface CheckAnswerBody {
+  /**
+   * @minimum 0
+   * @maximum 3
+   */
+  selectedOption: number;
+}
+
+export interface CheckAnswerResult {
+  questionId: number;
+  selectedOption: number;
+  correctOption: number;
+  isCorrect: boolean;
+  explanation: string;
+  /** @nullable */
+  funFact: string | null;
+}
+
 export interface QuizStats {
   quizId: number;
   totalAttempts: number;

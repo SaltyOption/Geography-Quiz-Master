@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useParams, Link } from "wouter";
-import { useGetQuiz, useSubmitQuizAttempt, getGetQuizQueryKey } from "@workspace/api-client-react";
-import { ArrowRight, ChevronRight, Home, Loader2 } from "lucide-react";
+import { useGetQuiz, useSubmitQuizAttempt, useCheckAnswer, getGetQuizQueryKey, type CheckAnswerResult } from "@workspace/api-client-react";
+import { ArrowRight, ChevronRight, Home, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { useJsonLd } from "@/hooks/useJsonLd";
 import { Button } from "@/components/ui/button";
@@ -67,10 +67,12 @@ export default function QuizPage() {
   useJsonLd(breadcrumbLd);
 
   const submitQuiz = useSubmitQuizAttempt();
+  const checkAnswer = useCheckAnswer();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [feedback, setFeedback] = useState<CheckAnswerResult | null>(null);
   const [answers, setAnswers] = useState<Array<{questionId: number, selectedOption: number}>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -78,11 +80,25 @@ export default function QuizPage() {
   const currentQuestion = questions[currentQuestionIndex];
   const progress = questions.length > 0 ? ((currentQuestionIndex) / questions.length) * 100 : 0;
 
-  const handleSelectOption = (index: number) => {
+  const handleSelectOption = async (index: number) => {
     if (isAnswered) return;
+    const question = currentQuestion!;
     setSelectedOption(index);
     setIsAnswered(true);
-    setAnswers(prev => [...prev, { questionId: currentQuestion!.id, selectedOption: index }]);
+    setAnswers(prev => [...prev, { questionId: question.id, selectedOption: index }]);
+    try {
+      const result = await checkAnswer.mutateAsync({
+        id: quizId,
+        questionId: question.id,
+        data: { selectedOption: index },
+      });
+      setFeedback(result);
+    } catch (err) {
+      // Non-fatal: the final submission still scores every answer. If the
+      // per-question reveal fails, let the player continue without feedback.
+      // eslint-disable-next-line no-console
+      console.error("Failed to check answer", err);
+    }
   };
 
   const handleNext = () => {
@@ -90,6 +106,7 @@ export default function QuizPage() {
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedOption(null);
       setIsAnswered(false);
+      setFeedback(null);
     } else {
       handleComplete();
     }
@@ -212,17 +229,21 @@ export default function QuizPage() {
         <div className="grid gap-3 sm:grid-cols-1">
           {currentQuestion.options.map((option, index) => {
             const isSelected = selectedOption === index;
-            
+            const isCorrectOption = feedback?.correctOption === index;
+            const isWrongSelection = feedback != null && isSelected && !feedback.isCorrect;
+
             let buttonClass = "justify-start h-auto min-h-[4rem] text-left p-4 whitespace-normal text-lg border-2 transition-all ";
-            
+
             if (!isAnswered) {
               buttonClass += "hover:border-primary/50 hover:bg-primary/5 bg-card border-card-border shadow-sm";
+            } else if (isCorrectOption) {
+              buttonClass += "border-green-500 bg-green-50 dark:bg-green-950/30 ring-2 ring-green-500/30";
+            } else if (isWrongSelection) {
+              buttonClass += "border-destructive bg-destructive/10 ring-2 ring-destructive/30";
+            } else if (isSelected) {
+              buttonClass += "border-primary bg-primary/10 ring-2 ring-primary/30";
             } else {
-              if (isSelected) {
-                buttonClass += "border-primary bg-primary/10 ring-2 ring-primary/30";
-              } else {
-                buttonClass += "opacity-50 border-card-border bg-card";
-              }
+              buttonClass += "opacity-50 border-card-border bg-card";
             }
 
             return (
@@ -237,7 +258,13 @@ export default function QuizPage() {
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">
                     {String.fromCharCode(65 + index)}
                   </span>
-                  <span>{option}</span>
+                  <span className="flex-1">{option}</span>
+                  {isAnswered && isCorrectOption && (
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+                  )}
+                  {isAnswered && isWrongSelection && (
+                    <XCircle className="h-5 w-5 shrink-0 text-destructive" />
+                  )}
                 </div>
               </Button>
             );
@@ -245,15 +272,59 @@ export default function QuizPage() {
         </div>
 
         {isAnswered && (
-          <div className="mt-8 flex justify-end pt-4">
-            <Button size="lg" className="w-full sm:w-auto text-lg px-8" onClick={handleNext} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              {currentQuestionIndex < questions.length - 1 ? (
-                <>Next Question <ArrowRight className="ml-2 h-5 w-5" /></>
-              ) : (
-                "Complete Journey"
-              )}
-            </Button>
+          <div className="mt-8 space-y-4">
+            {checkAnswer.isPending && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Checking your answer…
+              </div>
+            )}
+
+            {feedback && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
+                <div
+                  className={`flex items-center gap-2 text-xl font-serif font-bold ${
+                    feedback.isCorrect ? "text-green-600 dark:text-green-400" : "text-destructive"
+                  }`}
+                >
+                  {feedback.isCorrect ? (
+                    <><CheckCircle2 className="h-6 w-6" /> Correct!</>
+                  ) : (
+                    <><XCircle className="h-6 w-6" /> Not quite</>
+                  )}
+                </div>
+
+                <div className="rounded-xl border bg-muted/40 p-4 text-base leading-relaxed text-foreground">
+                  {feedback.explanation}
+                </div>
+
+                {feedback.funFact && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+                    <div className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                      <Sparkles className="h-4 w-4" /> Fun Fact
+                    </div>
+                    <p className="text-base leading-relaxed text-amber-900 dark:text-amber-100">
+                      {feedback.funFact}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto text-lg px-8"
+                onClick={handleNext}
+                disabled={isSubmitting || checkAnswer.isPending}
+              >
+                {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                {currentQuestionIndex < questions.length - 1 ? (
+                  <>Next Question <ArrowRight className="ml-2 h-5 w-5" /></>
+                ) : (
+                  "Complete Journey"
+                )}
+              </Button>
+            </div>
           </div>
         )}
       </div>

@@ -23,6 +23,8 @@ import type {
   Category,
   CategoryNode,
   CategoryWithQuizzes,
+  CheckAnswerBody,
+  CheckAnswerResult,
   ClearCourseModuleProgress200,
   CourseDetail,
   CourseImportBody,
@@ -1858,6 +1860,94 @@ export const useImportQuestionsByCategory = <
   TContext
 > => {
   return useMutation(getImportQuestionsByCategoryMutationOptions(options));
+};
+
+/**
+ * @summary Check a single answer and reveal its explanation and fun fact
+ */
+export const getCheckAnswerUrl = (id: number, questionId: number) => {
+  return `/api/quizzes/${id}/questions/${questionId}/check`;
+};
+
+export const checkAnswer = async (
+  id: number,
+  questionId: number,
+  checkAnswerBody: CheckAnswerBody,
+  options?: RequestInit,
+): Promise<CheckAnswerResult> => {
+  return customFetch<CheckAnswerResult>(getCheckAnswerUrl(id, questionId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(checkAnswerBody),
+  });
+};
+
+export const getCheckAnswerMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkAnswer>>,
+    TError,
+    { id: number; questionId: number; data: BodyType<CheckAnswerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkAnswer>>,
+  TError,
+  { id: number; questionId: number; data: BodyType<CheckAnswerBody> },
+  TContext
+> => {
+  const mutationKey = ["checkAnswer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkAnswer>>,
+    { id: number; questionId: number; data: BodyType<CheckAnswerBody> }
+  > = (props) => {
+    const { id, questionId, data } = props ?? {};
+
+    return checkAnswer(id, questionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckAnswerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkAnswer>>
+>;
+export type CheckAnswerMutationBody = BodyType<CheckAnswerBody>;
+export type CheckAnswerMutationError = ErrorType<void>;
+
+/**
+ * @summary Check a single answer and reveal its explanation and fun fact
+ */
+export const useCheckAnswer = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkAnswer>>,
+    TError,
+    { id: number; questionId: number; data: BodyType<CheckAnswerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof checkAnswer>>,
+  TError,
+  { id: number; questionId: number; data: BodyType<CheckAnswerBody> },
+  TContext
+> => {
+  return useMutation(getCheckAnswerMutationOptions(options));
 };
 
 /**

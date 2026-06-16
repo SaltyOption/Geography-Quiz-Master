@@ -17,13 +17,26 @@ import {
   DeleteQuizParams,
   GetQuizStatsParams,
   BulkImportQuizzesBody,
+  CheckAnswerParams,
+  CheckAnswerBody,
 } from "@workspace/api-zod";
+import { getAuth } from "@clerk/express";
 import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 import { getCategoriesByQuestionIds } from "../lib/questionCategories";
 import { slugify, uniqueSlugTx } from "../lib/categorySlug";
 import { getVisibleCategoryIds } from "../lib/categoryVisibility";
+import { createRateLimiter, getRateLimitKey } from "../lib/rateLimit";
 
 const router: IRouter = Router();
+
+// Sliding-window rate limiter for single-answer reveals. This endpoint hands
+// back answer keys one question at a time, so it is a scraping target; the
+// limit is sized generously for real play (one call per question) but still
+// bounds bulk enumeration: 300 checks per 10-minute window per user/IP.
+const checkAnswerRateLimit = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 300,
+});
 
 type CategorySerialized = {
   id: number;
@@ -447,6 +460,64 @@ router.get("/quizzes/:id", async (req, res): Promise<void> => {
       createdAt: q.createdAt.toISOString(),
       updatedAt: q.updatedAt.toISOString(),
     })),
+  });
+});
+
+// Reveal a single question's answer key (correct option, explanation, fun fact)
+// after the player has committed to a choice. The play-time GET /quizzes/:id
+// strips this content; this endpoint hands it back one question at a time so the
+// UI can give immediate feedback. Same visibility gate as attempt submission:
+// non-admins can only probe published quizzes, and the question must belong to
+// the given quiz (blocks cross-quiz answer-key exfiltration).
+router.post("/quizzes/:id/questions/:questionId/check", async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const rawQuestionId = Array.isArray(req.params.questionId)
+    ? req.params.questionId[0]
+    : req.params.questionId;
+  const params = CheckAnswerParams.safeParse({ id: rawId, questionId: rawQuestionId });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = CheckAnswerBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const userId = getAuth(req)?.userId ?? null;
+  if (!checkAnswerRateLimit(getRateLimitKey(req, userId))) {
+    res.status(429).json({ error: "Too many requests. Please try again later." });
+    return;
+  }
+
+  const admin = isRequestAdmin(req);
+  const [quiz] = await db
+    .select({ published: quizzesTable.published })
+    .from(quizzesTable)
+    .where(eq(quizzesTable.id, params.data.id));
+  if (!quiz || (!quiz.published && !admin)) {
+    res.status(404).json({ error: "Quiz not found" });
+    return;
+  }
+
+  const [question] = await db
+    .select()
+    .from(questionsTable)
+    .where(eq(questionsTable.id, params.data.questionId));
+  if (!question || question.quizId !== params.data.id) {
+    res.status(404).json({ error: "Question not found" });
+    return;
+  }
+
+  res.json({
+    questionId: question.id,
+    selectedOption: parsed.data.selectedOption,
+    correctOption: question.correctOption,
+    isCorrect: parsed.data.selectedOption === question.correctOption,
+    explanation: question.explanation,
+    funFact: question.funFact ?? null,
   });
 });
 

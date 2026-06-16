@@ -487,6 +487,33 @@ export const ImportQuestionsByCategoryResponse = zod.object({
 });
 
 /**
+ * @summary Check a single answer and reveal its explanation and fun fact
+ */
+export const CheckAnswerParams = zod.object({
+  id: zod.coerce.number(),
+  questionId: zod.coerce.number(),
+});
+
+export const checkAnswerBodySelectedOptionMin = 0;
+export const checkAnswerBodySelectedOptionMax = 3;
+
+export const CheckAnswerBody = zod.object({
+  selectedOption: zod
+    .number()
+    .min(checkAnswerBodySelectedOptionMin)
+    .max(checkAnswerBodySelectedOptionMax),
+});
+
+export const CheckAnswerResponse = zod.object({
+  questionId: zod.number(),
+  selectedOption: zod.number(),
+  correctOption: zod.number(),
+  isCorrect: zod.boolean(),
+  explanation: zod.string(),
+  funFact: zod.string().nullable(),
+});
+
+/**
  * @summary Get a single question
  */
 export const GetQuestionParams = zod.object({
