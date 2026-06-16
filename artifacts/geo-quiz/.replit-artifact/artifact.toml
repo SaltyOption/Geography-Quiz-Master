@@ -11,24 +11,29 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-# This static layer intentionally does NOT claim "/assets/". The JS/CSS bundles
-# are content-hashed per build, and this layer builds geo in a SEPARATE step from
-# the api-server, so its asset hashes can drift from the SSR shell the api-server
-# renders. When they drift, a request for the shell's asset misses here and the
-# SPA rewrite returns index.html (text/html) — the cause of the unstyled prod
-# site. So "/assets/" is served by the api-server instead (it bundles the SAME
-# build that produced its shell, so they can never diverge). This layer only
-# serves stable-named files whose URLs are not content-hashed and cannot drift.
-paths = ["/favicon.svg", "/logo.svg", "/opengraph.jpg", "/llms.txt", "/robots.txt", "/landmarks/", "/regions/"]
+# This static layer intentionally claims NO routes in production. Every static
+# file (the content-hashed /assets bundle AND the stable-named files like
+# /favicon.svg, /logo.svg, /opengraph.jpg, /llms.txt, /robots.txt, /landmarks/*,
+# and /regions/*) is served by the api-server instead. The api-server bundles the
+# SAME geo-quiz build that produced its SSR shell (build.mjs copies the entire
+# dist/public into the server bundle) and serves it via express.static, so the
+# shell and every asset it references always come from one build and can never
+# diverge. In the autoscale deployment this separate static layer's publicDir was
+# not reliably served (requests fell through to the SPA index.html rewrite,
+# producing broken images), so all static serving is consolidated into the
+# api-server, which owns "/". This service still runs the Vite dev server in
+# development (reached via the api-server's dev proxy).
+paths = []
 localPort = 26064
 
 [services.development]
 run = "pnpm --filter @workspace/geo-quiz run dev"
 
 [services.production]
-# Build the frontend so this layer can serve the stable static files above. The
-# hashed /assets are served by the api-server, which bundles its own copy of this
-# build as the single source of truth for shell + assets.
+# Build the frontend so the api-server's build can copy dist/public into its own
+# bundle. (The api-server's production build also runs this frontend build first,
+# so this is belt-and-suspenders.) The api-server serves the resulting static
+# files at runtime as the single source of truth for shell + assets.
 build = [ "bash", "-c", "pnpm --filter @workspace/geo-quiz run build" ]
 publicDir = "artifacts/geo-quiz/dist/public"
 serve = "static"

@@ -41,9 +41,24 @@ geo-quiz static artifact must NOT claim `/assets/`; with only the api-server
 claiming `/`, `/assets/*` falls through to it. Verify in prod with
 `curl -sI <domain>/assets/<hash>.js` — a correct response has
 `content-type: text/javascript` and the `x-powered-by: Express` header (proving
-the api-server, not the static layer, served it). The static layer should keep
-only stable-named paths (favicon, og image, robots, llms, landmarks, regions)
-whose URLs are not content-hashed and therefore cannot drift.
+the api-server, not the static layer, served it).
+
+**UPDATE — the static layer now claims NOTHING (`paths = []`); the api-server
+serves ALL frontend static files.** It is NOT just `/assets` that the separate
+static layer fails to serve. In the autoscale deployment the geo-quiz static
+layer's `publicDir` was not reliably served for the STABLE-named files either
+(`/regions/*`, `/landmarks/*`, `/favicon.svg`, `/logo.svg`, `/opengraph.jpg`,
+`/llms.txt`, `/robots.txt`): those requests returned the SPA `index.html` via
+the static layer's `from="/*" to="/index.html"` rewrite (HTTP 200,
+`content-type: text/html`, NO `x-powered-by: Express`), so category/topic card
+images rendered as broken placeholders on the live site. Because the api-server
+already bundles the ENTIRE `dist/public` and serves it via `express.static`, the
+robust fix is to give the geo-quiz static artifact `paths = []` so every static
+request falls through to the api-server `/`. Do NOT reintroduce stable-named
+path claims (favicon, og, robots, llms, landmarks, regions) on the static layer
+to "fix" missing images — that is exactly what caused the bug. Verify in prod:
+`/regions/africa.png` must return `image/png` (not `text/html`) and `/favicon.svg`
+must NOT 301 to `/favicon.svg/`.
 
 **Why `index: false` + `redirect: false`:** `dist/public` contains prerendered
 `<route>/index.html` SEO snapshots. These flags stop express.static from
