@@ -113,7 +113,7 @@ export default function Home() {
     );
   }
 
-  const ROOT_ORDER = ["By Topic", "By Region"];
+  const ROOT_ORDER = ["World Cup 2026", "By Topic", "By Region"];
   const roots = [...(tree ?? [])].sort((a, b) => {
     const ai = ROOT_ORDER.indexOf(a.name);
     const bi = ROOT_ORDER.indexOf(b.name);
