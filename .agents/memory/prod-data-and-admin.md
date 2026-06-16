@@ -1,6 +1,6 @@
 ---
 name: Prod data & admin setup
-description: Why a published app can show an empty site / no admin, and the supported ways to fix it (separate prod DB, Publish "overwrite data", shared-env admin IDs, single Clerk instance).
+description: Why a published app can show an empty site / no admin, and the supported ways to fix it (separate prod DB, Publish "overwrite data", shared-env admin IDs, SEPARATE dev/prod Clerk user stores).
 ---
 
 # Production data & admin access
@@ -21,14 +21,17 @@ data (attempts, subscribers, etc.); safe only when prod has no real data yet.
   `[userenv.shared]` in `.replit`), which reaches BOTH dev and prod. Seeing it in
   `.replit` under `[userenv.shared]` is correct — it is NOT a hardcoded secret;
   `viewEnvVars` confirms it under `envVars.shared`.
-- Dev and prod share ONE Clerk instance (publishable key is `pk_test_` in both),
-  so a user's Clerk ID is identical across environments — the same admin ID works
-  in prod. Verify with `printf %s "$VITE_CLERK_PUBLISHABLE_KEY" | cut -c1-8`.
-- Therefore "can't log in as admin" on the live site is usually just being signed
-  OUT there: sign in with the admin Clerk account. If the Admin link still doesn't
-  appear after signing in, republish so the running deployment picks up the env.
-- Bootstrap if the ID is unknown: visit `/admin` while signed in (non-admin) — the
-  page prints your Clerk user ID to add to `ADMIN_USER_IDS`.
+- Dev and prod are SEPARATE Clerk instances with SEPARATE user stores (dev uses
+  `pk_test_`/`sk_test_`, prod uses live keys). The same email gets a DIFFERENT
+  `user_...` ID in each, so a dev-only admin ID works in the editor preview but
+  NOT on the published domain. `ADMIN_USER_IDS` must contain BOTH the dev ID and
+  the prod ID. See `clerk-admin-dev-prod-ids.md`.
+- "Can't log in as admin" on the live site (signed IN but treated as a regular
+  user) is almost always the missing prod ID, not being signed out.
+- Get the prod ID: sign in on the LIVE domain and visit `/admin`; the "Not yet an
+  admin" card prints the current Clerk user ID. Append it to `ADMIN_USER_IDS`
+  (shared env), keep the dev ID, then RE-PUBLISH (env changes only reach prod on a
+  new deploy). The editor's `sk_test` key cannot look up the prod ID for you.
 
 **How to apply:** when a freshly deployed app shows no content / no admin, check
 `executeSql({environment:"production"})` counts vs dev BEFORE touching code — it is
