@@ -152,10 +152,17 @@ export default function Home() {
                     <Sparkles className="mr-2 h-4 w-4" /> Daily quiz
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" data-testid="button-hero-browse">
-                  <Link href="#quizzes">
-                    <Compass className="mr-2 h-4 w-4" /> Browse quizzes
-                  </Link>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  data-testid="button-hero-browse"
+                  onClick={() =>
+                    document
+                      .getElementById("quizzes")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                >
+                  <Compass className="mr-2 h-4 w-4" /> Browse quizzes
                 </Button>
               </div>
             </div>
