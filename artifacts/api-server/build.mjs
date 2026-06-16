@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { copyFile, rm } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
@@ -120,31 +120,31 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     },
   });
 
-  // Ship the frontend's empty-root SPA shell inside the api-server's own dist so
-  // the SSR layer can read it at runtime. In the autoscale deployment the
-  // geo-quiz static artifact's files are served from a separate static layer and
-  // are NOT present in this process's container, so the template must live here.
-  // The shell must come from the SAME geo build whose hashed assets the static
-  // layer serves. The production build command (see this artifact's
-  // .replit-artifact/artifact.toml) builds the geo frontend first when the shell
-  // is missing, guaranteeing it exists here.
-  const shellSrc = path.resolve(
-    artifactDir,
-    "../geo-quiz/dist/public/spa-template.html",
-  );
-  const shellDest = path.resolve(distDir, "web-template.html");
-  if (existsSync(shellSrc)) {
-    await copyFile(shellSrc, shellDest);
-    console.log(`Copied SSR shell -> ${path.relative(process.cwd(), shellDest)}`);
+  // Ship the ENTIRE frontend build (hashed JS/CSS bundles, images, favicon, and
+  // the empty-root SPA shell) inside the api-server's own dist so this process
+  // can serve those assets itself at runtime (see app.ts). In the autoscale
+  // deployment the geo-quiz static artifact is built in a SEPARATE environment
+  // and served from a SEPARATE static layer; if that layer's hashed asset
+  // filenames don't match the shell this server renders, asset requests fall
+  // through to this server. By bundling the SAME build that produced the shell,
+  // the api-server becomes the single source of truth — the SSR shell and the
+  // hashed assets it references always come from one build and can never diverge.
+  const publicSrc = path.resolve(artifactDir, "../geo-quiz/dist/public");
+  const publicDest = path.resolve(distDir, "public");
+  if (existsSync(path.join(publicSrc, "spa-template.html"))) {
+    await cp(publicSrc, publicDest, { recursive: true });
+    console.log(
+      `Copied frontend build -> ${path.relative(process.cwd(), publicDest)}`,
+    );
   } else if (process.env.NODE_ENV === "production") {
     throw new Error(
-      `SSR shell not found at ${shellSrc}. The geo-quiz frontend must be built ` +
-        `before the api-server in production. Without it the deployed site ` +
-        `would serve an unstyled fallback page.`,
+      `Frontend build not found at ${publicSrc}. The geo-quiz frontend must be ` +
+        `built before the api-server in production. Without it the deployed site ` +
+        `would serve an unstyled fallback page with broken assets.`,
     );
   } else {
     console.warn(
-      `[build] SSR shell not found at ${shellSrc}; skipping copy (dev build). ` +
+      `[build] Frontend build not found at ${publicSrc}; skipping copy (dev build). ` +
         `Build the geo-quiz frontend to generate it.`,
     );
   }

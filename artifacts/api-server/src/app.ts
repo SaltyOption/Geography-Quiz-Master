@@ -1,12 +1,14 @@
 import express, { type Express, type RequestHandler } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import { sep } from "path";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
 import { createDevViteProxy } from "./middlewares/devViteProxy";
 import router from "./routes";
 import ssrPagesRouter from "./routes/ssr-pages";
 import sitemapRouter from "./routes/sitemap";
+import { BUNDLED_PUBLIC_DIR } from "./lib/ssrTemplate";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -60,6 +62,25 @@ export const devViteProxy: ReturnType<typeof createDevViteProxy> | undefined =
 if (devViteProxy) {
   app.use(devViteProxy as unknown as RequestHandler);
 } else {
+  // Production: serve the frontend's hashed assets (JS/CSS), images, and other
+  // static files from the build bundled inside this server (see build.mjs). This
+  // makes the api-server the single source of truth for both the SSR shell and
+  // the assets it references, so they can never diverge from the separately built
+  // static layer (an asset request that misses that layer falls through here).
+  // `index: false` + `redirect: false` keep every HTML route owned by the SSR
+  // handlers below — no directory index.html snapshots are served and no
+  // trailing-slash redirects are issued; only real asset files are served here.
+  app.use(
+    express.static(BUNDLED_PUBLIC_DIR, {
+      index: false,
+      redirect: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.includes(`${sep}assets${sep}`)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    }),
+  );
   app.use(ssrPagesRouter);
 }
 

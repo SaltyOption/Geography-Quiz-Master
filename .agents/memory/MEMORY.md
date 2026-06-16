@@ -1,2 +1,2 @@
 - [Dev vs prod frontend routing split](dev-prod-routing-split.md) — api-server owns `/` for prod SSR; in dev it proxies non-API traffic to Vite. Don't revert route ownership to fix dev.
-- [SSR template bundling](ssr-template-bundling.md) — on autoscale the api-server container lacks the geo-quiz static layer; the SSR shell must be copied into api-server's bundle and read bundle-relative, not from the sibling dist at runtime.
+- [SSR shell + asset bundling](ssr-template-bundling.md) — on autoscale the api-server must bundle AND serve the full geo dist/public (shell + hashed /assets) itself; the separate static layer can diverge, else assets fall through to the SSR catch-all and the site renders unstyled.

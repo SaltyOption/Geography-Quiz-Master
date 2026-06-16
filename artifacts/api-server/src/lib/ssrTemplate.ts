@@ -19,11 +19,13 @@ import { fileURLToPath } from "url";
 
 const SITE_NAME = "World Geography Trivia";
 
-// Primary (production): the SPA shell shipped next to the running bundle.
-// esbuild bundles this module into dist/index.mjs, so import.meta.url resolves
-// to the dist dir regardless of the process CWD.
+// Primary (production): the full frontend build (including the SPA shell) is
+// copied next to the running bundle by build.mjs. esbuild bundles this module
+// into dist/index.mjs, so import.meta.url resolves to the dist dir regardless of
+// the process CWD; the build output therefore lives at dist/public.
 const BUNDLE_DIR = dirname(fileURLToPath(import.meta.url));
-const BUNDLED_TEMPLATE_PATH = resolve(BUNDLE_DIR, "web-template.html");
+export const BUNDLED_PUBLIC_DIR = resolve(BUNDLE_DIR, "public");
+const BUNDLED_TEMPLATE_PATH = resolve(BUNDLED_PUBLIC_DIR, "spa-template.html");
 
 // Fallback (dev / local prod-like runs): read the frontend build output
 // directly from the workspace tree.
