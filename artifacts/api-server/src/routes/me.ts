@@ -7,6 +7,7 @@ const router: IRouter = Router();
 router.get("/me", (req, res): void => {
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
+  res.setHeader("Cache-Control", "no-store");
   res.json({
     userId,
     isAdmin: isAdminUserId(userId),
