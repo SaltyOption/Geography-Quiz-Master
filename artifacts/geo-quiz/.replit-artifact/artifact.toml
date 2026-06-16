@@ -11,17 +11,24 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = ["/assets/", "/favicon.svg", "/logo.svg", "/opengraph.jpg", "/llms.txt", "/robots.txt", "/landmarks/", "/regions/"]
+# This static layer intentionally does NOT claim "/assets/". The JS/CSS bundles
+# are content-hashed per build, and this layer builds geo in a SEPARATE step from
+# the api-server, so its asset hashes can drift from the SSR shell the api-server
+# renders. When they drift, a request for the shell's asset misses here and the
+# SPA rewrite returns index.html (text/html) — the cause of the unstyled prod
+# site. So "/assets/" is served by the api-server instead (it bundles the SAME
+# build that produced its shell, so they can never diverge). This layer only
+# serves stable-named files whose URLs are not content-hashed and cannot drift.
+paths = ["/favicon.svg", "/logo.svg", "/opengraph.jpg", "/llms.txt", "/robots.txt", "/landmarks/", "/regions/"]
 localPort = 26064
 
 [services.development]
 run = "pnpm --filter @workspace/geo-quiz run dev"
 
 [services.production]
-# Build the frontend unconditionally so this static layer always serves the
-# CURRENT hashed assets. The api-server bundles and serves its own copy of this
-# same build as the single source of truth, so even if this layer is ever stale
-# or missing an asset, requests fall through to the api-server and still resolve.
+# Build the frontend so this layer can serve the stable static files above. The
+# hashed /assets are served by the api-server, which bundles its own copy of this
+# build as the single source of truth for shell + assets.
 build = [ "bash", "-c", "pnpm --filter @workspace/geo-quiz run build" ]
 publicDir = "artifacts/geo-quiz/dist/public"
 serve = "static"

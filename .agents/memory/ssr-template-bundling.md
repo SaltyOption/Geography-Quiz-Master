@@ -29,6 +29,22 @@ AND the hashed assets.
   after `sitemapRouter` and `/api`). So the api-server serves the real assets
   itself and the static layer becomes a non-critical front cache.
 
+**CRITICAL — proxy path ownership (the piece that's easy to miss):** the
+deployment uses the `application` router, which routes by each artifact.toml's
+`[[services]].paths`, most-specific-first. If the geo-quiz STATIC artifact also
+claims `/assets/`, the proxy sends `/assets/*` THERE — the api-server's
+`express.static` never sees those requests, so bundling them in the api-server
+does nothing. The static layer (built separately, different hashes) then returns
+`index.html` via its `from="/*" to="/index.html"` rewrite (HTTP 200,
+`content-type: text/html`) for the shell's asset URLs → unstyled site. FIX: the
+geo-quiz static artifact must NOT claim `/assets/`; with only the api-server
+claiming `/`, `/assets/*` falls through to it. Verify in prod with
+`curl -sI <domain>/assets/<hash>.js` — a correct response has
+`content-type: text/javascript` and the `x-powered-by: Express` header (proving
+the api-server, not the static layer, served it). The static layer should keep
+only stable-named paths (favicon, og image, robots, llms, landmarks, regions)
+whose URLs are not content-hashed and therefore cannot drift.
+
 **Why `index: false` + `redirect: false`:** `dist/public` contains prerendered
 `<route>/index.html` SEO snapshots. These flags stop express.static from
 shadowing the live SSR handlers for `/`, `/quiz/:id`, `/category/:slug`,
