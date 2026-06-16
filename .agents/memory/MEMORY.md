@@ -1,2 +1,3 @@
 - [Dev vs prod frontend routing split](dev-prod-routing-split.md) — api-server owns `/` for prod SSR; in dev it proxies non-API traffic to Vite. Don't revert route ownership to fix dev.
 - [SSR shell + asset bundling](ssr-template-bundling.md) — on autoscale the api-server must bundle AND serve the full geo dist/public (shell + hashed /assets) itself; the separate static layer can diverge, else assets fall through to the SSR catch-all and the site renders unstyled.
+- [Prod data & admin setup](prod-data-and-admin.md) — dev/prod DBs are separate (publish copies schema, not data); copy content via Publish "overwrite data" (never seed scripts); admin ID lives in shared env, dev+prod share one Clerk instance.

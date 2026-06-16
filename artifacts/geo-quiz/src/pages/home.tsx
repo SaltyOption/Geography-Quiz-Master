@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetCategoryTree, useListQuizzes, useListCourses, type CategoryNode } from "@workspace/api-client-react";
+import { useGetCategoryTree, useListQuizzes, useListCourses, useGetMe, type CategoryNode } from "@workspace/api-client-react";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Link } from "wouter";
 import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass } from "lucide-react";
@@ -89,6 +89,8 @@ export default function Home() {
   const { data: tree, isLoading, error } = useGetCategoryTree();
   const { data: quizzes } = useListQuizzes();
   const { data: courses } = useListCourses();
+  const { data: me } = useGetMe();
+  const isAdmin = me?.isAdmin ?? false;
   const [showAllCourses, setShowAllCourses] = useState(false);
   const [expandedRoots, setExpandedRoots] = useState<Record<number, boolean>>({});
 
@@ -187,13 +189,19 @@ export default function Home() {
         {roots.length === 0 ? (
           <div id="quizzes" className="scroll-mt-20 flex flex-col items-center justify-center rounded-xl border border-dashed p-16 text-center">
             <FolderTree className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <h2 className="text-xl font-semibold">No categories yet</h2>
+            <h2 className="text-xl font-semibold">
+              {isAdmin ? "No categories yet" : "Quizzes are on their way"}
+            </h2>
             <p className="mt-2 text-muted-foreground">
-              Head to the admin panel to create your first category and quizzes.
+              {isAdmin
+                ? "Head to the admin panel to create your first category and quizzes."
+                : "New geography quizzes are being prepared. Please check back soon!"}
             </p>
-            <Button asChild className="mt-6">
-              <Link href="/admin">Go to Admin Dashboard</Link>
-            </Button>
+            {isAdmin && (
+              <Button asChild className="mt-6">
+                <Link href="/admin">Go to Admin Dashboard</Link>
+              </Button>
+            )}
           </div>
         ) : (
           <div id="quizzes" className="space-y-12 scroll-mt-20">
