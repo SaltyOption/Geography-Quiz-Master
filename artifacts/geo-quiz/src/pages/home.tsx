@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useGetCategoryTree, useListQuizzes, useListCourses, useGetMe, type CategoryNode } from "@workspace/api-client-react";
+import { useGetCategoryTree, useListQuizzes, useListCourses, useGetMe, type CategoryNode, type QuizSummary } from "@workspace/api-client-react";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Link } from "wouter";
-import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass } from "lucide-react";
+import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass, Play } from "lucide-react";
 import mascotUrl from "@assets/mascot_swallow.png";
 import { SignUpBanner } from "@/components/SignUpBanner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -78,6 +78,40 @@ function CategoryCard({ node }: { node: CategoryNode }) {
   );
 }
 
+function HomeQuizCard({ quiz }: { quiz: QuizSummary }) {
+  return (
+    <Card className="group flex h-full flex-col overflow-hidden transition-all hover:shadow-md hover:border-primary/50">
+      <CardHeader>
+        <div className="mb-2 flex items-center justify-between">
+          <Badge
+            variant={
+              quiz.difficulty === "hard"
+                ? "destructive"
+                : quiz.difficulty === "medium"
+                  ? "default"
+                  : "secondary"
+            }
+          >
+            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
+          </Badge>
+          <span className="text-xs font-medium text-muted-foreground">
+            {quiz.questionCount} {quiz.questionCount === 1 ? "Question" : "Questions"}
+          </span>
+        </div>
+        <CardTitle className="text-xl transition-colors group-hover:text-primary">{quiz.title}</CardTitle>
+        <CardDescription className="line-clamp-2">{quiz.description}</CardDescription>
+      </CardHeader>
+      <CardFooter className="mt-auto border-t bg-muted/20 pt-4">
+        <Button className="w-full" asChild>
+          <Link href={`/quiz/${quiz.id}`}>
+            <Play className="mr-2 h-4 w-4" /> Start Adventure
+          </Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
 export default function Home() {
   usePageMeta({
     title: "World Geography Trivia",
@@ -113,6 +147,7 @@ export default function Home() {
     );
   }
 
+  const QUIZ_LIST_ROOT = "World Cup 2026";
   const ROOT_ORDER = ["World Cup 2026", "By Topic", "By Region"];
   const roots = [...(tree ?? [])].sort((a, b) => {
     const ai = ROOT_ORDER.indexOf(a.name);
@@ -213,66 +248,97 @@ export default function Home() {
         ) : (
           <div id="quizzes" className="space-y-12 scroll-mt-20">
             {/* Quizzes first */}
-            {roots.map((root) => (
-              <section key={root.id}>
-                <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight">{root.name}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {countAll(root).quizzes} {countAll(root).quizzes === 1 ? "quiz" : "quizzes"} across {root.children.length} {root.children.length === 1 ? "category" : "categories"}
-                    </p>
-                  </div>
-                  {root.children.length > 2 ? (
-                    <div className="flex items-center gap-2">
+            {roots.map((root) => {
+              const isQuizListRoot = root.name === QUIZ_LIST_ROOT;
+              const linkedQuizzes = isQuizListRoot
+                ? (quizzes ?? []).filter((q) => q.categories.some((c) => c.id === root.id))
+                : [];
+              return (
+                <section key={root.id}>
+                  <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
+                    <div>
+                      <h2 className="text-2xl font-bold tracking-tight">{root.name}</h2>
+                      <p className="text-sm text-muted-foreground">
+                        {isQuizListRoot ? (
+                          <>
+                            {linkedQuizzes.length} {linkedQuizzes.length === 1 ? "quiz" : "quizzes"}
+                          </>
+                        ) : (
+                          <>
+                            {countAll(root).quizzes} {countAll(root).quizzes === 1 ? "quiz" : "quizzes"} across {root.children.length} {root.children.length === 1 ? "category" : "categories"}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    {!isQuizListRoot && root.children.length > 2 ? (
+                      <div className="flex items-center gap-2">
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/category/${root.slug}`}>
+                            View all <ChevronRight className="ml-1 h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          data-testid={`button-home-root-toggle-${root.id}`}
+                          onClick={() =>
+                            setExpandedRoots((prev) => ({ ...prev, [root.id]: !prev[root.id] }))
+                          }
+                        >
+                          {expandedRoots[root.id] ? (
+                            <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
+                          ) : (
+                            <>Expand <ChevronDown className="ml-1 h-4 w-4" /></>
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/category/${root.slug}`}>
                           View all <ChevronRight className="ml-1 h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        data-testid={`button-home-root-toggle-${root.id}`}
-                        onClick={() =>
-                          setExpandedRoots((prev) => ({ ...prev, [root.id]: !prev[root.id] }))
-                        }
-                      >
-                        {expandedRoots[root.id] ? (
-                          <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
-                        ) : (
-                          <>Expand <ChevronDown className="ml-1 h-4 w-4" /></>
-                        )}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/category/${root.slug}`}>
-                        View all <ChevronRight className="ml-1 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-
-                {root.children.length === 0 ? (
-                  <Card className="border-dashed">
-                    <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                      No subcategories yet.{" "}
-                      <Link href={`/category/${root.slug}`} className="text-primary hover:underline">
-                        Browse {root.name}
-                      </Link>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {root.children.map((child, i) => (
-                      <div key={child.id} className={!expandedRoots[root.id] && i >= 2 ? "hidden" : undefined}>
-                        <CategoryCard node={child} />
-                      </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </section>
-            ))}
+
+                  {isQuizListRoot ? (
+                    linkedQuizzes.length === 0 ? (
+                      <Card className="border-dashed">
+                        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                          No quizzes yet.{" "}
+                          <Link href={`/category/${root.slug}`} className="text-primary hover:underline">
+                            Browse {root.name}
+                          </Link>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {linkedQuizzes.map((quiz) => (
+                          <HomeQuizCard key={quiz.id} quiz={quiz} />
+                        ))}
+                      </div>
+                    )
+                  ) : root.children.length === 0 ? (
+                    <Card className="border-dashed">
+                      <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                        No subcategories yet.{" "}
+                        <Link href={`/category/${root.slug}`} className="text-primary hover:underline">
+                          Browse {root.name}
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {root.children.map((child, i) => (
+                        <div key={child.id} className={!expandedRoots[root.id] && i >= 2 ? "hidden" : undefined}>
+                          <CategoryCard node={child} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
 
             {/* Learning Courses (after quizzes) */}
             {courseList.length > 0 && (
