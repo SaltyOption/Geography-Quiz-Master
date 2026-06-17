@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
-import { Shield, Mail, Database, Cookie, Lock } from "lucide-react";
+import { Shield, Mail, Database, Cookie, Lock, Megaphone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +12,7 @@ const sections: Array<{
   {
     icon: Shield,
     title: "We will never sell your information",
-    body: "Your account details and quiz history are yours. We do not sell, rent, or trade your personal information to anyone, and we do not share it with third-party advertisers.",
+    body: "Your account details and quiz history are yours. We do not sell, rent, or trade your personal information. We do show ads from third-party advertising partners, who may set cookies to display relevant ads — but we never hand them your account details or quiz history.",
   },
   {
     icon: Database,
@@ -25,9 +25,14 @@ const sections: Array<{
     body: "We use your information to operate the site: signing you in, saving your scores, and showing you your quiz history. If you have an account, we may also use your email to send you our newsletter with occasional updates and new quizzes — you can opt out anytime from your profile page.",
   },
   {
+    icon: Megaphone,
+    title: "Advertising",
+    body: "To help keep World Geography Trivia free, we display ads from third-party advertising partners. These partners may use cookies to show ads and measure how they perform. We never give them your account details or quiz history.",
+  },
+  {
     icon: Cookie,
     title: "Cookies & sessions",
-    body: "We use a small number of cookies to keep you signed in and remember preferences such as whether you've dismissed our sign-up banner. We do not use third-party advertising or tracking cookies.",
+    body: "We use a small number of cookies to keep you signed in and remember preferences such as whether you've dismissed our sign-up banner. Our advertising partners may also set cookies to display and measure ads; where the law requires it, we'll ask for your consent first.",
   },
   {
     icon: Mail,
