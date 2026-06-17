@@ -77,3 +77,11 @@ resolution, or the artifact.toml build commands, preserve full-public bundling +
 bundle-relative serving + the express.static asset mount. Do NOT reintroduce a
 runtime dependency on the sibling geo dist or a conditional build guard that
 assumes a shared filesystem / single build.
+
+**Global `<head>` additions (analytics/verification/3rd-party tags):** add them
+ONCE to `artifacts/geo-quiz/index.html` `<head>`. `prerender.mjs` copies the
+just-built `index.html` verbatim to `spa-template.html`, and `buildPageHtml`
+(ssrTemplate.ts) only swaps specific meta/title/canonical tags — it never strips
+head `<script>`s. So one edit reaches dev, every SSR-rendered prod page, and the
+prerendered SEO snapshots. Do NOT also paste the tag into ssrTemplate.ts or
+per-page — that would duplicate it. (e.g. the Google tag / gtag.js lives here.)
