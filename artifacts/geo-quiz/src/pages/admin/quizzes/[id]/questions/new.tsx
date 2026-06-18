@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
 import { ImageUrlWarning } from "@/components/ImageUrlWarning";
+import { ImagePickerField } from "@/components/ImagePickerField";
 import { COUNTRIES, flagUrl, outlineUrl, pickRandomDistractors } from "@/lib/countries";
 
 const formSchema = z.object({
@@ -26,7 +27,12 @@ const formSchema = z.object({
   correctOption: z.number().min(0).max(3),
   explanation: z.string().min(5, "Explanation is required"),
   funFact: z.string().optional(),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: z
+    .string()
+    .refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//.test(v), {
+      message: "Enter a hosted path (e.g. /regions/europe.webp) or a full URL",
+    })
+    .optional(),
 });
 
 export default function AdminCreateQuestion() {
@@ -289,9 +295,12 @@ export default function AdminCreateQuestion() {
                   name="imageUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-bold">Image URL (Optional)</FormLabel>
+                      <FormLabel className="font-bold">Image (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://example.com/image.jpg" {...field} />
+                        <ImagePickerField
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                        />
                       </FormControl>
                       <ImageUrlWarning url={field.value ?? ""} />
                       <FormMessage />

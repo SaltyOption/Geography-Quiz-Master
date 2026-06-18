@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ImageUrlWarning } from "@/components/ImageUrlWarning";
+import { ImagePickerField } from "@/components/ImagePickerField";
 
 const NO_PARENT = "__none__";
 
@@ -122,16 +123,13 @@ function CategoryTreeNode({
                   if (e.key === "Escape") setEditing(null);
                 }}
               />
-              <Input
-                value={editing.imageUrl}
-                onChange={(e) => setEditing({ ...editing, imageUrl: e.target.value })}
-                className="h-8 flex-1 font-mono text-xs"
-                placeholder="Image URL (e.g. /regions/europe.webp)"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") onSave(node.id, editing.name, editing.imageUrl);
-                  if (e.key === "Escape") setEditing(null);
-                }}
-              />
+              <div className="flex-1">
+                <ImagePickerField
+                  value={editing.imageUrl}
+                  onChange={(url) => setEditing({ ...editing, imageUrl: url })}
+                  compact
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
@@ -429,18 +427,8 @@ export default function AdminCategories() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-image">Image URL (optional)</Label>
-              <Input
-                id="new-image"
-                placeholder="/regions/europe.webp"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                className="font-mono text-xs"
-              />
-              <p className="text-xs text-muted-foreground">
-                Hosted images under /regions/ or /landmarks/ must have their responsive variants
-                uploaded, or saving is rejected.
-              </p>
+              <Label>Image (optional)</Label>
+              <ImagePickerField value={newImageUrl} onChange={setNewImageUrl} />
               <ImageUrlWarning url={newImageUrl} />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">

@@ -18,7 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, Loader2, Plus, GripVertical, Trash2, Tags, FolderInput } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Plus, GripVertical, Trash2, Tags, FolderInput, Image as ImageIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
+import { ImagePickerField } from "@/components/ImagePickerField";
+import { ResponsiveImage } from "@/components/ResponsiveImage";
 
 const formSchema = z.object({
   title: z.string().min(3).max(100),
@@ -270,6 +272,7 @@ export default function AdminEditQuiz() {
                         ))}
                       </div>
 
+                      <QuestionImageEditor question={q} quizId={quizId} />
                       <QuestionTagsEditor question={q} quizId={quizId} />
                     </div>
                   </CardContent>
@@ -356,6 +359,90 @@ function QuestionTagsEditor({ question, quizId }: { question: Question; quizId: 
   );
 }
 
+
+function QuestionImageEditor({ question, quizId }: { question: Question; quizId: number }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const updateQuestion = useUpdateQuestion();
+  const [open, setOpen] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) setImageUrl(question.imageUrl ?? "");
+    setOpen(next);
+  };
+
+  const handleSave = async () => {
+    const trimmed = imageUrl.trim();
+    try {
+      await updateQuestion.mutateAsync({
+        id: question.id,
+        data: { imageUrl: trimmed === "" ? null : trimmed },
+      });
+      queryClient.invalidateQueries({ queryKey: getGetQuizQueryKey(quizId) });
+      toast({ title: "Question image updated" });
+      setOpen(false);
+    } catch (err) {
+      toast({
+        title: "Failed to update image",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 pt-1">
+      {question.imageUrl ? (
+        <div className="h-10 w-16 shrink-0 overflow-hidden rounded border bg-muted">
+          <ResponsiveImage
+            src={question.imageUrl}
+            alt="Question image"
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded border border-dashed bg-muted/40 text-muted-foreground">
+          <ImageIcon className="h-4 w-4" />
+        </div>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+        onClick={() => handleOpenChange(true)}
+      >
+        <ImageIcon className="mr-1 h-3.5 w-3.5" />
+        {question.imageUrl ? "Edit image" : "Add image"}
+      </Button>
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Question image</DialogTitle>
+            <DialogDescription>
+              Pick a hosted image from the gallery, enter an image URL, or remove it.
+            </DialogDescription>
+          </DialogHeader>
+          <ImagePickerField value={imageUrl} onChange={setImageUrl} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={updateQuestion.isPending}>
+              {updateQuestion.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save image
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 function ImportByTagDialog({ quizId }: { quizId: number }) {
   const queryClient = useQueryClient();
