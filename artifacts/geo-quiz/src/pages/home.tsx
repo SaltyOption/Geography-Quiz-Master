@@ -180,6 +180,29 @@ export default function Home() {
               <p className="mt-4 text-lg text-muted-foreground sm:text-xl">
                 Continents, capitals, cultures, and landscapes — one quick quiz at a time.
               </p>
+              <p className="mt-3 text-base text-muted-foreground sm:text-lg">
+                Not sure where to start? Jump right in by clicking on our{" "}
+                <Link
+                  href="/daily"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Daily Quiz
+                </Link>{" "}
+                or why not start with{" "}
+                <a
+                  href="#by-region"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document
+                      .getElementById("by-region")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Continents
+                </a>
+                ?
+              </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3 md:justify-start">
                 <Button asChild size="lg" data-testid="button-hero-daily">
                   <Link href="/daily">
@@ -255,7 +278,11 @@ export default function Home() {
                 ? (quizzes ?? []).filter((q) => q.categories.some((c) => c.id === root.id))
                 : [];
               return (
-                <section key={root.id}>
+                <section
+                  key={root.id}
+                  id={root.name === "By Region" ? "by-region" : undefined}
+                  className={root.name === "By Region" ? "scroll-mt-20" : undefined}
+                >
                   <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
                     <div>
                       <h2 className="text-2xl font-bold tracking-tight">{root.name}</h2>
