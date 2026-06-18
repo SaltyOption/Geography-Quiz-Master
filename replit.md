@@ -65,6 +65,14 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - Default enrollment: a silent `NewsletterEnrollment` component in `App.tsx` (rendered only when signed-in) calls `GET /api/newsletter/me` on app bootstrap, so every signed-in user is captured even if they never open their profile.
 - Admin: `GET /api/newsletter/subscribers` (admin-only via `requireAdmin`) returns the subscribed recipients plus `subscribedCount`/`optedOutCount`. Admin page `/admin/newsletter` shows counts, the subscriber table, and a CSV export. Linked from the admin dashboard.
 
+## Contact
+
+- Public contact form at `/contact` (linked in the footer). Fields: name, email, message, and an optional reason (Quiz correction / Quiz suggestion / Website feedback / Partnership / advertising / Other).
+- Table `contact_messages` — id (serial PK), name, email, reason (nullable text), message, createdAt.
+- Endpoints: `POST /api/contact` is **public** (no auth) and bounded (name ≤100, email ≤200, message ≤5000 chars; email format validated). It stores the message and returns `{ id }`. `GET /api/contact/messages` (admin-only via `requireAdmin`) returns `{ messages, total }` newest-first.
+- Admin page `/admin/contact` (linked from the admin dashboard) lists submissions newest-first, each with a `mailto:` reply link.
+- Email delivery is **deferred**: submissions are currently stored only (visible in the admin panel). Emailing each submission to worldgeographytrivia@gmail.com can be added later by connecting a Gmail (or other email) integration and calling a send helper from the `POST /api/contact` handler (best-effort, must not fail the DB save).
+
 ## Database Schema
 
 - `quizzes` — id, title, description, category (legacy text label), difficulty, published (boolean, default false), timestamps
