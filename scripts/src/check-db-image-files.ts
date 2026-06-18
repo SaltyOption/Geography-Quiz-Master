@@ -1,16 +1,22 @@
-// Maintenance check: catch broken images that point to files we don't host.
+// Maintenance check: catch broken images referenced by the database.
 //
-// The filesystem-only test (artifacts/geo-quiz/src/image-variants.test.ts)
-// verifies that every SOURCE image under public/regions and public/landmarks
-// has its pre-generated responsive siblings. It does NOT verify the reverse:
-// that the image URLs actually stored in the database point at files that exist.
+// Two classes of stored image URLs are validated:
 //
-// An admin can save a quiz question / category / course image URL under the
-// /regions/ or /landmarks/ prefixes that has no underlying source file (or is
-// missing its responsive variants). Because a <picture> does not fall back to
-// its <img> when a chosen <source> 404s, this renders a broken image with no
-// fallback. This script flags those rows so they can be fixed before users hit
-// them.
+//   1. Locally hosted images under the optimized prefixes (/regions/,
+//      /landmarks/). The filesystem-only test
+//      (artifacts/geo-quiz/src/image-variants.test.ts) verifies that every
+//      SOURCE image on disk has its pre-generated responsive siblings. It does
+//      NOT verify the reverse: that the image URLs actually stored in the
+//      database point at files that exist. An admin can save a URL under those
+//      prefixes with no underlying source file (or missing responsive
+//      variants). Because a <picture> does not fall back to its <img> when a
+//      chosen <source> 404s, this renders a broken image with no fallback.
+//
+//   2. External / CDN image URLs (anything served over http(s) that is not a
+//      locally hosted optimized path). Admins can paste any URL through the
+//      admin UI; those links are never validated, so a broken external image
+//      can render on the public site indefinitely. This script issues a bounded
+//      network request and flags URLs that are not reachable as an image.
 //
 // It is a maintenance/admin script (not a CI test) because the api-server test
 // suite runs against a mocked database, so real DB access in CI is impractical.
@@ -18,8 +24,11 @@
 //
 //   pnpm --filter @workspace/scripts run check-db-image-files
 //
-// Exit code is non-zero when any referenced file is missing, so it can also be
-// wired into a scheduled job or pre-deploy gate that has DB access.
+// Exit code is non-zero when any referenced local file is missing or any
+// external URL is genuinely broken (e.g. 404 / non-image), so it can also be
+// wired into a scheduled job or pre-deploy gate that has DB access. Transient
+// network failures (timeouts, DNS errors, 5xx, 429) are reported as warnings
+// but do NOT fail the run, so a flaky CDN or network blip cannot block a deploy.
 
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -38,6 +47,12 @@ import { RESPONSIVE_IMAGE_WIDTHS } from "@workspace/image-config";
 // hosted images under these prefixes have pre-generated responsive variants.
 const OPTIMIZED_PREFIXES = ["/regions/", "/landmarks/"];
 const OPTIMIZED_FORMATS = ["webp", "avif"] as const;
+
+// Bounds for external URL reachability checks.
+const EXTERNAL_TIMEOUT_MS = 10_000;
+const EXTERNAL_CONCURRENCY = 8;
+const EXTERNAL_USER_AGENT =
+  "geo-quiz-image-check/1.0 (+broken-image maintenance check)";
 
 // public/ lives in the geo-quiz frontend artifact; that is what the proxy
 // serves these URLs from in production.
@@ -78,9 +93,15 @@ function expectedVariants(relPath: string): string[] {
 function missingFilesFor(url: string): string[] {
   const relPath = normalizePath(url);
   const candidates = [relPath, ...expectedVariants(relPath)];
-  return candidates.filter(
-    (rel) => !existsSync(path.join(PUBLIC_DIR, rel)),
-  );
+  return candidates.filter((rel) => !existsSync(path.join(PUBLIC_DIR, rel)));
+}
+
+function isExternalUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
+
+function isOptimizedLocalUrl(url: string): boolean {
+  return OPTIMIZED_PREFIXES.some((p) => url.startsWith(p));
 }
 
 async function collectImageRefs(): Promise<ImageRef[]> {
@@ -109,46 +130,211 @@ async function collectImageRefs(): Promise<ImageRef[]> {
   return refs;
 }
 
+type ExternalResult =
+  | { status: "ok" }
+  | { status: "broken"; reason: string }
+  | { status: "transient"; reason: string };
+
+async function fetchWithTimeout(
+  url: string,
+  method: "HEAD" | "GET",
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EXTERNAL_TIMEOUT_MS);
+  try {
+    return await fetch(url, {
+      method,
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "user-agent": EXTERNAL_USER_AGENT,
+        accept: "image/*,*/*;q=0.8",
+      },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function classifyResponse(
+  res: Response,
+  method: "HEAD" | "GET",
+): ExternalResult | "retry" {
+  const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
+
+  if (res.ok) {
+    // Many servers omit content-type on HEAD; treat a missing type as OK and
+    // only flag a 2xx whose type is explicitly non-image.
+    if (!contentType || contentType.startsWith("image/")) {
+      return { status: "ok" };
+    }
+    // A 2xx with a non-image type (often a soft-404 HTML page). Double-check
+    // with GET before deciding it is broken.
+    if (method === "HEAD") return "retry";
+    return {
+      status: "broken",
+      reason: `returned ${res.status} with non-image content-type "${contentType}"`,
+    };
+  }
+
+  // Rate limiting and server errors are transient — do not fail the run.
+  if (res.status === 429 || res.status >= 500) {
+    return { status: "transient", reason: `returned ${res.status}` };
+  }
+
+  // Some servers reject HEAD (405/403/501); retry those with GET before
+  // concluding anything.
+  if (
+    method === "HEAD" &&
+    (res.status === 403 || res.status === 405 || res.status === 501)
+  ) {
+    return "retry";
+  }
+
+  // Any remaining 4xx is a genuine broken link (404/410/403/etc.).
+  if (res.status >= 400 && res.status < 500) {
+    return { status: "broken", reason: `returned ${res.status}` };
+  }
+
+  return { status: "transient", reason: `returned ${res.status}` };
+}
+
+async function checkExternalUrl(url: string): Promise<ExternalResult> {
+  for (const method of ["HEAD", "GET"] as const) {
+    let res: Response;
+    try {
+      res = await fetchWithTimeout(url, method);
+    } catch (err) {
+      const reason =
+        err instanceof Error && err.name === "AbortError"
+          ? `timed out after ${EXTERNAL_TIMEOUT_MS}ms`
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      // A network-level failure is transient; if HEAD failed this way, still
+      // give GET a chance before giving up.
+      if (method === "GET") return { status: "transient", reason };
+      continue;
+    }
+
+    // Drain/cancel the body so sockets are released promptly.
+    try {
+      await res.body?.cancel();
+    } catch {
+      // ignore
+    }
+
+    const verdict = classifyResponse(res, method);
+    if (verdict !== "retry") return verdict;
+    // else fall through to GET
+  }
+
+  return { status: "transient", reason: "request failed" };
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker(): Promise<void> {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index]);
+    }
+  }
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    () => worker(),
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 async function main(): Promise<void> {
   const refs = await collectImageRefs();
 
-  // Only URLs under the optimized prefixes are expected to be locally hosted
-  // with responsive variants. External/CDN URLs render a plain <img> and are
-  // out of scope here.
-  const localRefs = refs.filter((ref) =>
-    OPTIMIZED_PREFIXES.some((p) => ref.url.startsWith(p)),
+  // URLs under the optimized prefixes are expected to be locally hosted with
+  // responsive variants; verify the source file and every variant on disk.
+  const localRefs = refs.filter((ref) => isOptimizedLocalUrl(ref.url));
+  // External/CDN URLs render a plain <img>; verify they are reachable.
+  const externalRefs = refs.filter(
+    (ref) => !isOptimizedLocalUrl(ref.url) && isExternalUrl(ref.url),
   );
 
-  const broken: Array<ImageRef & { missing: string[] }> = [];
+  const brokenLocal: Array<ImageRef & { missing: string[] }> = [];
   for (const ref of localRefs) {
     const missing = missingFilesFor(ref.url);
-    if (missing.length > 0) broken.push({ ...ref, missing });
+    if (missing.length > 0) brokenLocal.push({ ...ref, missing });
   }
 
-  console.log(
-    `Checked ${localRefs.length} DB image URL(s) under ${OPTIMIZED_PREFIXES.join(
-      ", ",
-    )} (out of ${refs.length} total non-null image URL(s)).`,
+  const externalChecked = await mapWithConcurrency(
+    externalRefs,
+    EXTERNAL_CONCURRENCY,
+    async (ref) => ({ ref, result: await checkExternalUrl(ref.url) }),
+  );
+  const brokenExternal = externalChecked.filter(
+    (e) => e.result.status === "broken",
+  );
+  const transientExternal = externalChecked.filter(
+    (e) => e.result.status === "transient",
   );
 
-  if (broken.length === 0) {
-    console.log("OK: every referenced source file and responsive variant exists.");
+  console.log(
+    `Checked ${localRefs.length} local DB image URL(s) under ${OPTIMIZED_PREFIXES.join(
+      ", ",
+    )} and ${externalRefs.length} external DB image URL(s) (out of ${refs.length} total non-null image URL(s)).`,
+  );
+
+  if (brokenLocal.length > 0) {
+    console.error(
+      `\nFOUND ${brokenLocal.length} local DB image URL(s) pointing at files we don't host:`,
+    );
+    for (const ref of brokenLocal) {
+      console.error(`\n  ${ref.source}#${ref.id} -> ${ref.url}`);
+      for (const rel of ref.missing) {
+        console.error(`    missing: public/${rel}`);
+      }
+    }
+    console.error(
+      "\nFix by uploading the source image and running `pnpm --filter @workspace/geo-quiz run optimize-images`, " +
+        "or by correcting the stored image URL.",
+    );
+  }
+
+  if (brokenExternal.length > 0) {
+    console.error(
+      `\nFOUND ${brokenExternal.length} external DB image URL(s) that are not reachable as an image:`,
+    );
+    for (const { ref, result } of brokenExternal) {
+      const reason = result.status === "broken" ? result.reason : "";
+      console.error(`\n  ${ref.source}#${ref.id} -> ${ref.url}`);
+      console.error(`    unreachable: ${reason}`);
+    }
+    console.error(
+      "\nFix by correcting the stored image URL or hosting the image locally.",
+    );
+  }
+
+  if (transientExternal.length > 0) {
+    console.warn(
+      `\nWARNING: ${transientExternal.length} external DB image URL(s) could not be verified (transient failures — not failing the run):`,
+    );
+    for (const { ref, result } of transientExternal) {
+      const reason = result.status === "transient" ? result.reason : "";
+      console.warn(`  ${ref.source}#${ref.id} -> ${ref.url} (${reason})`);
+    }
+  }
+
+  if (brokenLocal.length === 0 && brokenExternal.length === 0) {
+    console.log(
+      "\nOK: every local source file and responsive variant exists, and every external image URL is reachable.",
+    );
     return;
   }
 
-  console.error(
-    `\nFOUND ${broken.length} DB image URL(s) pointing at files we don't host:`,
-  );
-  for (const ref of broken) {
-    console.error(`\n  ${ref.source}#${ref.id} -> ${ref.url}`);
-    for (const rel of ref.missing) {
-      console.error(`    missing: public/${rel}`);
-    }
-  }
-  console.error(
-    "\nFix by uploading the source image and running `pnpm --filter @workspace/geo-quiz run optimize-images`, " +
-      "or by correcting the stored image URL.",
-  );
   process.exitCode = 1;
 }
 
