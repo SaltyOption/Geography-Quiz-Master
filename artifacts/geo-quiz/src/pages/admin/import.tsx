@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ResponsiveImage } from "@/components/ResponsiveImage";
 
 interface ParseResult {
   ok: boolean;
@@ -290,6 +291,50 @@ function summarizeByTopic(items: BulkImportItem[]): Array<{ topic: string; count
   return [...map.entries()].map(([topic, count]) => ({ topic, count }));
 }
 
+// A single question-image thumbnail that tracks its own load error so the admin
+// can spot broken/unreachable images (or ones missing responsive variants)
+// before running the import. Mirrors the server's image validation as a UX aid.
+function QuestionImagePreview({
+  question,
+  imageUrl,
+}: {
+  question: string;
+  imageUrl: string;
+}) {
+  const [errored, setErrored] = useState(false);
+  return (
+    <div className="flex items-start gap-3" data-testid="question-image-preview">
+      <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-md border bg-muted">
+        {errored ? (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+        ) : (
+          <ResponsiveImage
+            src={imageUrl}
+            alt="Question image preview"
+            className="h-full w-full object-cover"
+            onError={() => setErrored(true)}
+          />
+        )}
+      </div>
+      <div className="min-w-0 flex-1 text-xs">
+        <div className="line-clamp-2 font-medium text-foreground">{question}</div>
+        <div className="mt-0.5 break-all font-mono text-muted-foreground">{imageUrl}</div>
+        {errored && (
+          <div className="mt-1.5 flex items-start gap-1.5 text-amber-700 dark:text-amber-300">
+            <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>
+              This image couldn&apos;t be previewed — it may be broken, unreachable, or missing its
+              responsive variants. Fix it before importing or the import will be rejected.
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminImport() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -303,6 +348,15 @@ export default function AdminImport() {
 
   const parsed = useMemo(() => (text.trim() ? parseInput(text) : null), [text]);
   const summary = parsed?.ok && parsed.items ? summarizeByTopic(parsed.items) : null;
+  const imageQuestions = useMemo(
+    () =>
+      parsed?.ok && parsed.items
+        ? parsed.items
+            .filter((it): it is BulkImportItem & { image_url: string } => Boolean(it.image_url))
+            .map((it) => ({ question: it.question, imageUrl: it.image_url }))
+        : [],
+    [parsed],
+  );
   const existingTitles = useMemo(
     () => new Set((existingQuizzes ?? []).map((q) => q.title)),
     [existingQuizzes],
@@ -433,6 +487,23 @@ export default function AdminImport() {
                   );
                 })}
               </ul>
+
+              {imageQuestions.length > 0 && (
+                <div className="mt-4 border-t pt-3" data-testid="image-previews">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Question images ({imageQuestions.length})
+                  </div>
+                  <div className="space-y-3">
+                    {imageQuestions.map((q, i) => (
+                      <QuestionImagePreview
+                        key={`${q.imageUrl}-${i}`}
+                        question={q.question}
+                        imageUrl={q.imageUrl}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
