@@ -10,11 +10,13 @@ import newsletterRouter from "./newsletter";
 import dailyQuizRouter from "./daily-quiz";
 import coursesRouter from "./courses";
 import sitemapRouter from "./sitemap";
+import imagesRouter from "./images";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(sitemapRouter);
+router.use(imagesRouter);
 router.use(meRouter);
 router.use(newsletterRouter);
 router.use(dailyQuizRouter);

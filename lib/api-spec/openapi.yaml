@@ -20,6 +20,8 @@ tags:
     description: User progress tracking
   - name: categories
     description: Category hierarchy management
+  - name: images
+    description: Image hosting validation
   - name: me
     description: Current user identity and admin status
   - name: courses
@@ -147,6 +149,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Me"
+
+  /images/validate:
+    get:
+      operationId: validateImageUrl
+      tags: [images]
+      summary: Check whether an optimized image URL and its variants are hosted (admin only)
+      description: >
+        Pre-flight check used by the admin question form to warn, while typing,
+        that an image under an optimized prefix (/regions/, /landmarks/) and its
+        responsive variants are not yet hosted. Mirrors the write-time guard; the
+        server-side 400 on save remains authoritative.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Validation result for the supplied image URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageValidationResult"
+        "400":
+          description: Missing or invalid url query parameter
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
 
   /newsletter/me:
     get:
@@ -877,6 +909,29 @@ components:
       required:
         - userId
         - isAdmin
+
+    ImageValidationResult:
+      type: object
+      properties:
+        optimized:
+          type: boolean
+          description: >
+            True when the URL points under an optimized prefix (/regions/,
+            /landmarks/) and therefore requires hosted responsive variants.
+        missing:
+          type: array
+          items:
+            type: string
+          description: >
+            Files (relative to public/) referenced by the URL that are not
+            hosted. Empty when the URL is valid or out of scope.
+        message:
+          type: ["string", "null"]
+          description: Human-readable warning when files are missing, otherwise null.
+      required:
+        - optimized
+        - missing
+        - message
 
     HealthStatus:
       type: object

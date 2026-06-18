@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { CategoryMultiSelect } from "@/components/CategoryMultiSelect";
+import { ImageUrlWarning } from "@/components/ImageUrlWarning";
 import { COUNTRIES, flagUrl, outlineUrl, pickRandomDistractors } from "@/lib/countries";
 
 const formSchema = z.object({
@@ -288,6 +289,7 @@ export default function AdminCreateQuestion() {
                       <FormControl>
                         <Input placeholder="https://example.com/image.jpg" {...field} />
                       </FormControl>
+                      <ImageUrlWarning url={field.value ?? ""} />
                       <FormMessage />
                     </FormItem>
                   )}

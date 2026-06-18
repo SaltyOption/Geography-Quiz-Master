@@ -168,6 +168,32 @@ export const GetMeResponse = zod.object({
 });
 
 /**
+ * Pre-flight check used by the admin question form to warn, while typing, that an image under an optimized prefix (/regions/, /landmarks/) and its responsive variants are not yet hosted. Mirrors the write-time guard; the server-side 400 on save remains authoritative.
+
+ * @summary Check whether an optimized image URL and its variants are hosted (admin only)
+ */
+export const ValidateImageUrlQueryParams = zod.object({
+  url: zod.coerce.string(),
+});
+
+export const ValidateImageUrlResponse = zod.object({
+  optimized: zod
+    .boolean()
+    .describe(
+      "True when the URL points under an optimized prefix (\/regions\/, \/landmarks\/) and therefore requires hosted responsive variants.\n",
+    ),
+  missing: zod
+    .array(zod.string())
+    .describe(
+      "Files (relative to public\/) referenced by the URL that are not hosted. Empty when the URL is valid or out of scope.\n",
+    ),
+  message: zod
+    .string()
+    .nullable()
+    .describe("Human-readable warning when files are missing, otherwise null."),
+});
+
+/**
  * @summary Get the current user's newsletter subscription status
  */
 export const GetNewsletterSubscriptionResponse = zod.object({

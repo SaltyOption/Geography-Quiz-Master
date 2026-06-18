@@ -11,6 +11,20 @@ export interface Me {
   isAdmin: boolean;
 }
 
+export interface ImageValidationResult {
+  /** True when the URL points under an optimized prefix (/regions/, /landmarks/) and therefore requires hosted responsive variants.
+   */
+  optimized: boolean;
+  /** Files (relative to public/) referenced by the URL that are not hosted. Empty when the URL is valid or out of scope.
+   */
+  missing: string[];
+  /**
+   * Human-readable warning when files are missing, otherwise null.
+   * @nullable
+   */
+  message: string | null;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -638,6 +652,10 @@ export interface CourseImportResult {
   questionsAdded: number;
   modules: CourseImportModuleResult[];
 }
+
+export type ValidateImageUrlParams = {
+  url: string;
+};
 
 export type ClearCourseModuleProgress200 = {
   saved: boolean;

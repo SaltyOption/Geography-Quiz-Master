@@ -36,6 +36,7 @@ import type {
   CreateQuizBody,
   DailyQuiz,
   HealthStatus,
+  ImageValidationResult,
   ImportQuestionsByCategoryBody,
   ImportQuestionsByCategoryResult,
   Me,
@@ -64,6 +65,7 @@ import type {
   UpdatedCourse,
   UserProgress,
   UserQuizProgress,
+  ValidateImageUrlParams,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -624,6 +626,105 @@ export function useGetMe<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Pre-flight check used by the admin question form to warn, while typing, that an image under an optimized prefix (/regions/, /landmarks/) and its responsive variants are not yet hosted. Mirrors the write-time guard; the server-side 400 on save remains authoritative.
+
+ * @summary Check whether an optimized image URL and its variants are hosted (admin only)
+ */
+export const getValidateImageUrlUrl = (params: ValidateImageUrlParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/images/validate?${stringifiedParams}`
+    : `/api/images/validate`;
+};
+
+export const validateImageUrl = async (
+  params: ValidateImageUrlParams,
+  options?: RequestInit,
+): Promise<ImageValidationResult> => {
+  return customFetch<ImageValidationResult>(getValidateImageUrlUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getValidateImageUrlQueryKey = (
+  params?: ValidateImageUrlParams,
+) => {
+  return [`/api/images/validate`, ...(params ? [params] : [])] as const;
+};
+
+export const getValidateImageUrlQueryOptions = <
+  TData = Awaited<ReturnType<typeof validateImageUrl>>,
+  TError = ErrorType<void>,
+>(
+  params: ValidateImageUrlParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof validateImageUrl>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getValidateImageUrlQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof validateImageUrl>>
+  > = ({ signal }) => validateImageUrl(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof validateImageUrl>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ValidateImageUrlQueryResult = NonNullable<
+  Awaited<ReturnType<typeof validateImageUrl>>
+>;
+export type ValidateImageUrlQueryError = ErrorType<void>;
+
+/**
+ * @summary Check whether an optimized image URL and its variants are hosted (admin only)
+ */
+
+export function useValidateImageUrl<
+  TData = Awaited<ReturnType<typeof validateImageUrl>>,
+  TError = ErrorType<void>,
+>(
+  params: ValidateImageUrlParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof validateImageUrl>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getValidateImageUrlQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
