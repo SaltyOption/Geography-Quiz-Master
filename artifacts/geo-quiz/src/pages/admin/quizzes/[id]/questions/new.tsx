@@ -114,7 +114,11 @@ export default function AdminCreateQuestion() {
       toast({ title: "Question added successfully" });
       setLocation(`/admin/quizzes/${quizId}`);
     } catch (error) {
-      toast({ title: "Failed to add question", variant: "destructive" });
+      toast({
+        title: "Failed to add question",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "destructive",
+      });
     }
   };
 

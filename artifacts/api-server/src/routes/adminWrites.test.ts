@@ -1,7 +1,19 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import { clerkMiddleware } from "@clerk/express";
+import type { ExternalImageResult } from "@workspace/image-check";
+
+// Control external reachability without hitting the network.
+let nextExternalResult: ExternalImageResult = { status: "ok" };
+vi.mock("@workspace/image-check", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/image-check")>();
+  return {
+    ...actual,
+    checkExternalImageUrl: vi.fn(async () => nextExternalResult),
+  };
+});
+
 import router from "./index";
 import { resetDbQueue, pushDbResult } from "../test/db-mock";
 
@@ -247,7 +259,8 @@ describe("image URL validation on question writes", () => {
     expect(res.body.error).toContain("not hosted");
   });
 
-  it("ignores external (non-optimized) image URLs that are not locally hosted", async () => {
+  it("accepts a reachable external image URL", async () => {
+    nextExternalResult = { status: "ok" };
     pushDbResult([sampleQuiz], [{ ...sampleQuestion, imageUrl: "https://example.com/x.jpg" }]);
     const res = await asAdmin("post", "/api/quizzes/1/questions").send({
       text: "Q?",
@@ -256,6 +269,35 @@ describe("image URL validation on question writes", () => {
       explanation: "because",
       orderIndex: 0,
       imageUrl: "https://example.com/x.jpg",
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("rejects a genuinely broken external image URL", async () => {
+    nextExternalResult = { status: "broken", reason: "returned 404" };
+    pushDbResult([sampleQuiz]);
+    const res = await asAdmin("post", "/api/quizzes/1/questions").send({
+      text: "Q?",
+      options: ["a", "b", "c", "d"],
+      correctOption: 0,
+      explanation: "because",
+      orderIndex: 0,
+      imageUrl: "https://example.com/missing.jpg",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("unreachable");
+  });
+
+  it("does NOT block saving on a transient external image failure", async () => {
+    nextExternalResult = { status: "transient", reason: "timed out" };
+    pushDbResult([sampleQuiz], [{ ...sampleQuestion, imageUrl: "https://example.com/flaky.jpg" }]);
+    const res = await asAdmin("post", "/api/quizzes/1/questions").send({
+      text: "Q?",
+      options: ["a", "b", "c", "d"],
+      correctOption: 0,
+      explanation: "because",
+      orderIndex: 0,
+      imageUrl: "https://example.com/flaky.jpg",
     });
     expect(res.status).toBe(201);
   });

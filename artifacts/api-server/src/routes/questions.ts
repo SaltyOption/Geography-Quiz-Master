@@ -26,7 +26,7 @@ import {
 } from "../lib/questionCategories";
 import { getVisibleCategoryIds } from "../lib/categoryVisibility";
 import {
-  validateOptionalImageUrl,
+  validateImageUrlReachable,
   imageValidationMessage,
 } from "../lib/imageValidation";
 
@@ -120,7 +120,7 @@ router.post("/quizzes/:id/questions", requireAdmin, async (req, res): Promise<vo
 
   const { categoryIds, ...questionData } = parsed.data;
 
-  const imageError = validateOptionalImageUrl(questionData.imageUrl);
+  const imageError = await validateImageUrlReachable(questionData.imageUrl);
   if (imageError) {
     res.status(400).json({ error: imageValidationMessage(imageError) });
     return;
@@ -349,7 +349,7 @@ router.patch("/questions/:id", requireAdmin, async (req, res): Promise<void> => 
   const { categoryIds, ...updateFields } = parsed.data;
 
   if (updateFields.imageUrl !== undefined) {
-    const imageError = validateOptionalImageUrl(updateFields.imageUrl);
+    const imageError = await validateImageUrlReachable(updateFields.imageUrl);
     if (imageError) {
       res.status(400).json({ error: imageValidationMessage(imageError) });
       return;

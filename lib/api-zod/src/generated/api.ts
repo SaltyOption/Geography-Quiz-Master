@@ -187,10 +187,18 @@ export const ValidateImageUrlResponse = zod.object({
     .describe(
       "Files (relative to public\/) referenced by the URL that are not hosted. Empty when the URL is valid or out of scope.\n",
     ),
+  reachable: zod
+    .boolean()
+    .nullable()
+    .describe(
+      "External URL reachability: true when an external (http\/https) URL resolved to a reachable image, false when it is genuinely broken (404 \/ non-image), and null when not checked (local URL) or only transiently unreachable (timeout \/ DNS \/ 5xx \/ 429), which must not block a save.\n",
+    ),
   message: zod
     .string()
     .nullable()
-    .describe("Human-readable warning when files are missing, otherwise null."),
+    .describe(
+      "Human-readable warning when an image is not hosted or an external URL is unreachable, otherwise null.\n",
+    ),
 });
 
 /**

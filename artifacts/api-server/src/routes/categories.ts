@@ -17,7 +17,7 @@ import {
 import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 import { slugify, uniqueSlug } from "../lib/categorySlug";
 import { isCategoryVisible } from "../lib/categoryVisibility";
-import { validateOptionalImageUrl, imageValidationMessage } from "../lib/imageValidation";
+import { validateImageUrlReachable, imageValidationMessage } from "../lib/imageValidation";
 
 const router: IRouter = Router();
 
@@ -256,7 +256,7 @@ router.post("/categories", requireAdmin, async (req, res): Promise<void> => {
 
   const { name, parentId, slug, imageUrl, published } = parsed.data;
 
-  const imageError = validateOptionalImageUrl(imageUrl);
+  const imageError = await validateImageUrlReachable(imageUrl);
   if (imageError) {
     res.status(400).json({ error: imageValidationMessage(imageError) });
     return;
@@ -302,7 +302,7 @@ router.patch("/categories/:id", requireAdmin, async (req, res): Promise<void> =>
 
   const { name, parentId, slug, imageUrl, published } = parsed.data;
 
-  const imageError = validateOptionalImageUrl(imageUrl);
+  const imageError = await validateImageUrlReachable(imageUrl);
   if (imageError) {
     res.status(400).json({ error: imageValidationMessage(imageError) });
     return;

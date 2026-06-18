@@ -178,6 +178,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/image-check':
+        specifier: workspace:*
+        version: link:../../lib/image-check
       '@workspace/image-config':
         specifier: workspace:*
         version: link:../../lib/image-config
@@ -689,6 +692,12 @@ importers:
         specifier: ^0.31.9
         version: 0.31.9
 
+  lib/image-check:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
+
   lib/image-config: {}
 
   scripts:
@@ -696,6 +705,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../lib/db
+      '@workspace/image-check':
+        specifier: workspace:*
+        version: link:../lib/image-check
       '@workspace/image-config':
         specifier: workspace:*
         version: link:../lib/image-config

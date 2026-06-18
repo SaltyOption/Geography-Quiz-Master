@@ -20,7 +20,7 @@ import {
   UpdateCourseBody,
 } from "@workspace/api-zod";
 import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
-import { validateOptionalImageUrl, imageValidationMessage } from "../lib/imageValidation";
+import { validateImageUrlReachable, imageValidationMessage } from "../lib/imageValidation";
 
 const router: IRouter = Router();
 
@@ -1026,7 +1026,7 @@ router.patch("/admin/courses/:slug", requireAdmin, async (req, res): Promise<voi
 
   const { imageUrl } = parsed.data;
 
-  const imageError = validateOptionalImageUrl(imageUrl);
+  const imageError = await validateImageUrlReachable(imageUrl);
   if (imageError) {
     res.status(400).json({ error: imageValidationMessage(imageError) });
     return;

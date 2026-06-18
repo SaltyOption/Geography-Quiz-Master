@@ -1,7 +1,19 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import { clerkMiddleware } from "@clerk/express";
+import type { ExternalImageResult } from "@workspace/image-check";
+
+// Control external reachability without hitting the network.
+let nextExternalResult: ExternalImageResult = { status: "ok" };
+vi.mock("@workspace/image-check", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/image-check")>();
+  return {
+    ...actual,
+    checkExternalImageUrl: vi.fn(async () => nextExternalResult),
+  };
+});
+
 import router from "./index";
 
 const ADMIN_ID = "user_admin_images_123";
@@ -44,7 +56,8 @@ describe("GET /api/images/validate", () => {
     expect(res.status).toBe(400);
   });
 
-  it("treats non-optimized URLs as valid (optimized=false, no missing files)", async () => {
+  it("reports a reachable external URL (optimized=false, reachable=true)", async () => {
+    nextExternalResult = { status: "ok" };
     const res = await asAdmin(
       "/api/images/validate?url=" +
         encodeURIComponent("https://example.com/image.jpg"),
@@ -52,6 +65,30 @@ describe("GET /api/images/validate", () => {
     expect(res.status).toBe(200);
     expect(res.body.optimized).toBe(false);
     expect(res.body.missing).toEqual([]);
+    expect(res.body.reachable).toBe(true);
+    expect(res.body.message).toBeNull();
+  });
+
+  it("reports a broken external URL (reachable=false, with message)", async () => {
+    nextExternalResult = { status: "broken", reason: "returned 404" };
+    const res = await asAdmin(
+      "/api/images/validate?url=" +
+        encodeURIComponent("https://example.com/missing.jpg"),
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.optimized).toBe(false);
+    expect(res.body.reachable).toBe(false);
+    expect(typeof res.body.message).toBe("string");
+  });
+
+  it("does not flag a transient external failure (reachable=null, no message)", async () => {
+    nextExternalResult = { status: "transient", reason: "timed out" };
+    const res = await asAdmin(
+      "/api/images/validate?url=" +
+        encodeURIComponent("https://example.com/flaky.jpg"),
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.reachable).toBeNull();
     expect(res.body.message).toBeNull();
   });
 

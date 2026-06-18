@@ -4,3 +4,4 @@
 - [Prod data & admin setup](prod-data-and-admin.md) — dev/prod DBs are separate (publish copies schema, not data); copy content via Publish "overwrite data" (never seed scripts); admin ID lives in shared env, dev+prod share one Clerk instance.
 - [Responsive image variants](responsive-image-variants.md) — /regions & /landmarks DB images served as pre-generated -400/-1024 webp+avif; every such path MUST have variants or <picture> shows a broken image (no <img> fallback on 404).
 - [Quiz-detail embedded categories have no slug](quiz-detail-embedded-categories.md) — GET /api/quizzes/:id categories are {id,name,parentId,published,timestamps}; detect by name, never c.slug (it's undefined → crashes QuizPage).
+- [Image reachability shared lib](image-reachability-shared-lib.md) — `@workspace/image-check` backs both the broken-image script and API save guard; a "transient" result must NEVER block a save/deploy.

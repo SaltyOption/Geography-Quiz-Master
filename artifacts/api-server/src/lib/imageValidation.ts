@@ -21,6 +21,12 @@ import { existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RESPONSIVE_IMAGE_WIDTHS } from "@workspace/image-config";
+import {
+  checkExternalImageUrl,
+  isExternalImageUrl,
+} from "@workspace/image-check";
+
+export { isExternalImageUrl };
 
 export const OPTIMIZED_PREFIXES = ["/regions/", "/landmarks/"];
 const OPTIMIZED_FORMATS = ["webp", "avif"] as const;
@@ -102,12 +108,19 @@ export function findMissingImageFiles(url: string): string[] {
   return candidates.filter((rel) => !existsSync(join(publicDir, rel)));
 }
 
-export type ImageValidationError = { url: string; missing: string[] };
+export type ImageValidationError =
+  | { kind: "local-missing"; url: string; missing: string[] }
+  | { kind: "external-unreachable"; url: string; reason: string };
 
 /**
- * Validate a single optional image URL. Returns an error object when the URL
- * points under an optimized prefix but its source file or responsive variants
- * are not hosted; null when valid, out of scope, or empty.
+ * Validate a single optional image URL against the locally hosted files only
+ * (synchronous, no network). Returns an error object when the URL points under
+ * an optimized prefix but its source file or responsive variants are not
+ * hosted; null when valid, out of scope (external/CDN), or empty.
+ *
+ * Use this on bulk paths (e.g. import) where issuing a network request per item
+ * would be too costly. For single-form saves prefer validateImageUrlReachable,
+ * which additionally verifies external URLs are reachable.
  */
 export function validateOptionalImageUrl(
   url: string | null | undefined,
@@ -115,11 +128,53 @@ export function validateOptionalImageUrl(
   if (url === null || url === undefined || url === "") return null;
   const missing = findMissingImageFiles(url);
   if (missing.length === 0) return null;
-  return { url, missing };
+  return { kind: "local-missing", url, missing };
+}
+
+/**
+ * Validate a single optional image URL the way an admin form should on save:
+ *
+ *   - Locally hosted optimized URLs (/regions/, /landmarks/) are checked for
+ *     their source file and responsive variants on disk (synchronous).
+ *   - External http(s) URLs are checked for reachability with a bounded network
+ *     request (reusing the same logic as the batch check). A genuinely broken
+ *     URL (404 / non-image) is rejected; transient failures (timeout, DNS, 5xx,
+ *     429) are NOT treated as errors so a flaky CDN can't block a legitimate
+ *     save.
+ *
+ * Returns null when the URL is valid, out of scope, empty, or only transiently
+ * unreachable.
+ */
+export async function validateImageUrlReachable(
+  url: string | null | undefined,
+): Promise<ImageValidationError | null> {
+  if (url === null || url === undefined || url === "") return null;
+
+  // Locally hosted optimized images: verify the files exist on disk first.
+  const local = validateOptionalImageUrl(url);
+  if (local) return local;
+
+  // External / CDN URLs: verify they resolve to a reachable image.
+  if (isExternalImageUrl(url)) {
+    const result = await checkExternalImageUrl(url);
+    if (result.status === "broken") {
+      return { kind: "external-unreachable", url, reason: result.reason };
+    }
+    // "ok" and "transient" both pass — never hard-block on a transient failure.
+  }
+
+  return null;
 }
 
 /** Human-readable, actionable message for a failed image validation. */
 export function imageValidationMessage(err: ImageValidationError): string {
+  if (err.kind === "external-unreachable") {
+    return (
+      `Image unreachable: "${err.url}" could not be loaded as an image ` +
+      `(${err.reason}). Check that the URL is correct and publicly accessible, ` +
+      `or host the image locally.`
+    );
+  }
   return (
     `Image not hosted: "${err.url}" is missing ${err.missing.length} file(s) ` +
     `(${err.missing.map((m) => `public/${m}`).join(", ")}). ` +

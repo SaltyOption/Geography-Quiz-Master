@@ -19,7 +19,14 @@ export interface ImageValidationResult {
    */
   missing: string[];
   /**
-   * Human-readable warning when files are missing, otherwise null.
+   * External URL reachability: true when an external (http/https) URL resolved to a reachable image, false when it is genuinely broken (404 / non-image), and null when not checked (local URL) or only transiently unreachable (timeout / DNS / 5xx / 429), which must not block a save.
+
+   * @nullable
+   */
+  reachable: boolean | null;
+  /**
+   * Human-readable warning when an image is not hosted or an external URL is unreachable, otherwise null.
+
    * @nullable
    */
   message: string | null;

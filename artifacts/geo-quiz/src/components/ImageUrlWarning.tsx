@@ -5,13 +5,16 @@ import {
   getValidateImageUrlQueryKey,
 } from "@workspace/api-client-react";
 
-// Mirror of OPTIMIZED_PREFIXES in the API's imageValidation.ts. Only URLs under
-// these prefixes require pre-generated responsive variants, so we only bother
-// the server for those. The server-side 400 on save stays authoritative.
+// Mirror of OPTIMIZED_PREFIXES in the API's imageValidation.ts. URLs under
+// these prefixes require pre-generated responsive variants.
 const OPTIMIZED_PREFIXES = ["/regions/", "/landmarks/"];
 
 function isOptimizedImageUrl(url: string): boolean {
   return OPTIMIZED_PREFIXES.some((p) => url.startsWith(p));
+}
+
+function isExternalImageUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url);
 }
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
@@ -24,15 +27,19 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 /**
- * Inline pre-flight warning for the admin question form. When the entered image
- * URL points under an optimized prefix but its source file or responsive
- * variants are not hosted yet, this surfaces the problem while the admin types
- * — before they hit Save and get a 400 from the server.
+ * Inline pre-flight warning for the admin image-URL fields. Surfaces, while the
+ * admin types, when:
+ *   - an optimized (/regions/, /landmarks/) URL's source file or responsive
+ *     variants are not hosted, or
+ *   - an external http(s) URL does not resolve to a reachable image.
+ * The server-side 400 on save stays authoritative; transient network failures
+ * never produce a warning here (server returns reachable=null).
  */
 export function ImageUrlWarning({ url }: { url: string }) {
   const trimmed = url.trim();
   const debouncedUrl = useDebouncedValue(trimmed, 500);
-  const enabled = isOptimizedImageUrl(debouncedUrl);
+  const enabled =
+    isOptimizedImageUrl(debouncedUrl) || isExternalImageUrl(debouncedUrl);
 
   const { data } = useValidateImageUrl(
     { url: debouncedUrl },
@@ -46,7 +53,11 @@ export function ImageUrlWarning({ url }: { url: string }) {
     },
   );
 
-  if (!enabled || !data || data.missing.length === 0) return null;
+  if (!enabled || !data) return null;
+
+  const notHosted = data.missing.length > 0;
+  const unreachable = data.reachable === false;
+  if (!notHosted && !unreachable) return null;
 
   return (
     <div
@@ -55,11 +66,15 @@ export function ImageUrlWarning({ url }: { url: string }) {
     >
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
       <div>
-        <p className="font-medium">This image isn't hosted yet.</p>
+        <p className="font-medium">
+          {notHosted
+            ? "This image isn't hosted yet."
+            : "This image URL can't be reached."}
+        </p>
         <p className="mt-0.5">
           {data.message ??
-            "Upload the source image and regenerate its responsive variants, or correct the URL."}{" "}
-          Saving will be rejected until the file and its responsive variants exist.
+            "Check that the URL is correct, or host the image locally."}{" "}
+          Saving will be rejected until the image is reachable.
         </p>
       </div>
     </div>
