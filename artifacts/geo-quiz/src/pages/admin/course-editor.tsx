@@ -33,6 +33,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ImagePicker } from "@/components/ImagePicker";
+import { ImageUrlWarning } from "@/components/ImageUrlWarning";
 import { useToast } from "@/hooks/use-toast";
 
 interface EditState {
@@ -399,6 +400,7 @@ export default function CourseEditor() {
                 Hosted images under /regions/ or /landmarks/ must have their responsive variants
                 uploaded, or saving is rejected.
               </p>
+              <ImageUrlWarning url={imageForm} />
             </div>
           </div>
           <DialogFooter>

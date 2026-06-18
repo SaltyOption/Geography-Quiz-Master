@@ -50,6 +50,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUrlWarning } from "@/components/ImageUrlWarning";
 
 const NO_PARENT = "__none__";
 
@@ -108,40 +109,43 @@ function CategoryTreeNode({
         </button>
 
         {isEditing ? (
-          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-            <Input
-              value={editing.name}
-              onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-              className="h-8 sm:max-w-[12rem]"
-              autoFocus
-              placeholder="Name"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onSave(node.id, editing.name, editing.imageUrl);
-                if (e.key === "Escape") setEditing(null);
-              }}
-            />
-            <Input
-              value={editing.imageUrl}
-              onChange={(e) => setEditing({ ...editing, imageUrl: e.target.value })}
-              className="h-8 flex-1 font-mono text-xs"
-              placeholder="Image URL (e.g. /regions/europe.webp)"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onSave(node.id, editing.name, editing.imageUrl);
-                if (e.key === "Escape") setEditing(null);
-              }}
-            />
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                onClick={() => onSave(node.id, editing.name, editing.imageUrl)}
-                disabled={isSavingId === node.id || editing.name.trim().length === 0}
-              >
-                {isSavingId === node.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
-                <X className="h-4 w-4" />
-              </Button>
+          <div className="flex flex-1 flex-col gap-2">
+            <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                value={editing.name}
+                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                className="h-8 sm:max-w-[12rem]"
+                autoFocus
+                placeholder="Name"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onSave(node.id, editing.name, editing.imageUrl);
+                  if (e.key === "Escape") setEditing(null);
+                }}
+              />
+              <Input
+                value={editing.imageUrl}
+                onChange={(e) => setEditing({ ...editing, imageUrl: e.target.value })}
+                className="h-8 flex-1 font-mono text-xs"
+                placeholder="Image URL (e.g. /regions/europe.webp)"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onSave(node.id, editing.name, editing.imageUrl);
+                  if (e.key === "Escape") setEditing(null);
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => onSave(node.id, editing.name, editing.imageUrl)}
+                  disabled={isSavingId === node.id || editing.name.trim().length === 0}
+                >
+                  {isSavingId === node.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+            <ImageUrlWarning url={editing.imageUrl} />
           </div>
         ) : (
           <>
@@ -437,6 +441,7 @@ export default function AdminCategories() {
                 Hosted images under /regions/ or /landmarks/ must have their responsive variants
                 uploaded, or saving is rejected.
               </p>
+              <ImageUrlWarning url={newImageUrl} />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
