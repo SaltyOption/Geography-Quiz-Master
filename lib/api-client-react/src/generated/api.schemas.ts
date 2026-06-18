@@ -703,6 +703,11 @@ export interface CourseImportItem {
   question_type?: string | null;
   /** @nullable */
   mastery_weight?: number | null;
+  /**
+   * Optional cover image URL for the course (topic). Taken from the first item that carries one. Validated like the course edit flow: locally hosted /regions/ and /landmarks/ URLs must have their responsive variants on disk, and external URLs must be reachable.
+   * @nullable
+   */
+  image_url?: string | null;
 }
 
 export interface CourseImportBody {

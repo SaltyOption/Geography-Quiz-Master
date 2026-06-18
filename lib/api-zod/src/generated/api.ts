@@ -808,6 +808,12 @@ export const BulkImportCourseBody = zod.object({
         difficulty: zod.string().nullish(),
         question_type: zod.string().nullish(),
         mastery_weight: zod.number().nullish(),
+        image_url: zod
+          .string()
+          .nullish()
+          .describe(
+            "Optional cover image URL for the course (topic). Taken from the first item that carries one. Validated like the course edit flow: locally hosted \/regions\/ and \/landmarks\/ URLs must have their responsive variants on disk, and external URLs must be reachable.",
+          ),
       })
       .describe("One question row in the course bulk import payload."),
   ),

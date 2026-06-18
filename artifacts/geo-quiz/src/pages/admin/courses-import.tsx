@@ -49,6 +49,7 @@ const FIELD_ALIASES: Record<string, string[]> = {
   difficulty: ["difficulty", "level"],
   question_type: ["question_type", "questiontype", "type"],
   mastery_weight: ["mastery_weight", "weight"],
+  image_url: ["image_url", "imageurl", "image", "cover", "cover_image"],
 };
 
 function pick(obj: AnyRec, key: keyof typeof FIELD_ALIASES): unknown {
@@ -171,6 +172,7 @@ function parseInput(raw: string): ParseResult {
     const objective = pick(row, "learning_objective");
     const diff = pick(row, "difficulty");
     const qtype = pick(row, "question_type");
+    const image = pick(row, "image_url");
     const weightRaw = pick(row, "mastery_weight");
     const weight =
       typeof weightRaw === "number"
@@ -192,6 +194,7 @@ function parseInput(raw: string): ParseResult {
       difficulty: diff != null ? String(diff) : null,
       question_type: qtype != null ? String(qtype) : null,
       mastery_weight: weight !== null && Number.isFinite(weight) ? Math.trunc(weight) : null,
+      image_url: image != null && String(image).trim() ? String(image).trim() : null,
     });
   }
   return { ok: true, items };
@@ -289,7 +292,10 @@ export default function AdminCoursesImport() {
             <code>question</code>, <code>options</code> (A/B/C/D), <code>correct_answer</code>,{" "}
             <code>explanation</code>. Optional: <code>fun_fact</code>,{" "}
             <code>learning_objective</code>, <code>difficulty</code>, <code>question_type</code>,{" "}
-            <code>mastery_weight</code>.
+            <code>mastery_weight</code>, <code>image_url</code> (course cover — taken from the
+            first item that has one; locally hosted <code>/regions/</code> &amp;{" "}
+            <code>/landmarks/</code> URLs must have their responsive variants, external URLs must
+            be reachable).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

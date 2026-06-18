@@ -710,6 +710,20 @@ router.post("/courses/bulk-import", requireAdmin, async (req, res): Promise<void
 
   const [topic, modulesMap] = [...byTopic][0];
 
+  // A course has a single cover image; take the first non-empty image_url among
+  // this topic's items. Validate it like the course edit flow (responsive
+  // variants on disk for /regions/ and /landmarks/, reachability for external
+  // URLs) before any write, so a bad reference fails the whole import up front.
+  const courseImageUrl =
+    items.map((it) => it.image_url).find((u) => u != null && u !== "") ?? null;
+  if (courseImageUrl) {
+    const imageError = await validateImageUrlReachable(courseImageUrl);
+    if (imageError) {
+      res.status(400).json({ error: imageValidationMessage(imageError) });
+      return;
+    }
+  }
+
   try {
     const summary = await db.transaction(async (tx) => {
       // Find or create the course (by exact title).
@@ -725,6 +739,14 @@ router.post("/courses/bulk-import", requireAdmin, async (req, res): Promise<void
       if (existingCourse) {
         courseId = existingCourse.id;
         courseSlug = existingCourse.slug;
+        // Fill in a missing cover image on re-import without clobbering one an
+        // admin may have already set.
+        if (courseImageUrl && !existingCourse.imageUrl) {
+          await tx
+            .update(coursesTable)
+            .set({ imageUrl: courseImageUrl })
+            .where(eq(coursesTable.id, courseId));
+        }
       } else {
         const newSlug = await uniqueCourseSlug(topic);
         const [inserted] = await tx
@@ -733,6 +755,7 @@ router.post("/courses/bulk-import", requireAdmin, async (req, res): Promise<void
             title: topic,
             slug: newSlug,
             description: `A course on ${topic}`,
+            imageUrl: courseImageUrl,
           })
           .returning();
         courseId = inserted.id;

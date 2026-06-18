@@ -2384,6 +2384,13 @@ components:
           type: ["string", "null"]
         mastery_weight:
           type: ["integer", "null"]
+        image_url:
+          type: ["string", "null"]
+          description: >-
+            Optional cover image URL for the course (topic). Taken from the first
+            item that carries one. Validated like the course edit flow: locally
+            hosted /regions/ and /landmarks/ URLs must have their responsive
+            variants on disk, and external URLs must be reachable.
       required:
         - topic
         - module

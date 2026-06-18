@@ -91,6 +91,22 @@ describe("POST /api/courses/bulk-import", () => {
       .send({ items: [{ ...minimalImportItem, correct_answer: "Z" }] });
     expect(res.status).toBe(400);
   });
+
+  it("rejects a course image_url under an optimized prefix with missing variants", async () => {
+    const res = await request(app)
+      .post("/api/courses/bulk-import")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({
+        items: [
+          {
+            ...minimalImportItem,
+            image_url: "/regions/__definitely-not-a-real-image__.jpg",
+          },
+        ],
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/not hosted/i);
+  });
 });
 
 describe("POST /api/course-modules/:moduleId/attempts", () => {
