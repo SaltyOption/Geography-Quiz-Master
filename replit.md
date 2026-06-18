@@ -92,7 +92,25 @@ The home page is a category browser only (no quizzes shown directly) — it grou
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/scripts run check-db-image-files` — maintenance check: flags DB image URLs (question/category/course `image_url`) under `/regions/` or `/landmarks/` whose source file or responsive variants are missing from `public/`. Needs `DATABASE_URL`; exits non-zero on missing files. Run against dev or prod. This check also runs automatically as a **pre-deploy gate**: it is the first step of the api-server's production `build` (in `artifacts/api-server/.replit-artifact/artifact.toml`), running against the production database before the frontend/api-server builds. A failure fails the whole deploy build, so broken image references block publishing until fixed.
+- `pnpm --filter @workspace/scripts run check-db-image-files` — maintenance check: flags DB image URLs (question/category/course `image_url`) under `/regions/` or `/landmarks/` whose source file or responsive variants are missing from `public/`. Needs `DATABASE_URL`; exits non-zero on missing files. Run against dev or prod. This check also runs automatically as a **pre-deploy gate**: it is the first step of the api-server's production `build` (in `artifacts/api-server/.replit-artifact/artifact.toml`), running against the production database before the frontend/api-server builds. A failure fails the whole deploy build, so broken image references block publishing until fixed. It additionally runs on a **schedule** against production (see "Scheduled Broken-Image Check" below).
+
+## Scheduled Broken-Image Check
+
+The pre-deploy gate only catches broken image references at publish time. Admins add and edit image URLs through the live admin UI without redeploying, so a bad reference can sit in production until the next deploy. A **Scheduled Deployment** runs the same `check-db-image-files` script on a regular cadence against the production database to catch these promptly.
+
+- **What it runs:** the existing `pnpm --filter @workspace/scripts run check-db-image-files` script — no separate logic. It exits non-zero when any DB image URL points at a missing source file or responsive variant.
+- **Why a fresh checkout is enough:** the responsive variants (`-400/-768/-1024.webp/.avif`) under `public/regions` and `public/landmarks` are committed to git, so the script needs no frontend build — only `pnpm install` to get `tsx` + workspace deps. It reads `DATABASE_URL` (auto-provisioned in production) to inspect the live DB.
+- **How failures reach the team:** a non-zero exit makes the scheduled run fail, which Replit surfaces in the Deployments pane and notifies the deployer about. Broken-image details are printed to the run logs (`source#id -> url` + the missing files).
+
+### One-time setup (do this in the Deployments pane — agents cannot create it)
+
+Create a **separate Scheduled Deployment** (alongside the existing autoscale api-server deployment):
+
+- **Deployment type:** Scheduled
+- **Build command:** `pnpm install`
+- **Run command:** `pnpm --filter @workspace/scripts run check-db-image-files`
+- **Schedule:** a regular cadence (e.g. daily) — adjust to how often admins edit images
+- Production secrets (`DATABASE_URL`) are shared automatically, so no extra config is needed.
 
 ## Environment Variables (Auto-Provisioned)
 
