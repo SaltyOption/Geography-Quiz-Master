@@ -692,6 +692,16 @@ importers:
   lib/image-config: {}
 
   scripts:
+    dependencies:
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../lib/db
+      '@workspace/image-config':
+        specifier: workspace:*
+        version: link:../lib/image-config
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
