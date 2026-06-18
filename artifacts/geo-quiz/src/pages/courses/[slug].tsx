@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ResponsiveImage } from "@/components/ResponsiveImage";
 
 export default function CourseDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -110,6 +111,18 @@ export default function CourseDetailPage() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to courses
         </Link>
       </Button>
+
+      {course.imageUrl && (
+        <div className="relative mb-6 h-48 w-full overflow-hidden rounded-2xl sm:h-64 md:h-72">
+          <ResponsiveImage
+            src={course.imageUrl}
+            alt={course.title}
+            sizes="(min-width: 1024px) 896px, 100vw"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+        </div>
+      )}
 
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>

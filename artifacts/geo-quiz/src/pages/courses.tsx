@@ -10,15 +10,9 @@ import { Loader2, BookOpen, ChevronRight, GraduationCap, Trophy, Sparkles } from
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { ResponsiveImage } from "@/components/ResponsiveImage";
 
 function CourseCard({ course }: { course: CourseSummary }) {
-  const baseUrl = import.meta.env.BASE_URL;
-  const imgSrc = course.imageUrl
-    ? course.imageUrl.startsWith("/")
-      ? `${baseUrl}${course.imageUrl.slice(1)}`
-      : course.imageUrl
-    : null;
-
   const pct =
     course.moduleCount > 0
       ? Math.round((course.masteredCount / course.moduleCount) * 100)
@@ -30,12 +24,14 @@ function CourseCard({ course }: { course: CourseSummary }) {
         className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5"
         data-testid={`card-course-${course.slug}`}
       >
-        {imgSrc && (
+        {course.imageUrl && (
           <div className="relative h-32 w-full overflow-hidden bg-muted">
-            <img
-              src={imgSrc}
+            <ResponsiveImage
+              src={course.imageUrl}
               alt={course.title}
               loading="lazy"
+              decoding="async"
+              sizes="(min-width: 1280px) 280px, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 90vw"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />
