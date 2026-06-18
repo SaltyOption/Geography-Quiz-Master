@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  ArrowRight,
   Upload,
   Loader2,
   CheckCircle2,
@@ -267,6 +268,14 @@ export default function AdminCoursesImport() {
     return match?.imageUrl ?? null;
   }, [topic, existingCourses]);
   const willRemoveCover = clearImage && !coverUrl && !!existingCover;
+  // "Replace existing cover image" is on, the payload carries a new cover, and
+  // the matched course already has a *different* cover — overwriting it is
+  // destructive. A same-URL re-import or a fill of a missing cover is not.
+  const willReplaceCover =
+    replaceImage &&
+    !!coverUrl &&
+    !!existingCover &&
+    coverUrl.trim() !== existingCover.trim();
 
   const handleFile = async (file: File) => {
     const t = await file.text();
@@ -480,6 +489,61 @@ export default function AdminCoursesImport() {
                 <code>image_url</code> from this payload. Off by default, so re-import only fills
                 in a missing cover and never replaces one you set manually.
               </p>
+              {willReplaceCover && (
+                <div
+                  className="mt-2 rounded-md border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive"
+                  data-testid="cover-replace-warning"
+                >
+                  <div className="flex items-start gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>
+                      This import will overwrite the current cover on{" "}
+                      <span className="font-semibold">{topic}</span> with the new image below.
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="text-center">
+                      <div className="relative h-14 w-20 overflow-hidden rounded-md border bg-muted">
+                        {currentCoverError ? (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <AlertCircle className="h-4 w-4" />
+                          </div>
+                        ) : (
+                          <ResponsiveImage
+                            src={existingCover!}
+                            alt="Current course cover"
+                            className="h-full w-full object-cover"
+                            onError={() => setCurrentCoverError(true)}
+                          />
+                        )}
+                      </div>
+                      <div className="mt-1 font-medium uppercase tracking-wider text-muted-foreground">
+                        Current
+                      </div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="text-center">
+                      <div className="relative h-14 w-20 overflow-hidden rounded-md border bg-muted">
+                        {coverError ? (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <AlertCircle className="h-4 w-4" />
+                          </div>
+                        ) : (
+                          <ResponsiveImage
+                            src={coverUrl!}
+                            alt="New course cover"
+                            className="h-full w-full object-cover"
+                            onError={() => setCoverError(true)}
+                          />
+                        )}
+                      </div>
+                      <div className="mt-1 font-medium uppercase tracking-wider text-muted-foreground">
+                        New
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
