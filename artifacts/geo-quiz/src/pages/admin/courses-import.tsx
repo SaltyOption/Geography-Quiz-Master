@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { ResponsiveImage } from "@/components/ResponsiveImage";
 
 interface ParseResult {
   ok: boolean;
@@ -234,15 +235,21 @@ export default function AdminCoursesImport() {
 
   const [text, setText] = useState("");
   const [result, setResult] = useState<CourseImportResult | null>(null);
+  const [coverError, setCoverError] = useState(false);
 
   const parsed = useMemo(() => (text.trim() ? parseInput(text) : null), [text]);
   const summary = parsed?.ok && parsed.items ? summarize(parsed.items) : null;
   const tooManyTopics = summary && summary.topics.length > 1;
+  const coverUrl = useMemo(
+    () => (parsed?.ok && parsed.items ? parsed.items.find((it) => it.image_url)?.image_url ?? null : null),
+    [parsed],
+  );
 
   const handleFile = async (file: File) => {
     const t = await file.text();
     setText(t);
     setResult(null);
+    setCoverError(false);
   };
 
   const handleImport = async () => {
@@ -315,6 +322,7 @@ export default function AdminCoursesImport() {
             onChange={(e) => {
               setText(e.target.value);
               setResult(null);
+              setCoverError(false);
             }}
             placeholder='[{"topic":"World Deserts","module":"Module 1","lesson":"Intro","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct_answer":"A","explanation":"..."}]'
             className="min-h-[240px] font-mono text-xs"
@@ -343,6 +351,42 @@ export default function AdminCoursesImport() {
                   <span>
                     Multiple topics detected. Course import expects exactly one topic per request.
                   </span>
+                </div>
+              )}
+              {coverUrl && (
+                <div className="mb-3" data-testid="course-cover-preview">
+                  <div className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Course cover
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-md border bg-muted">
+                      {coverError ? (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                          <AlertCircle className="h-5 w-5" />
+                        </div>
+                      ) : (
+                        <ResponsiveImage
+                          src={coverUrl}
+                          alt="Course cover preview"
+                          className="h-full w-full object-cover"
+                          onError={() => setCoverError(true)}
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 text-xs">
+                      <div className="break-all font-mono text-muted-foreground">{coverUrl}</div>
+                      {coverError && (
+                        <div className="mt-1.5 flex items-start gap-1.5 text-amber-700 dark:text-amber-300">
+                          <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          <span>
+                            This cover image couldn&apos;t be previewed — it may be broken,
+                            unreachable, or missing its responsive variants. Fix it before importing
+                            or the import will be rejected.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
               {summary.topics.map((t) => (
