@@ -56,10 +56,12 @@ import type {
   SubmitModuleAttemptBody,
   SubmitQuizAttemptBody,
   UpdateCategoryBody,
+  UpdateCourseBody,
   UpdateCourseQuestionBody,
   UpdateNewsletterSubscriptionBody,
   UpdateQuestionBody,
   UpdateQuizBody,
+  UpdatedCourse,
   UserProgress,
   UserQuizProgress,
 } from "./api.schemas";
@@ -2886,6 +2888,93 @@ export function useGetAdminCourse<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Admin - update a course's editable fields (e.g. image)
+ */
+export const getUpdateCourseUrl = (slug: string) => {
+  return `/api/admin/courses/${slug}`;
+};
+
+export const updateCourse = async (
+  slug: string,
+  updateCourseBody: UpdateCourseBody,
+  options?: RequestInit,
+): Promise<UpdatedCourse> => {
+  return customFetch<UpdatedCourse>(getUpdateCourseUrl(slug), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateCourseBody),
+  });
+};
+
+export const getUpdateCourseMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCourse>>,
+    TError,
+    { slug: string; data: BodyType<UpdateCourseBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCourse>>,
+  TError,
+  { slug: string; data: BodyType<UpdateCourseBody> },
+  TContext
+> => {
+  const mutationKey = ["updateCourse"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCourse>>,
+    { slug: string; data: BodyType<UpdateCourseBody> }
+  > = (props) => {
+    const { slug, data } = props ?? {};
+
+    return updateCourse(slug, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCourseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCourse>>
+>;
+export type UpdateCourseMutationBody = BodyType<UpdateCourseBody>;
+export type UpdateCourseMutationError = ErrorType<void>;
+
+/**
+ * @summary Admin - update a course's editable fields (e.g. image)
+ */
+export const useUpdateCourse = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCourse>>,
+    TError,
+    { slug: string; data: BodyType<UpdateCourseBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateCourse>>,
+  TError,
+  { slug: string; data: BodyType<UpdateCourseBody> },
+  TContext
+> => {
+  return useMutation(getUpdateCourseMutationOptions(options));
+};
 
 /**
  * @summary Admin - update a single course (learning module) question

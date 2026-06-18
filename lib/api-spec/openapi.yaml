@@ -690,6 +690,37 @@ paths:
           description: Forbidden
         "404":
           description: Not found
+    patch:
+      operationId: updateCourse
+      tags: [courses]
+      summary: Admin - update a course's editable fields (e.g. image)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCourseBody"
+      responses:
+        "200":
+          description: Updated course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdatedCourse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
 
   /course-questions/{id}:
     patch:
@@ -1247,6 +1278,8 @@ components:
           description: "Optional. Auto-generated from name if omitted."
         parentId:
           type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
         published:
           type: boolean
       required:
@@ -1261,6 +1294,8 @@ components:
           type: string
         parentId:
           type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
         published:
           type: boolean
 
@@ -1848,6 +1883,8 @@ components:
           type: string
         description:
           type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
         modules:
           type: array
           items:
@@ -1857,7 +1894,34 @@ components:
         - slug
         - title
         - description
+        - imageUrl
         - modules
+
+    UpdateCourseBody:
+      type: object
+      properties:
+        imageUrl:
+          type: ["string", "null"]
+
+    UpdatedCourse:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - slug
+        - title
+        - description
+        - imageUrl
 
     UpdateCourseQuestionBody:
       type: object

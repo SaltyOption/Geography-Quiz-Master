@@ -3,12 +3,13 @@ import { Link, useParams } from "wouter";
 import {
   useGetAdminCourse,
   useUpdateCourseQuestion,
+  useUpdateCourse,
   getGetAdminCourseQueryKey,
   type CourseQuestion,
   type UpdateCourseQuestionBody,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Edit2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, Edit2, CheckCircle2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -64,14 +65,41 @@ export default function CourseEditor() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const updateMutation = useUpdateCourseQuestion();
+  const updateCourseMutation = useUpdateCourse();
 
   const [editing, setEditing] = useState<CourseQuestion | null>(null);
   const [form, setForm] = useState<EditState | null>(null);
+
+  const [imageOpen, setImageOpen] = useState(false);
+  const [imageForm, setImageForm] = useState("");
 
   useEffect(() => {
     if (editing) setForm(toEditState(editing));
     else setForm(null);
   }, [editing]);
+
+  useEffect(() => {
+    if (imageOpen) setImageForm(course?.imageUrl ?? "");
+  }, [imageOpen, course?.imageUrl]);
+
+  const handleSaveImage = async () => {
+    if (!course) return;
+    try {
+      await updateCourseMutation.mutateAsync({
+        slug: course.slug,
+        data: { imageUrl: imageForm.trim() === "" ? null : imageForm.trim() },
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetAdminCourseQueryKey(slug) });
+      toast({ title: "Course image updated" });
+      setImageOpen(false);
+    } catch (err) {
+      toast({
+        title: "Failed to update image",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSave = async () => {
     if (!editing || !form) return;
@@ -132,9 +160,22 @@ export default function CourseEditor() {
         </Card>
       ) : (
         <>
-          <h1 className="text-3xl font-bold tracking-tight">{course.title}</h1>
-          {course.description && (
-            <p className="text-muted-foreground mt-1">{course.description}</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">{course.title}</h1>
+              {course.description && (
+                <p className="text-muted-foreground mt-1">{course.description}</p>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setImageOpen(true)}>
+              <ImageIcon className="mr-2 h-4 w-4" />
+              {course.imageUrl ? "Edit image" : "Add image"}
+            </Button>
+          </div>
+          {course.imageUrl && (
+            <p className="text-muted-foreground mt-2 font-mono text-xs break-all">
+              {course.imageUrl}
+            </p>
           )}
 
           <div className="mt-8 space-y-6">
@@ -326,6 +367,42 @@ export default function CourseEditor() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={imageOpen} onOpenChange={setImageOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Course image</DialogTitle>
+            <DialogDescription>
+              Set a hosted image URL for this course. Leave blank to remove it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="course-image">Image URL</Label>
+            <Input
+              id="course-image"
+              placeholder="/landmarks/pyramids.webp"
+              value={imageForm}
+              onChange={(e) => setImageForm(e.target.value)}
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Hosted images under /regions/ or /landmarks/ must have their responsive variants
+              uploaded, or saving is rejected.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImageOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveImage} disabled={updateCourseMutation.isPending}>
+              {updateCourseMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Save image
             </Button>
           </DialogFooter>
         </DialogContent>

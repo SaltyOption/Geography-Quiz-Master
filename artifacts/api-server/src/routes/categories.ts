@@ -17,6 +17,7 @@ import {
 import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 import { slugify, uniqueSlug } from "../lib/categorySlug";
 import { isCategoryVisible } from "../lib/categoryVisibility";
+import { validateOptionalImageUrl, imageValidationMessage } from "../lib/imageValidation";
 
 const router: IRouter = Router();
 
@@ -253,7 +254,13 @@ router.post("/categories", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, parentId, slug, published } = parsed.data;
+  const { name, parentId, slug, imageUrl, published } = parsed.data;
+
+  const imageError = validateOptionalImageUrl(imageUrl);
+  if (imageError) {
+    res.status(400).json({ error: imageValidationMessage(imageError) });
+    return;
+  }
 
   if (parentId !== null && parentId !== undefined) {
     const [parent] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, parentId));
@@ -271,6 +278,7 @@ router.post("/categories", requireAdmin, async (req, res): Promise<void> => {
       name,
       slug: finalSlug,
       parentId: parentId ?? null,
+      ...(imageUrl !== undefined ? { imageUrl } : {}),
       ...(published !== undefined ? { published } : {}),
     })
     .returning();
@@ -292,7 +300,13 @@ router.patch("/categories/:id", requireAdmin, async (req, res): Promise<void> =>
     return;
   }
 
-  const { name, parentId, slug, published } = parsed.data;
+  const { name, parentId, slug, imageUrl, published } = parsed.data;
+
+  const imageError = validateOptionalImageUrl(imageUrl);
+  if (imageError) {
+    res.status(400).json({ error: imageValidationMessage(imageError) });
+    return;
+  }
 
   if (parentId === params.data.id) {
     res.status(400).json({ error: "Category cannot be its own parent" });
@@ -318,6 +332,7 @@ router.patch("/categories/:id", requireAdmin, async (req, res): Promise<void> =>
   const updateData: Partial<typeof categoriesTable.$inferInsert> = {};
   if (name !== undefined) updateData.name = name;
   if (parentId !== undefined) updateData.parentId = parentId;
+  if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
   if (published !== undefined) updateData.published = published;
   if (slug !== undefined) {
     const desired = slugify(slug);

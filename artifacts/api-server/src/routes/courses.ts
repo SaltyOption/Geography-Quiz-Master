@@ -17,8 +17,10 @@ import {
   GetAdminCourseParams,
   UpdateCourseQuestionParams,
   UpdateCourseQuestionBody,
+  UpdateCourseBody,
 } from "@workspace/api-zod";
 import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
+import { validateOptionalImageUrl, imageValidationMessage } from "../lib/imageValidation";
 
 const router: IRouter = Router();
 
@@ -978,6 +980,7 @@ router.get("/admin/courses/:slug", requireAdmin, async (req, res): Promise<void>
     slug: course.slug,
     title: course.title,
     description: course.description,
+    imageUrl: course.imageUrl,
     modules: modules.map((m) => ({
       id: m.id,
       slug: m.slug,
@@ -1003,6 +1006,61 @@ router.get("/admin/courses/:slug", requireAdmin, async (req, res): Promise<void>
         })),
       })),
     })),
+  });
+});
+
+// Admin: update a course's editable fields (currently the cover image).
+router.patch("/admin/courses/:slug", requireAdmin, async (req, res): Promise<void> => {
+  const rawSlug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
+  const params = GetAdminCourseParams.safeParse({ slug: rawSlug });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = UpdateCourseBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { imageUrl } = parsed.data;
+
+  const imageError = validateOptionalImageUrl(imageUrl);
+  if (imageError) {
+    res.status(400).json({ error: imageValidationMessage(imageError) });
+    return;
+  }
+
+  const updateData: Partial<typeof coursesTable.$inferInsert> = {};
+  if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+
+  let course: typeof coursesTable.$inferSelect | undefined;
+  if (Object.keys(updateData).length > 0) {
+    [course] = await db
+      .update(coursesTable)
+      .set(updateData)
+      .where(eq(coursesTable.slug, params.data.slug))
+      .returning();
+  } else {
+    [course] = await db
+      .select()
+      .from(coursesTable)
+      .where(eq(coursesTable.slug, params.data.slug))
+      .limit(1);
+  }
+
+  if (!course) {
+    res.status(404).json({ error: "Course not found" });
+    return;
+  }
+
+  res.json({
+    id: course.id,
+    slug: course.slug,
+    title: course.title,
+    description: course.description,
+    imageUrl: course.imageUrl,
   });
 });
 

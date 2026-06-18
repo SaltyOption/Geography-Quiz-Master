@@ -217,6 +217,8 @@ export interface CreateCategoryBody {
   slug?: string;
   /** @nullable */
   parentId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
   published?: boolean;
 }
 
@@ -225,6 +227,8 @@ export interface UpdateCategoryBody {
   slug?: string;
   /** @nullable */
   parentId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
   published?: boolean;
 }
 
@@ -459,7 +463,24 @@ export interface AdminCourseDetail {
   title: string;
   /** @nullable */
   description: string | null;
+  /** @nullable */
+  imageUrl: string | null;
   modules: AdminCourseModule[];
+}
+
+export interface UpdateCourseBody {
+  /** @nullable */
+  imageUrl?: string | null;
+}
+
+export interface UpdatedCourse {
+  id: number;
+  slug: string;
+  title: string;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  imageUrl: string | null;
 }
 
 export interface UpdateCourseQuestionBody {

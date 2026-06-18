@@ -32,6 +32,7 @@ export const CreateCategoryBody = zod.object({
     .optional()
     .describe("Optional. Auto-generated from name if omitted."),
   parentId: zod.number().nullish(),
+  imageUrl: zod.string().nullish(),
   published: zod.boolean().optional(),
 });
 
@@ -136,6 +137,7 @@ export const UpdateCategoryBody = zod.object({
   name: zod.string().optional(),
   slug: zod.string().optional(),
   parentId: zod.number().nullish(),
+  imageUrl: zod.string().nullish(),
   published: zod.boolean().optional(),
 });
 
@@ -883,6 +885,7 @@ export const GetAdminCourseResponse = zod.object({
   slug: zod.string(),
   title: zod.string(),
   description: zod.string().nullable(),
+  imageUrl: zod.string().nullable(),
   modules: zod.array(
     zod.object({
       id: zod.number(),
@@ -914,6 +917,25 @@ export const GetAdminCourseResponse = zod.object({
       ),
     }),
   ),
+});
+
+/**
+ * @summary Admin - update a course's editable fields (e.g. image)
+ */
+export const UpdateCourseParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const UpdateCourseBody = zod.object({
+  imageUrl: zod.string().nullish(),
+});
+
+export const UpdateCourseResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullable(),
+  imageUrl: zod.string().nullable(),
 });
 
 /**

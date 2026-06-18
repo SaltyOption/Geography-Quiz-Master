@@ -53,7 +53,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const NO_PARENT = "__none__";
 
-type EditState = { id: number; name: string; parentId: number | null };
+type EditState = { id: number; name: string; parentId: number | null; imageUrl: string };
 
 function CategoryTreeNode({
   node,
@@ -76,7 +76,7 @@ function CategoryTreeNode({
   toggle: (id: number) => void;
   editing: EditState | null;
   setEditing: (s: EditState | null) => void;
-  onSave: (id: number, name: string) => void;
+  onSave: (id: number, name: string, imageUrl: string) => void;
   onDelete: (id: number) => void;
   onAddChild: (parentId: number) => void;
   onTogglePublished: (id: number, published: boolean) => void;
@@ -108,27 +108,40 @@ function CategoryTreeNode({
         </button>
 
         {isEditing ? (
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               value={editing.name}
               onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-              className="h-8 max-w-xs"
+              className="h-8 sm:max-w-[12rem]"
               autoFocus
+              placeholder="Name"
               onKeyDown={(e) => {
-                if (e.key === "Enter") onSave(node.id, editing.name);
+                if (e.key === "Enter") onSave(node.id, editing.name, editing.imageUrl);
                 if (e.key === "Escape") setEditing(null);
               }}
             />
-            <Button
-              size="sm"
-              onClick={() => onSave(node.id, editing.name)}
-              disabled={isSavingId === node.id || editing.name.trim().length === 0}
-            >
-              {isSavingId === node.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
-              <X className="h-4 w-4" />
-            </Button>
+            <Input
+              value={editing.imageUrl}
+              onChange={(e) => setEditing({ ...editing, imageUrl: e.target.value })}
+              className="h-8 flex-1 font-mono text-xs"
+              placeholder="Image URL (e.g. /regions/europe.webp)"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSave(node.id, editing.name, editing.imageUrl);
+                if (e.key === "Escape") setEditing(null);
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => onSave(node.id, editing.name, editing.imageUrl)}
+                disabled={isSavingId === node.id || editing.name.trim().length === 0}
+              >
+                {isSavingId === node.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         ) : (
           <>
@@ -163,8 +176,8 @@ function CategoryTreeNode({
                 size="icon"
                 variant="ghost"
                 className="h-7 w-7"
-                onClick={() => setEditing({ id: node.id, name: node.name, parentId: node.parentId })}
-                title="Rename"
+                onClick={() => setEditing({ id: node.id, name: node.name, parentId: node.parentId, imageUrl: node.imageUrl ?? "" })}
+                title="Edit name & image"
                 data-testid={`button-rename-${node.id}`}
               >
                 <Edit2 className="h-4 w-4" />
@@ -249,6 +262,7 @@ export default function AdminCategories() {
 
   const [newName, setNewName] = useState("");
   const [newParentId, setNewParentId] = useState<string>(NO_PARENT);
+  const [newImageUrl, setNewImageUrl] = useState("");
   const [newPublished, setNewPublished] = useState(false);
 
   const invalidate = () => {
@@ -271,15 +285,27 @@ export default function AdminCategories() {
     if (name.length === 0) return;
     try {
       const parentId = newParentId === NO_PARENT ? null : parseInt(newParentId, 10);
-      await createCategory.mutateAsync({ data: { name, parentId, published: newPublished } });
+      await createCategory.mutateAsync({
+        data: {
+          name,
+          parentId,
+          imageUrl: newImageUrl.trim() === "" ? null : newImageUrl.trim(),
+          published: newPublished,
+        },
+      });
       setNewName("");
       setNewParentId(NO_PARENT);
+      setNewImageUrl("");
       setNewPublished(false);
       if (parentId !== null) setExpanded((prev) => new Set(prev).add(parentId));
       invalidate();
       toast({ title: "Category created" });
-    } catch {
-      toast({ title: "Failed to create category", variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Failed to create category",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
     }
   };
 
@@ -296,17 +322,24 @@ export default function AdminCategories() {
     }
   };
 
-  const handleSaveRename = async (id: number, name: string) => {
+  const handleSaveRename = async (id: number, name: string, imageUrl: string) => {
     const trimmed = name.trim();
     if (trimmed.length === 0) return;
     setSavingId(id);
     try {
-      await updateCategory.mutateAsync({ id, data: { name: trimmed } });
+      await updateCategory.mutateAsync({
+        id,
+        data: { name: trimmed, imageUrl: imageUrl.trim() === "" ? null : imageUrl.trim() },
+      });
       setEditing(null);
       invalidate();
-      toast({ title: "Category renamed" });
-    } catch {
-      toast({ title: "Failed to rename", variant: "destructive" });
+      toast({ title: "Category updated" });
+    } catch (err) {
+      toast({
+        title: "Failed to update",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
     } finally {
       setSavingId(null);
     }
@@ -390,6 +423,20 @@ export default function AdminCategories() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-image">Image URL (optional)</Label>
+              <Input
+                id="new-image"
+                placeholder="/regions/europe.webp"
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Hosted images under /regions/ or /landmarks/ must have their responsive variants
+                uploaded, or saving is rejected.
+              </p>
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
