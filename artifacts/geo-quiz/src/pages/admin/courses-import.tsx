@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
   useBulkImportCourse,
+  useListCourses,
   getListCoursesQueryKey,
   type CourseImportItem,
   type CourseImportResult,
@@ -234,12 +235,14 @@ export default function AdminCoursesImport() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const bulkImport = useBulkImportCourse();
+  const { data: existingCourses } = useListCourses();
 
   const [text, setText] = useState("");
   const [replaceImage, setReplaceImage] = useState(false);
   const [clearImage, setClearImage] = useState(false);
   const [result, setResult] = useState<CourseImportResult | null>(null);
   const [coverError, setCoverError] = useState(false);
+  const [currentCoverError, setCurrentCoverError] = useState(false);
 
   const parsed = useMemo(() => (text.trim() ? parseInput(text) : null), [text]);
   const summary = parsed?.ok && parsed.items ? summarize(parsed.items) : null;
@@ -249,11 +252,28 @@ export default function AdminCoursesImport() {
     [parsed],
   );
 
+  // Match the parsed payload's topic to an existing course (case-insensitive
+  // title match, mirroring how the importer maps topic -> course title) so we
+  // can show its current cover and warn before a re-import removes it.
+  const topic = useMemo(
+    () => (parsed?.ok && parsed.items?.length ? parsed.items[0].topic.trim() : null),
+    [parsed],
+  );
+  const existingCover = useMemo(() => {
+    if (!topic || !existingCourses) return null;
+    const match = existingCourses.find(
+      (c) => c.title.trim().toLowerCase() === topic.toLowerCase(),
+    );
+    return match?.imageUrl ?? null;
+  }, [topic, existingCourses]);
+  const willRemoveCover = clearImage && !coverUrl && !!existingCover;
+
   const handleFile = async (file: File) => {
     const t = await file.text();
     setText(t);
     setResult(null);
     setCoverError(false);
+    setCurrentCoverError(false);
   };
 
   const handleImport = async () => {
@@ -329,6 +349,7 @@ export default function AdminCoursesImport() {
               setText(e.target.value);
               setResult(null);
               setCoverError(false);
+              setCurrentCoverError(false);
             }}
             placeholder='[{"topic":"World Deserts","module":"Module 1","lesson":"Intro","question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct_answer":"A","explanation":"..."}]'
             className="min-h-[240px] font-mono text-xs"
@@ -395,6 +416,37 @@ export default function AdminCoursesImport() {
                   </div>
                 </div>
               )}
+              {existingCover && (
+                <div className="mb-3" data-testid="current-cover-preview">
+                  <div className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Current cover{" "}
+                    <span className="font-normal normal-case tracking-normal">
+                      (on the existing course)
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-md border bg-muted">
+                      {currentCoverError ? (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                          <AlertCircle className="h-5 w-5" />
+                        </div>
+                      ) : (
+                        <ResponsiveImage
+                          src={existingCover}
+                          alt="Current course cover"
+                          className="h-full w-full object-cover"
+                          onError={() => setCurrentCoverError(true)}
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 text-xs">
+                      <div className="break-all font-mono text-muted-foreground">
+                        {existingCover}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {summary.topics.map((t) => (
                 <div key={t.topic} className="space-y-2 text-sm">
                   <div className="font-semibold">{t.topic}</div>
@@ -448,6 +500,19 @@ export default function AdminCoursesImport() {
                 payload, remove its current cover so re-import becomes the single source of truth.
                 Off by default and ignored when the payload includes a cover image.
               </p>
+              {willRemoveCover && (
+                <div
+                  className="mt-2 flex items-start gap-1.5 rounded-md border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive"
+                  data-testid="cover-removal-warning"
+                >
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    This import will remove the current cover from{" "}
+                    <span className="font-semibold">{topic}</span>. The course will have no cover
+                    image afterwards.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
