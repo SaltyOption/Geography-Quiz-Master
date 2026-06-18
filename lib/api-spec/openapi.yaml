@@ -182,6 +182,28 @@ paths:
         "403":
           description: Forbidden
 
+  /images/gallery:
+    get:
+      operationId: getImageGallery
+      tags: [images]
+      summary: List hosted optimized images for the admin image picker (admin only)
+      description: >
+        Returns the locally hosted images under the optimized prefixes
+        (/regions/, /landmarks/) that have all of their responsive variants on
+        disk, grouped by prefix. Powers the visual cover-image picker so an admin
+        can select a guaranteed-hosted image instead of typing a raw path.
+      responses:
+        "200":
+          description: Grouped list of selectable hosted images
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageGallery"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
   /newsletter/me:
     get:
       operationId: getNewsletterSubscription
@@ -983,6 +1005,47 @@ components:
         - missing
         - reachable
         - message
+
+    ImageGalleryItem:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Path to store on the record, e.g. "/landmarks/pyramids-giza.jpg".
+        name:
+          type: string
+          description: Human-friendly label derived from the file name.
+      required:
+        - url
+        - name
+
+    ImageGalleryGroup:
+      type: object
+      properties:
+        prefix:
+          type: string
+          description: The optimized prefix this group covers, e.g. "/regions/".
+        label:
+          type: string
+          description: Display label for the group, e.g. "Regions".
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImageGalleryItem"
+      required:
+        - prefix
+        - label
+        - images
+
+    ImageGallery:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImageGalleryGroup"
+      required:
+        - groups
 
     HealthStatus:
       type: object

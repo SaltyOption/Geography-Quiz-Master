@@ -202,6 +202,38 @@ export const ValidateImageUrlResponse = zod.object({
 });
 
 /**
+ * Returns the locally hosted images under the optimized prefixes (/regions/, /landmarks/) that have all of their responsive variants on disk, grouped by prefix. Powers the visual cover-image picker so an admin can select a guaranteed-hosted image instead of typing a raw path.
+
+ * @summary List hosted optimized images for the admin image picker (admin only)
+ */
+export const GetImageGalleryResponse = zod.object({
+  groups: zod.array(
+    zod.object({
+      prefix: zod
+        .string()
+        .describe(
+          'The optimized prefix this group covers, e.g. \"\/regions\/\".',
+        ),
+      label: zod
+        .string()
+        .describe('Display label for the group, e.g. \"Regions\".'),
+      images: zod.array(
+        zod.object({
+          url: zod
+            .string()
+            .describe(
+              'Path to store on the record, e.g. \"\/landmarks\/pyramids-giza.jpg\".',
+            ),
+          name: zod
+            .string()
+            .describe("Human-friendly label derived from the file name."),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
  * @summary Get the current user's newsletter subscription status
  */
 export const GetNewsletterSubscriptionResponse = zod.object({

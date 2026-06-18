@@ -32,6 +32,25 @@ export interface ImageValidationResult {
   message: string | null;
 }
 
+export interface ImageGalleryItem {
+  /** Path to store on the record, e.g. "/landmarks/pyramids-giza.jpg". */
+  url: string;
+  /** Human-friendly label derived from the file name. */
+  name: string;
+}
+
+export interface ImageGalleryGroup {
+  /** The optimized prefix this group covers, e.g. "/regions/". */
+  prefix: string;
+  /** Display label for the group, e.g. "Regions". */
+  label: string;
+  images: ImageGalleryItem[];
+}
+
+export interface ImageGallery {
+  groups: ImageGalleryGroup[];
+}
+
 export interface HealthStatus {
   status: string;
 }

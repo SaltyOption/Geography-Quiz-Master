@@ -37,6 +37,7 @@ import type {
   CreateQuizBody,
   DailyQuiz,
   HealthStatus,
+  ImageGallery,
   ImageValidationResult,
   ImportQuestionsByCategoryBody,
   ImportQuestionsByCategoryResult,
@@ -728,6 +729,83 @@ export function useValidateImageUrl<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getValidateImageUrlQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns the locally hosted images under the optimized prefixes (/regions/, /landmarks/) that have all of their responsive variants on disk, grouped by prefix. Powers the visual cover-image picker so an admin can select a guaranteed-hosted image instead of typing a raw path.
+
+ * @summary List hosted optimized images for the admin image picker (admin only)
+ */
+export const getGetImageGalleryUrl = () => {
+  return `/api/images/gallery`;
+};
+
+export const getImageGallery = async (
+  options?: RequestInit,
+): Promise<ImageGallery> => {
+  return customFetch<ImageGallery>(getGetImageGalleryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetImageGalleryQueryKey = () => {
+  return [`/api/images/gallery`] as const;
+};
+
+export const getGetImageGalleryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getImageGallery>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getImageGallery>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetImageGalleryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getImageGallery>>> = ({
+    signal,
+  }) => getImageGallery({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getImageGallery>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetImageGalleryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getImageGallery>>
+>;
+export type GetImageGalleryQueryError = ErrorType<void>;
+
+/**
+ * @summary List hosted optimized images for the admin image picker (admin only)
+ */
+
+export function useGetImageGallery<
+  TData = Awaited<ReturnType<typeof getImageGallery>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getImageGallery>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetImageGalleryQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ImagePicker } from "@/components/ImagePicker";
 import { useToast } from "@/hooks/use-toast";
 
 interface EditState {
@@ -373,26 +374,32 @@ export default function CourseEditor() {
       </Dialog>
 
       <Dialog open={imageOpen} onOpenChange={setImageOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Course image</DialogTitle>
             <DialogDescription>
               Set a hosted image URL for this course. Leave blank to remove it.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="course-image">Image URL</Label>
-            <Input
-              id="course-image"
-              placeholder="/landmarks/pyramids.webp"
-              value={imageForm}
-              onChange={(e) => setImageForm(e.target.value)}
-              className="font-mono text-xs"
-            />
-            <p className="text-xs text-muted-foreground">
-              Hosted images under /regions/ or /landmarks/ must have their responsive variants
-              uploaded, or saving is rejected.
-            </p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Choose from hosted images</Label>
+              <ImagePicker value={imageForm} onSelect={setImageForm} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="course-image">Or enter an image URL</Label>
+              <Input
+                id="course-image"
+                placeholder="/landmarks/pyramids-giza.jpg"
+                value={imageForm}
+                onChange={(e) => setImageForm(e.target.value)}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Hosted images under /regions/ or /landmarks/ must have their responsive variants
+                uploaded, or saving is rejected.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setImageOpen(false)}>

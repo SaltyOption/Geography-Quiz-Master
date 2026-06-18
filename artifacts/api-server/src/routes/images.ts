@@ -5,6 +5,7 @@ import {
   isExternalImageUrl,
   findMissingImageFiles,
   imageValidationMessage,
+  listHostedOptimizedImages,
 } from "../lib/imageValidation";
 import { checkExternalImageUrl } from "@workspace/image-check";
 
@@ -62,6 +63,16 @@ router.get("/images/validate", requireAdmin, async (req, res): Promise<void> => 
   }
 
   res.json({ optimized, missing, reachable, message });
+});
+
+/**
+ * Admin-only gallery of the locally hosted optimized images (under /regions/
+ * and /landmarks/) that have all of their responsive variants on disk. Powers
+ * the visual image picker on the admin forms so admins can pick a guaranteed-
+ * hosted cover image instead of typing a raw path.
+ */
+router.get("/images/gallery", requireAdmin, (_req, res): void => {
+  res.json({ groups: listHostedOptimizedImages() });
 });
 
 export default router;

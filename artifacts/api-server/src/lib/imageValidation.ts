@@ -17,7 +17,7 @@
  * with ResponsiveImage.tsx, ssr-pages.ts, and check-db-image-files.ts.
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RESPONSIVE_IMAGE_WIDTHS } from "@workspace/image-config";
@@ -164,6 +164,78 @@ export async function validateImageUrlReachable(
   }
 
   return null;
+}
+
+// Base (fallback) image files have these extensions; the responsive variants
+// are always .webp/.avif, so listing these picks each image exactly once.
+const BASE_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"];
+
+export interface HostedImage {
+  /** Path stored on the record, e.g. "/landmarks/pyramids-giza.jpg". */
+  url: string;
+  /** Human-friendly label derived from the file stem, e.g. "Pyramids Giza". */
+  name: string;
+}
+
+export interface HostedImageGroup {
+  /** The optimized prefix this group covers, e.g. "/regions/". */
+  prefix: string;
+  /** Display label, e.g. "Regions". */
+  label: string;
+  images: HostedImage[];
+}
+
+function humanizeStem(stem: string): string {
+  return stem
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Enumerate the locally hosted optimized images (under /regions/ and
+ * /landmarks/) that have ALL of their responsive variants present on disk, so
+ * an admin can pick one from a gallery without risking a broken-image save.
+ * Only base files (.png/.jpg/.jpeg) are considered; each is included only when
+ * findMissingImageFiles reports nothing missing. Returns [] when the public
+ * directory cannot be located.
+ */
+export function listHostedOptimizedImages(): HostedImageGroup[] {
+  const publicDir = resolvePublicDir();
+  if (!publicDir) return [];
+
+  const groups: HostedImageGroup[] = [];
+  for (const prefix of OPTIMIZED_PREFIXES) {
+    const dirRel = prefix.replace(/^\/+|\/+$/g, "");
+    const dirAbs = join(publicDir, dirRel);
+    if (!existsSync(dirAbs)) continue;
+
+    let entries: string[];
+    try {
+      entries = readdirSync(dirAbs);
+    } catch {
+      continue;
+    }
+
+    const images: HostedImage[] = [];
+    for (const file of entries) {
+      const lower = file.toLowerCase();
+      const ext = BASE_IMAGE_EXTENSIONS.find((e) => lower.endsWith(e));
+      if (!ext) continue;
+      const stem = file.slice(0, file.length - ext.length);
+      // Defensive: skip anything that looks like a responsive variant.
+      if (/-\d+$/.test(stem)) continue;
+      const url = `${prefix}${file}`;
+      if (findMissingImageFiles(url).length > 0) continue;
+      images.push({ url, name: humanizeStem(stem) });
+    }
+
+    images.sort((a, b) => a.name.localeCompare(b.name));
+    if (images.length > 0) {
+      groups.push({ prefix, label: humanizeStem(dirRel), images });
+    }
+  }
+  return groups;
 }
 
 /** Human-readable, actionable message for a failed image validation. */
