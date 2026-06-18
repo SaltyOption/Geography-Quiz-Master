@@ -23,7 +23,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import mascotThinkingUrl from "@assets/mascot_swallow_thinking.png";
+import { Mascot } from "@/components/Mascot";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -394,10 +394,11 @@ export default function ModuleTakingPage() {
             {current.text}
           </h2>
           {!answered && (
-            <img
-              src={mascotThinkingUrl}
+            <Mascot
+              variant="thinking"
               alt=""
-              aria-hidden="true"
+              ariaHidden
+              sizes="(min-width: 768px) 96px, 80px"
               className="hidden h-20 w-20 shrink-0 object-contain drop-shadow-sm sm:block md:h-24 md:w-24 animate-in fade-in duration-500"
             />
           )}

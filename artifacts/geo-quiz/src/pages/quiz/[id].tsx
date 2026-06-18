@@ -7,7 +7,7 @@ import { useJsonLd } from "@/hooks/useJsonLd";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import mascotThinkingUrl from "@assets/mascot_swallow_thinking.png";
+import { Mascot } from "@/components/Mascot";
 
 export default function QuizPage() {
   const { id } = useParams();
@@ -203,10 +203,11 @@ export default function QuizPage() {
             {currentQuestion.text}
           </h2>
           {!isAnswered && (
-            <img
-              src={mascotThinkingUrl}
+            <Mascot
+              variant="thinking"
               alt=""
-              aria-hidden="true"
+              ariaHidden
+              sizes="(min-width: 768px) 112px, 96px"
               className="hidden h-24 w-24 shrink-0 object-contain drop-shadow-sm sm:block md:h-28 md:w-28 animate-in fade-in duration-500"
             />
           )}

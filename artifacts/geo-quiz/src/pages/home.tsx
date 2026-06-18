@@ -3,7 +3,7 @@ import { useGetCategoryTree, useListQuizzes, useListCourses, useGetMe, type Cate
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Link } from "wouter";
 import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass, Play } from "lucide-react";
-import mascotUrl from "@assets/mascot_swallow.png";
+import { Mascot } from "@/components/Mascot";
 import { SignUpBanner } from "@/components/SignUpBanner";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,7 @@ function CategoryCard({ node }: { node: CategoryNode }) {
               src={imgSrc}
               alt={node.name}
               loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />
@@ -202,9 +203,11 @@ export default function Home() {
               </div>
             </div>
             <div className="flex shrink-0 justify-center md:justify-end">
-              <img
-                src={mascotUrl}
+              <Mascot
+                variant="default"
                 alt="Geography quiz mascot"
+                sizes="(min-width: 1024px) 256px, (min-width: 768px) 224px, 160px"
+                loading="eager"
                 className="h-40 w-40 object-contain drop-shadow-lg md:h-56 md:w-56 lg:h-64 lg:w-64"
               />
             </div>

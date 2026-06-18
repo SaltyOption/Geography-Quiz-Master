@@ -3,7 +3,7 @@ import { Settings, LogOut, User as UserIcon, GraduationCap } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Show, useUser, useClerk } from "@clerk/react";
 import { useGetMe } from "@workspace/api-client-react";
-import mascotUrl from "@assets/mascot_swallow.png";
+import { Mascot } from "@/components/Mascot";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -20,9 +20,11 @@ export function Navbar() {
           href="/"
           className="flex shrink-0 items-center space-x-2 transition-opacity hover:opacity-80"
         >
-          <img
-            src={mascotUrl}
+          <Mascot
+            variant="default"
             alt="World Geography Trivia"
+            sizes="40px"
+            loading="eager"
             className="h-10 w-10 shrink-0 object-contain drop-shadow-sm"
           />
           <span className="hidden font-serif text-lg font-bold tracking-tight text-foreground sm:inline lg:text-xl">
