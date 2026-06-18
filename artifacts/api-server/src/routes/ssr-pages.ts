@@ -131,6 +131,38 @@ function homeBody(
 </main>`;
 }
 
+// Width list and naming convention MUST match the generator
+// (artifacts/geo-quiz/optimize-images.mjs) and the client component
+// (artifacts/geo-quiz/src/components/ResponsiveImage.tsx).
+const SSR_IMG_WIDTHS = [400, 1024];
+const SSR_IMG_OPTIMIZED_PREFIXES = ["/regions/", "/landmarks/"];
+
+function ssrImgSrcSet(rawPath: string, format: "avif" | "webp"): string {
+  const dot = rawPath.lastIndexOf(".");
+  const stem = rawPath.slice(0, dot);
+  return SSR_IMG_WIDTHS.map((w) => `${stem}-${w}.${format} ${w}w`).join(", ");
+}
+
+// Renders a question image as a <picture> with AVIF + WebP sources for
+// locally-hosted (pre-optimized) images, falling back to a plain <img> for
+// external URLs. Mirrors the client ResponsiveImage component.
+function questionImageHtml(imageUrl: string | null): string {
+  if (!imageUrl) return "";
+  const imgStyle = "max-width:100%;border-radius:0.375rem;margin-bottom:0.75rem";
+  const optimizable = SSR_IMG_OPTIMIZED_PREFIXES.some((p) => imageUrl.startsWith(p));
+  if (!optimizable) {
+    return `<img src="${esc(imageUrl)}" alt="" style="${imgStyle}" loading="lazy">`;
+  }
+  const sizes = "(min-width: 768px) 600px, 90vw";
+  return (
+    `<picture>` +
+    `<source type="image/avif" srcset="${esc(ssrImgSrcSet(imageUrl, "avif"))}" sizes="${sizes}">` +
+    `<source type="image/webp" srcset="${esc(ssrImgSrcSet(imageUrl, "webp"))}" sizes="${sizes}">` +
+    `<img src="${esc(imageUrl)}" alt="" style="${imgStyle}" loading="lazy">` +
+    `</picture>`
+  );
+}
+
 function quizBody(quiz: {
   id: number;
   title: string;
@@ -157,8 +189,7 @@ function quizBody(quiz: {
         .join("\n          ");
       return (
         `<div style="margin-bottom:1.25rem;padding:1rem;background:#f9fafb;border-radius:0.5rem;border:1px solid #e5e7eb">` +
-        (q.imageUrl
-          ? `<img src="${esc(q.imageUrl)}" alt="" style="max-width:100%;border-radius:0.375rem;margin-bottom:0.75rem" loading="lazy">` : "") +
+        questionImageHtml(q.imageUrl) +
         `<p style="font-weight:600;margin:0 0 0.5rem"><span style="color:#9ca3af;font-size:0.8rem">Q${i + 1}.</span> ${esc(q.text)}</p>` +
         `<ul style="padding:0;list-style:none;margin:0">
           ${optionItems}

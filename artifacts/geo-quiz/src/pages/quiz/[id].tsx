@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Mascot } from "@/components/Mascot";
+import { ResponsiveImage } from "@/components/ResponsiveImage";
 
 export default function QuizPage() {
   const { id } = useParams();
@@ -214,15 +215,12 @@ export default function QuizPage() {
         </div>
         {currentQuestion.imageUrl && (
           <div className="mb-8 flex justify-center overflow-hidden rounded-xl border bg-muted/50 p-4">
-              <img
-                src={
-                  currentQuestion.imageUrl.startsWith("/")
-                    ? `${import.meta.env.BASE_URL}${currentQuestion.imageUrl.slice(1)}`
-                    : currentQuestion.imageUrl
-                }
+              <ResponsiveImage
+                src={currentQuestion.imageUrl}
                 alt="Question illustration"
                 className="max-h-72 w-auto object-contain"
                 loading="eager"
+                sizes="(min-width: 768px) 600px, 90vw"
               />
           </div>
         )}

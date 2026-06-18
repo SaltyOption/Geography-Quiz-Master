@@ -4,6 +4,7 @@ import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Link } from "wouter";
 import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass, Play } from "lucide-react";
 import { Mascot } from "@/components/Mascot";
+import { ResponsiveImage } from "@/components/ResponsiveImage";
 import { SignUpBanner } from "@/components/SignUpBanner";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,20 +25,17 @@ function countAll(node: CategoryNode): { quizzes: number; subcategories: number 
 
 function CategoryCard({ node }: { node: CategoryNode }) {
   const totals = countAll(node);
-  const baseUrl = import.meta.env.BASE_URL;
-  const imgSrc = node.imageUrl
-    ? (node.imageUrl.startsWith("/") ? `${baseUrl}${node.imageUrl.slice(1)}` : node.imageUrl)
-    : null;
   return (
     <Link href={`/category/${node.slug}`}>
       <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
-        {imgSrc && (
+        {node.imageUrl && (
           <div className="relative h-32 w-full overflow-hidden bg-muted">
-            <img
-              src={imgSrc}
+            <ResponsiveImage
+              src={node.imageUrl}
               alt={node.name}
               loading="lazy"
               decoding="async"
+              sizes="(min-width: 1024px) 360px, (min-width: 640px) 45vw, 90vw"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/40 to-transparent" />

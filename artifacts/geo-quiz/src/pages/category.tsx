@@ -5,6 +5,7 @@ import { Loader2, Play, CheckCircle2, ChevronRight, MapPin, FolderTree, ArrowLef
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ResponsiveImage } from "@/components/ResponsiveImage";
 import { Show } from "@clerk/react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
@@ -155,9 +156,10 @@ export default function CategoryPage() {
 
       {category.imageUrl && (
         <div className="relative mb-6 h-48 w-full overflow-hidden rounded-2xl sm:h-64 md:h-72">
-          <img
-            src={category.imageUrl.startsWith("/") ? `${import.meta.env.BASE_URL}${category.imageUrl.slice(1)}` : category.imageUrl}
+          <ResponsiveImage
+            src={category.imageUrl}
             alt={category.name}
+            sizes="(min-width: 1280px) 1216px, 100vw"
             className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
