@@ -1,8 +1,9 @@
-import { describe, it, expect, afterAll, vi } from "vitest";
+import { describe, it, expect, afterAll, beforeEach, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import { clerkMiddleware } from "@clerk/express";
 import type { ExternalImageResult } from "@workspace/image-check";
+import { pushDbResult, resetDbQueue } from "../test/db-mock";
 
 // Control external reachability without hitting the network.
 let nextExternalResult: ExternalImageResult = { status: "ok" };
@@ -143,5 +144,135 @@ describe("GET /api/images/gallery", () => {
         expect(findMissingImageFiles(img.url)).toEqual([]);
       }
     }
+  });
+});
+
+describe("GET /api/images/scan", () => {
+  beforeEach(() => {
+    resetDbQueue();
+  });
+
+  // Queue order mirrors collectImageRefs' Promise.all([questions, categories,
+  // courses]).
+  const queueRefs = (refs: {
+    questions?: unknown[];
+    categories?: unknown[];
+    courses?: unknown[];
+  }): void => {
+    pushDbResult(refs.questions ?? []);
+    pushDbResult(refs.categories ?? []);
+    pushDbResult(refs.courses ?? []);
+  };
+
+  it("rejects unauthenticated requests with 401", async () => {
+    const res = await request(app).get("/api/images/scan");
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects non-admin signed-in users with 403", async () => {
+    const res = await request(app)
+      .get("/api/images/scan")
+      .set("x-test-user-id", "user_not_admin");
+    expect(res.status).toBe(403);
+  });
+
+  it("reports a broken external URL with owner context", async () => {
+    nextExternalResult = { status: "broken", reason: "returned 404" };
+    queueRefs({
+      questions: [
+        {
+          id: 7,
+          url: "https://example.com/missing.jpg",
+          text: "What is the capital of France?",
+          quizId: 3,
+        },
+      ],
+      courses: [
+        {
+          id: 2,
+          url: "https://example.com/cover.png",
+          title: "Africa 101",
+          slug: "africa-101",
+        },
+      ],
+    });
+
+    const res = await asAdmin("/api/images/scan");
+    expect(res.status).toBe(200);
+    expect(res.body.scanned).toBe(2);
+    expect(res.body.brokenCount).toBe(2);
+    expect(res.body.transientCount).toBe(0);
+
+    const question = res.body.broken.find(
+      (b: { source: string }) => b.source === "question",
+    );
+    expect(question).toMatchObject({
+      id: 7,
+      quizId: 3,
+      slug: null,
+      label: "What is the capital of France?",
+      reason: "returned 404",
+    });
+
+    const course = res.body.broken.find(
+      (b: { source: string }) => b.source === "course",
+    );
+    expect(course).toMatchObject({ id: 2, slug: "africa-101", quizId: null });
+  });
+
+  it("does not report transient external failures as broken", async () => {
+    nextExternalResult = { status: "transient", reason: "timed out" };
+    queueRefs({
+      categories: [
+        { id: 5, url: "https://example.com/flaky.jpg", name: "Europe" },
+      ],
+    });
+
+    const res = await asAdmin("/api/images/scan");
+    expect(res.status).toBe(200);
+    expect(res.body.scanned).toBe(1);
+    expect(res.body.brokenCount).toBe(0);
+    expect(res.body.transientCount).toBe(1);
+    expect(res.body.broken).toEqual([]);
+  });
+
+  it("reports an unhosted optimized local URL as broken", async () => {
+    nextExternalResult = { status: "ok" };
+    queueRefs({
+      categories: [
+        {
+          id: 9,
+          url: "/regions/this-does-not-exist-xyz.png",
+          name: "Nowhere",
+        },
+      ],
+    });
+
+    const res = await asAdmin("/api/images/scan");
+    expect(res.status).toBe(200);
+    expect(res.body.brokenCount).toBe(1);
+    const item = res.body.broken[0];
+    expect(item).toMatchObject({ source: "category", id: 9 });
+    expect(item.reason).toContain("missing");
+  });
+
+  it("reports no broken images when every URL is reachable", async () => {
+    nextExternalResult = { status: "ok" };
+    queueRefs({
+      questions: [
+        {
+          id: 1,
+          url: "https://example.com/ok.jpg",
+          text: "Q",
+          quizId: 1,
+        },
+      ],
+    });
+
+    const res = await asAdmin("/api/images/scan");
+    expect(res.status).toBe(200);
+    expect(res.body.scanned).toBe(1);
+    expect(res.body.brokenCount).toBe(0);
+    expect(res.body.broken).toEqual([]);
   });
 });

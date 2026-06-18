@@ -20,6 +20,7 @@ import AdminDashboard from "@/pages/admin/index";
 import AdminCategories from "@/pages/admin/categories";
 import AdminNewsletter from "@/pages/admin/newsletter";
 import AdminContact from "@/pages/admin/contact";
+import AdminImageScan from "@/pages/admin/image-scan";
 import AdminImport from "@/pages/admin/import";
 import AdminCoursesImport from "@/pages/admin/courses-import";
 import AdminCourses from "@/pages/admin/courses";
@@ -196,6 +197,9 @@ function ClerkProviderWithRoutes() {
               </Route>
               <Route path="/admin/contact">
                 <AdminGuard><AdminContact /></AdminGuard>
+              </Route>
+              <Route path="/admin/image-scan">
+                <AdminGuard><AdminImageScan /></AdminGuard>
               </Route>
               <Route path="/admin/import">
                 <AdminGuard><AdminImport /></AdminGuard>

@@ -234,6 +234,58 @@ export const GetImageGalleryResponse = zod.object({
 });
 
 /**
+ * One-time cleanup tool that runs the same reachability check used at write-time and by the scheduled job across ALL image URLs already stored on questions, categories, and courses. Optimized local URLs (/regions/, /landmarks/) are checked for their source file and responsive variants on disk; external http(s) URLs are checked for reachability over the network. Only genuinely broken links are reported — transient failures (timeout, DNS, 5xx, 429) are counted separately and never reported as broken. Each broken item carries enough context to link to the owning record for a fix.
+
+ * @summary Scan every stored image URL for broken links (admin only)
+ */
+export const ScanStoredImagesResponse = zod.object({
+  scanned: zod
+    .number()
+    .describe("Total number of non-null stored image URLs inspected."),
+  brokenCount: zod
+    .number()
+    .describe("Number of URLs that are genuinely broken."),
+  transientCount: zod
+    .number()
+    .describe(
+      "Number of external URLs that could not be verified due to a transient failure (timeout \/ DNS \/ 5xx \/ 429). These are NOT reported as broken.\n",
+    ),
+  broken: zod.array(
+    zod.object({
+      source: zod
+        .enum(["question", "category", "course"])
+        .describe("Which table the broken image URL belongs to."),
+      id: zod.number().describe("Primary key of the owning record."),
+      url: zod
+        .string()
+        .describe("The broken image URL as stored on the record."),
+      reason: zod
+        .string()
+        .describe(
+          'Why the image is considered broken (missing local files, or the external unreachable reason such as \"returned 404\").\n',
+        ),
+      label: zod
+        .string()
+        .describe(
+          "Human-friendly name of the owning record (question text, category name, or course title) for display.\n",
+        ),
+      quizId: zod
+        .number()
+        .nullable()
+        .describe(
+          "For a question, the id of the quiz it belongs to, used to link to the quiz editor. Null for categories and courses.\n",
+        ),
+      slug: zod
+        .string()
+        .nullable()
+        .describe(
+          "For a course, its slug, used to link to the course editor. Null for questions and categories.\n",
+        ),
+    }),
+  ),
+});
+
+/**
  * @summary Get the current user's newsletter subscription status
  */
 export const GetNewsletterSubscriptionResponse = zod.object({

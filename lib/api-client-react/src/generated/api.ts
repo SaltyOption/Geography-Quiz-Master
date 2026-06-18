@@ -38,6 +38,7 @@ import type {
   DailyQuiz,
   HealthStatus,
   ImageGallery,
+  ImageScanResult,
   ImageValidationResult,
   ImportQuestionsByCategoryBody,
   ImportQuestionsByCategoryResult,
@@ -806,6 +807,83 @@ export function useGetImageGallery<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetImageGalleryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * One-time cleanup tool that runs the same reachability check used at write-time and by the scheduled job across ALL image URLs already stored on questions, categories, and courses. Optimized local URLs (/regions/, /landmarks/) are checked for their source file and responsive variants on disk; external http(s) URLs are checked for reachability over the network. Only genuinely broken links are reported — transient failures (timeout, DNS, 5xx, 429) are counted separately and never reported as broken. Each broken item carries enough context to link to the owning record for a fix.
+
+ * @summary Scan every stored image URL for broken links (admin only)
+ */
+export const getScanStoredImagesUrl = () => {
+  return `/api/images/scan`;
+};
+
+export const scanStoredImages = async (
+  options?: RequestInit,
+): Promise<ImageScanResult> => {
+  return customFetch<ImageScanResult>(getScanStoredImagesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getScanStoredImagesQueryKey = () => {
+  return [`/api/images/scan`] as const;
+};
+
+export const getScanStoredImagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof scanStoredImages>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof scanStoredImages>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getScanStoredImagesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof scanStoredImages>>
+  > = ({ signal }) => scanStoredImages({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof scanStoredImages>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ScanStoredImagesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof scanStoredImages>>
+>;
+export type ScanStoredImagesQueryError = ErrorType<void>;
+
+/**
+ * @summary Scan every stored image URL for broken links (admin only)
+ */
+
+export function useScanStoredImages<
+  TData = Awaited<ReturnType<typeof scanStoredImages>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof scanStoredImages>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getScanStoredImagesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

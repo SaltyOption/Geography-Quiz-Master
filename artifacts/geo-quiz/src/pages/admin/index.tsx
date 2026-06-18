@@ -21,6 +21,7 @@ import {
   GraduationCap,
   Mail,
   Inbox,
+  ScanSearch,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -141,6 +142,11 @@ export default function AdminDashboard() {
           <Button variant="outline" asChild data-testid="link-contact-messages">
             <Link href="/admin/contact">
               <Inbox className="mr-2 h-4 w-4" /> Contact
+            </Link>
+          </Button>
+          <Button variant="outline" asChild data-testid="link-image-scan">
+            <Link href="/admin/image-scan">
+              <ScanSearch className="mr-2 h-4 w-4" /> Image Scan
             </Link>
           </Button>
           <Button

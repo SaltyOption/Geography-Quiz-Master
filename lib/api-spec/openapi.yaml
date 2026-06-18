@@ -204,6 +204,32 @@ paths:
         "403":
           description: Forbidden
 
+  /images/scan:
+    get:
+      operationId: scanStoredImages
+      tags: [images]
+      summary: Scan every stored image URL for broken links (admin only)
+      description: >
+        One-time cleanup tool that runs the same reachability check used at
+        write-time and by the scheduled job across ALL image URLs already stored
+        on questions, categories, and courses. Optimized local URLs (/regions/,
+        /landmarks/) are checked for their source file and responsive variants on
+        disk; external http(s) URLs are checked for reachability over the network.
+        Only genuinely broken links are reported — transient failures (timeout,
+        DNS, 5xx, 429) are counted separately and never reported as broken. Each
+        broken item carries enough context to link to the owning record for a fix.
+      responses:
+        "200":
+          description: The set of stored image URLs that are currently broken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageScanResult"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
   /newsletter/me:
     get:
       operationId: getNewsletterSubscription
@@ -1046,6 +1072,72 @@ components:
             $ref: "#/components/schemas/ImageGalleryGroup"
       required:
         - groups
+
+    ImageScanBrokenItem:
+      type: object
+      properties:
+        source:
+          type: string
+          enum: [question, category, course]
+          description: Which table the broken image URL belongs to.
+        id:
+          type: integer
+          description: Primary key of the owning record.
+        url:
+          type: string
+          description: The broken image URL as stored on the record.
+        reason:
+          type: string
+          description: >
+            Why the image is considered broken (missing local files, or the
+            external unreachable reason such as "returned 404").
+        label:
+          type: string
+          description: >
+            Human-friendly name of the owning record (question text, category
+            name, or course title) for display.
+        quizId:
+          type: ["integer", "null"]
+          description: >
+            For a question, the id of the quiz it belongs to, used to link to the
+            quiz editor. Null for categories and courses.
+        slug:
+          type: ["string", "null"]
+          description: >
+            For a course, its slug, used to link to the course editor. Null for
+            questions and categories.
+      required:
+        - source
+        - id
+        - url
+        - reason
+        - label
+        - quizId
+        - slug
+
+    ImageScanResult:
+      type: object
+      properties:
+        scanned:
+          type: integer
+          description: Total number of non-null stored image URLs inspected.
+        brokenCount:
+          type: integer
+          description: Number of URLs that are genuinely broken.
+        transientCount:
+          type: integer
+          description: >
+            Number of external URLs that could not be verified due to a transient
+            failure (timeout / DNS / 5xx / 429). These are NOT reported as broken.
+        broken:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImageScanBrokenItem"
+      required:
+        - scanned
+        - brokenCount
+        - transientCount
+        - broken
 
     HealthStatus:
       type: object

@@ -51,6 +51,56 @@ export interface ImageGallery {
   groups: ImageGalleryGroup[];
 }
 
+/**
+ * Which table the broken image URL belongs to.
+ */
+export type ImageScanBrokenItemSource =
+  (typeof ImageScanBrokenItemSource)[keyof typeof ImageScanBrokenItemSource];
+
+export const ImageScanBrokenItemSource = {
+  question: "question",
+  category: "category",
+  course: "course",
+} as const;
+
+export interface ImageScanBrokenItem {
+  /** Which table the broken image URL belongs to. */
+  source: ImageScanBrokenItemSource;
+  /** Primary key of the owning record. */
+  id: number;
+  /** The broken image URL as stored on the record. */
+  url: string;
+  /** Why the image is considered broken (missing local files, or the external unreachable reason such as "returned 404").
+   */
+  reason: string;
+  /** Human-friendly name of the owning record (question text, category name, or course title) for display.
+   */
+  label: string;
+  /**
+   * For a question, the id of the quiz it belongs to, used to link to the quiz editor. Null for categories and courses.
+
+   * @nullable
+   */
+  quizId: number | null;
+  /**
+   * For a course, its slug, used to link to the course editor. Null for questions and categories.
+
+   * @nullable
+   */
+  slug: string | null;
+}
+
+export interface ImageScanResult {
+  /** Total number of non-null stored image URLs inspected. */
+  scanned: number;
+  /** Number of URLs that are genuinely broken. */
+  brokenCount: number;
+  /** Number of external URLs that could not be verified due to a transient failure (timeout / DNS / 5xx / 429). These are NOT reported as broken.
+   */
+  transientCount: number;
+  broken: ImageScanBrokenItem[];
+}
+
 export interface HealthStatus {
   status: string;
 }
