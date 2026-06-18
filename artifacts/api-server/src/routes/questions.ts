@@ -25,6 +25,10 @@ import {
   setQuestionCategories,
 } from "../lib/questionCategories";
 import { getVisibleCategoryIds } from "../lib/categoryVisibility";
+import {
+  validateOptionalImageUrl,
+  imageValidationMessage,
+} from "../lib/imageValidation";
 
 function collectDescendantIds(
   rootId: number,
@@ -115,6 +119,12 @@ router.post("/quizzes/:id/questions", requireAdmin, async (req, res): Promise<vo
   }
 
   const { categoryIds, ...questionData } = parsed.data;
+
+  const imageError = validateOptionalImageUrl(questionData.imageUrl);
+  if (imageError) {
+    res.status(400).json({ error: imageValidationMessage(imageError) });
+    return;
+  }
 
   const [question] = await db
     .insert(questionsTable)
@@ -337,6 +347,14 @@ router.patch("/questions/:id", requireAdmin, async (req, res): Promise<void> => 
   }
 
   const { categoryIds, ...updateFields } = parsed.data;
+
+  if (updateFields.imageUrl !== undefined) {
+    const imageError = validateOptionalImageUrl(updateFields.imageUrl);
+    if (imageError) {
+      res.status(400).json({ error: imageValidationMessage(imageError) });
+      return;
+    }
+  }
 
   let question: typeof questionsTable.$inferSelect | undefined;
   if (Object.keys(updateFields).length > 0) {

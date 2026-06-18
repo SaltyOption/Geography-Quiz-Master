@@ -26,6 +26,10 @@ import { getCategoriesByQuestionIds } from "../lib/questionCategories";
 import { slugify, uniqueSlugTx } from "../lib/categorySlug";
 import { getVisibleCategoryIds } from "../lib/categoryVisibility";
 import { createRateLimiter, getRateLimitKey } from "../lib/rateLimit";
+import {
+  validateOptionalImageUrl,
+  imageValidationMessage,
+} from "../lib/imageValidation";
 
 const router: IRouter = Router();
 
@@ -254,6 +258,20 @@ router.post("/quizzes/bulk-import", requireAdmin, async (req, res): Promise<void
       topics: [],
     });
     return;
+  }
+
+  // Reject the whole import up front if any item references an image that is not
+  // hosted (source file or responsive variants missing). This keeps broken
+  // image references out of the database and avoids a partial-looking failure
+  // mid-transaction.
+  for (let i = 0; i < items.length; i++) {
+    const imageError = validateOptionalImageUrl(items[i].image_url);
+    if (imageError) {
+      res
+        .status(400)
+        .json({ error: `Item ${i + 1}: ${imageValidationMessage(imageError)}` });
+      return;
+    }
   }
 
   // Normalize topic whitespace and group items by normalized topic, preserving first-seen order.

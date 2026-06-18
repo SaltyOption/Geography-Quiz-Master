@@ -15,9 +15,11 @@ responsive variants, not as the multi-MB originals.
   replacing a source image you must delete its old variants first.
 - The variants are committed into `public/` and served by BOTH the vite dev
   server and the api-server prod static layer (see ssr-template-bundling).
-- The width/naming/prefix convention is duplicated in three files and must stay
-  in sync: `optimize-images.mjs`, `src/components/ResponsiveImage.tsx` (client),
-  and api-server `src/routes/ssr-pages.ts` (runtime SSR). Comments in each flag this.
+- The width/naming/prefix convention is duplicated across several files and must
+  stay in sync: `optimize-images.mjs`, `src/components/ResponsiveImage.tsx`
+  (client), api-server `src/routes/ssr-pages.ts` (runtime SSR), the maintenance
+  script `scripts/src/check-db-image-files.ts`, and the api-server write-time
+  guard `src/lib/imageValidation.ts`. Comments in each flag this.
 
 **Constraint:** every DB value whose path starts with `/regions/` or
 `/landmarks/` MUST have its four generated siblings present.

@@ -207,6 +207,76 @@ describe("POST /api/quizzes/:id/questions", () => {
   });
 });
 
+describe("image URL validation on question writes", () => {
+  const VALID_IMAGE = "/regions/africa.png";
+  const MISSING_IMAGE = "/regions/does-not-exist.png";
+
+  it("rejects POST /quizzes/:id/questions with an unhosted optimized image", async () => {
+    pushDbResult([sampleQuiz]); // quiz lookup succeeds
+    const res = await asAdmin("post", "/api/quizzes/1/questions").send({
+      text: "Q?",
+      options: ["a", "b", "c", "d"],
+      correctOption: 0,
+      explanation: "because",
+      orderIndex: 0,
+      imageUrl: MISSING_IMAGE,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("not hosted");
+  });
+
+  it("accepts POST /quizzes/:id/questions with a fully hosted optimized image", async () => {
+    pushDbResult([sampleQuiz], [{ ...sampleQuestion, imageUrl: VALID_IMAGE }]);
+    const res = await asAdmin("post", "/api/quizzes/1/questions").send({
+      text: "Q?",
+      options: ["a", "b", "c", "d"],
+      correctOption: 0,
+      explanation: "because",
+      orderIndex: 0,
+      imageUrl: VALID_IMAGE,
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.imageUrl).toBe(VALID_IMAGE);
+  });
+
+  it("rejects PATCH /questions/:id with an unhosted optimized image", async () => {
+    const res = await asAdmin("patch", "/api/questions/10").send({
+      imageUrl: MISSING_IMAGE,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("not hosted");
+  });
+
+  it("ignores external (non-optimized) image URLs that are not locally hosted", async () => {
+    pushDbResult([sampleQuiz], [{ ...sampleQuestion, imageUrl: "https://example.com/x.jpg" }]);
+    const res = await asAdmin("post", "/api/quizzes/1/questions").send({
+      text: "Q?",
+      options: ["a", "b", "c", "d"],
+      correctOption: 0,
+      explanation: "because",
+      orderIndex: 0,
+      imageUrl: "https://example.com/x.jpg",
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("rejects POST /quizzes/bulk-import when an item's image is not hosted", async () => {
+    const res = await asAdmin("post", "/api/quizzes/bulk-import").send([
+      {
+        topic: "Africa",
+        question: "Capital of Kenya?",
+        options: { A: "Nairobi", B: "Lagos", C: "Cairo", D: "Accra" },
+        correct_answer: "A",
+        explanation: "Nairobi is the capital.",
+        image_url: MISSING_IMAGE,
+      },
+    ]);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Item 1");
+    expect(res.body.error).toContain("not hosted");
+  });
+});
+
 describe("PATCH /api/questions/:id", () => {
   it("returns 400 for invalid body field type", async () => {
     const res = await asAdmin("patch", "/api/questions/10").send({ correctOption: "nope" });
