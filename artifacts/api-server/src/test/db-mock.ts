@@ -1,11 +1,19 @@
 export const dbResultQueue: unknown[] = [];
 
+// Payloads captured from chained `.values(...)` / `.set(...)` calls so tests can
+// assert what would be written (e.g. the course cover imageUrl), independent of
+// the queued read results.
+export const recordedInserts: unknown[] = [];
+export const recordedUpdates: unknown[] = [];
+
 export function pushDbResult(...values: unknown[]): void {
   dbResultQueue.push(...values);
 }
 
 export function resetDbQueue(): void {
   dbResultQueue.length = 0;
+  recordedInserts.length = 0;
+  recordedUpdates.length = 0;
 }
 
 function makeChain(): Record<string, unknown> {
@@ -22,8 +30,6 @@ function makeChain(): Record<string, unknown> {
     "fullJoin",
     "limit",
     "offset",
-    "set",
-    "values",
     "returning",
     "onConflictDoNothing",
     "onConflictDoUpdate",
@@ -32,6 +38,14 @@ function makeChain(): Record<string, unknown> {
   for (const m of passthroughMethods) {
     chain[m] = noop;
   }
+  chain.values = (payload: unknown): unknown => {
+    recordedInserts.push(payload);
+    return chain;
+  };
+  chain.set = (payload: unknown): unknown => {
+    recordedUpdates.push(payload);
+    return chain;
+  };
   chain.then = (
     onF: (value: unknown) => unknown,
     onR?: (reason: unknown) => unknown,

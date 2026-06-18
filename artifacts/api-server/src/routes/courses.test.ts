@@ -3,7 +3,12 @@ import express from "express";
 import request from "supertest";
 import { clerkMiddleware } from "@clerk/express";
 import router from "./index";
-import { resetDbQueue, pushDbResult } from "../test/db-mock";
+import {
+  resetDbQueue,
+  pushDbResult,
+  recordedInserts,
+  recordedUpdates,
+} from "../test/db-mock";
 
 const ADMIN_ID = "user_courses_admin_999";
 const NON_ADMIN_ID = "user_courses_normal_888";
@@ -106,6 +111,167 @@ describe("POST /api/courses/bulk-import", () => {
       });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/not hosted/i);
+  });
+});
+
+describe("POST /api/courses/bulk-import — cover image rules", () => {
+  const COVER_URL = "https://images.example.com/deserts-cover.jpg";
+  const OTHER_COVER_URL = "https://images.example.com/new-cover.jpg";
+
+  // Queue the DB reads for an existing-course import where the module, lesson,
+  // and question already exist (so the import is an idempotent no-op apart from
+  // any cover-image side effect). Call AFTER pushing the course lookup result.
+  function pushExistingCourseStructure(questionText: string): void {
+    pushDbResult([{ max: 0 }]); // maxModuleRow
+    pushDbResult([
+      { id: 5, courseId: 1, slug: "module-1-intro", title: "Module 1: Intro", orderIndex: 0 },
+    ]); // existing module
+    pushDbResult([{ max: 0 }]); // maxLessonRow
+    pushDbResult([
+      { id: 10, moduleId: 5, slug: "lesson-1", title: "Lesson 1", orderIndex: 0 },
+    ]); // existing lesson
+    pushDbResult([{ max: 0 }]); // maxQ
+    pushDbResult([{ text: questionText }]); // existing questions -> duplicate, skip insert
+  }
+
+  it("stores the first image_url when creating a fresh course", async () => {
+    pushDbResult([]); // course lookup -> none, so create
+    pushDbResult([]); // uniqueCourseSlug lookup -> slug available
+    pushDbResult([{ id: 1, slug: "world-deserts" }]); // insert course returning
+    pushDbResult([{ max: null }]); // maxModuleRow
+    pushDbResult([]); // existing module -> none
+    pushDbResult([{ id: 5 }]); // insert module returning
+    pushDbResult([{ max: null }]); // maxLessonRow
+    pushDbResult([]); // existing lesson -> none
+    pushDbResult([{ id: 10 }]); // insert lesson returning
+    pushDbResult([{ max: null }]); // maxQ
+    pushDbResult([]); // existing questions -> none
+    pushDbResult([]); // insert questions
+
+    const res = await request(app)
+      .post("/api/courses/bulk-import")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({ items: [{ ...minimalImportItem, image_url: COVER_URL }] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.courseCreated).toBe(true);
+    const courseInsert = recordedInserts.find(
+      (v): v is { imageUrl?: unknown } =>
+        typeof v === "object" && v !== null && "imageUrl" in v,
+    );
+    expect(courseInsert?.imageUrl).toBe(COVER_URL);
+    // No update path runs when creating a fresh course.
+    expect(recordedUpdates).toHaveLength(0);
+  });
+
+  it("leaves an existing cover untouched on re-import without replace_image", async () => {
+    pushDbResult([
+      { id: 1, slug: "world-deserts", title: "World Deserts", imageUrl: COVER_URL },
+    ]); // course lookup -> existing with a cover
+    pushExistingCourseStructure(minimalImportItem.question);
+
+    const res = await request(app)
+      .post("/api/courses/bulk-import")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({ items: [{ ...minimalImportItem, image_url: OTHER_COVER_URL }] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.courseCreated).toBe(false);
+    // No cover update: existing cover is preserved without replace_image.
+    expect(recordedUpdates).toHaveLength(0);
+  });
+
+  it("fills a missing cover on re-import when none was set", async () => {
+    pushDbResult([
+      { id: 1, slug: "world-deserts", title: "World Deserts", imageUrl: null },
+    ]); // course lookup -> existing, no cover
+    pushExistingCourseStructure(minimalImportItem.question);
+
+    const res = await request(app)
+      .post("/api/courses/bulk-import")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({ items: [{ ...minimalImportItem, image_url: COVER_URL }] });
+
+    expect(res.status).toBe(200);
+    expect(recordedUpdates).toHaveLength(1);
+    expect(recordedUpdates[0]).toEqual({ imageUrl: COVER_URL });
+  });
+
+  it("overwrites an existing cover when replace_image is set", async () => {
+    pushDbResult([
+      { id: 1, slug: "world-deserts", title: "World Deserts", imageUrl: COVER_URL },
+    ]); // course lookup -> existing with a cover
+    pushExistingCourseStructure(minimalImportItem.question);
+
+    const res = await request(app)
+      .post("/api/courses/bulk-import")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({
+        items: [{ ...minimalImportItem, image_url: OTHER_COVER_URL }],
+        replace_image: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(recordedUpdates).toHaveLength(1);
+    expect(recordedUpdates[0]).toEqual({ imageUrl: OTHER_COVER_URL });
+  });
+
+  it("removes the cover with clear_image when no image_url is supplied", async () => {
+    pushDbResult([
+      { id: 1, slug: "world-deserts", title: "World Deserts", imageUrl: COVER_URL },
+    ]); // course lookup -> existing with a cover
+    pushExistingCourseStructure(minimalImportItem.question);
+
+    const res = await request(app)
+      .post("/api/courses/bulk-import")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({
+        items: [minimalImportItem], // no image_url
+        clear_image: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(recordedUpdates).toHaveLength(1);
+    expect(recordedUpdates[0]).toEqual({ imageUrl: null });
+  });
+
+  it("ignores clear_image when an image_url is present", async () => {
+    pushDbResult([
+      { id: 1, slug: "world-deserts", title: "World Deserts", imageUrl: COVER_URL },
+    ]); // course lookup -> existing with a cover
+    pushExistingCourseStructure(minimalImportItem.question);
+
+    const res = await request(app)
+      .post("/api/courses/bulk-import")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({
+        items: [{ ...minimalImportItem, image_url: OTHER_COVER_URL }],
+        clear_image: true,
+      });
+
+    expect(res.status).toBe(200);
+    // image_url present + existing cover, no replace_image -> neither fill nor
+    // clear runs, so the cover is left untouched.
+    expect(recordedUpdates).toHaveLength(0);
+  });
+
+  it("does not clear a cover that is already absent", async () => {
+    pushDbResult([
+      { id: 1, slug: "world-deserts", title: "World Deserts", imageUrl: null },
+    ]); // course lookup -> existing, no cover
+    pushExistingCourseStructure(minimalImportItem.question);
+
+    const res = await request(app)
+      .post("/api/courses/bulk-import")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({
+        items: [minimalImportItem], // no image_url
+        clear_image: true,
+      });
+
+    expect(res.status).toBe(200);
+    // Nothing to clear -> no update issued.
+    expect(recordedUpdates).toHaveLength(0);
   });
 });
 
