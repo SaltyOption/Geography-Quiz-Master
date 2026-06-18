@@ -15,14 +15,23 @@ run = "pnpm --filter @workspace/api-server run dev"
 [services.production]
 
 [services.production.build]
-# Build the geo-quiz frontend FIRST, then the api-server. The api-server's build
-# copies the ENTIRE frontend build (dist/public) into its own bundle and serves
-# those hashed assets itself at runtime, so the deployed site is fully styled
-# even though the geo static files live in a separate static layer that this
-# process's container does not share. The frontend build runs unconditionally (no
-# guard on the prebuilt shell) so this server always bundles the CURRENT assets
-# that match the CURRENT shell it renders.
-args = ["bash", "-c", "PORT=26064 BASE_PATH=/ pnpm --filter @workspace/geo-quiz run build && pnpm --filter @workspace/api-server run build"]
+# Pre-deploy image gate, then build the frontend and api-server.
+#
+# 1. check-db-image-files runs FIRST as a pre-deploy gate against the production
+#    database (DATABASE_URL is available during the deploy build). It exits
+#    non-zero if any DB image URL under /regions/ or /landmarks/ points at a
+#    source file or responsive variant we don't host, which fails the whole
+#    deploy build so broken images are caught before users hit them. It runs via
+#    tsx and reads source files from artifacts/geo-quiz/public, so it does not
+#    depend on the frontend build.
+# 2. Build the geo-quiz frontend, then the api-server. The api-server's build
+#    copies the ENTIRE frontend build (dist/public) into its own bundle and
+#    serves those hashed assets itself at runtime, so the deployed site is fully
+#    styled even though the geo static files live in a separate static layer that
+#    this process's container does not share. The frontend build runs
+#    unconditionally (no guard on the prebuilt shell) so this server always
+#    bundles the CURRENT assets that match the CURRENT shell it renders.
+args = ["bash", "-c", "pnpm --filter @workspace/scripts run check-db-image-files && PORT=26064 BASE_PATH=/ pnpm --filter @workspace/geo-quiz run build && pnpm --filter @workspace/api-server run build"]
 
 [services.production.build.env]
 NODE_ENV = "production"

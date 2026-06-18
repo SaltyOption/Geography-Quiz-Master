@@ -92,7 +92,7 @@ The home page is a category browser only (no quizzes shown directly) — it grou
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/scripts run check-db-image-files` — maintenance check: flags DB image URLs (question/category/course `image_url`) under `/regions/` or `/landmarks/` whose source file or responsive variants are missing from `public/`. Needs `DATABASE_URL`; exits non-zero on missing files. Run against dev or prod.
+- `pnpm --filter @workspace/scripts run check-db-image-files` — maintenance check: flags DB image URLs (question/category/course `image_url`) under `/regions/` or `/landmarks/` whose source file or responsive variants are missing from `public/`. Needs `DATABASE_URL`; exits non-zero on missing files. Run against dev or prod. This check also runs automatically as a **pre-deploy gate**: it is the first step of the api-server's production `build` (in `artifacts/api-server/.replit-artifact/artifact.toml`), running against the production database before the frontend/api-server builds. A failure fails the whole deploy build, so broken image references block publishing until fixed.
 
 ## Environment Variables (Auto-Provisioned)
 
