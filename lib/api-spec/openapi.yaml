@@ -26,6 +26,8 @@ tags:
     description: Current user identity and admin status
   - name: courses
     description: Layered learning courses (topics with modules and lessons)
+  - name: contact
+    description: Public contact form submissions
 paths:
   /categories:
     get:
@@ -226,6 +228,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NewsletterSubscribers"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /contact:
+    post:
+      operationId: submitContactMessage
+      tags: [contact]
+      summary: Submit a contact form message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitContactMessageBody"
+      responses:
+        "201":
+          description: The message was received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmittedContactMessage"
+        "400":
+          description: Invalid submission
+
+  /contact/messages:
+    get:
+      operationId: listContactMessages
+      tags: [contact]
+      summary: List submitted contact messages (admin only)
+      responses:
+        "200":
+          description: Contact messages and total count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactMessages"
         "401":
           description: Unauthorized
         "403":
@@ -1531,6 +1571,79 @@ components:
         - subscribers
         - subscribedCount
         - optedOutCount
+
+    SubmitContactMessageBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 200
+        reason:
+          type: string
+          enum:
+            - Quiz correction
+            - Quiz suggestion
+            - Website feedback
+            - Partnership / advertising
+            - Other
+        message:
+          type: string
+          minLength: 1
+          maxLength: 5000
+      required:
+        - name
+        - email
+        - message
+
+    SubmittedContactMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id
+
+    ContactMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        reason:
+          type: ["string", "null"]
+        message:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - reason
+        - message
+        - createdAt
+
+    ContactMessages:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactMessage"
+        total:
+          type: integer
+      required:
+        - messages
+        - total
 
     SubmitQuizAttemptBody:
       type: object

@@ -15,9 +15,11 @@ import QuizPage from "@/pages/quiz/[id]";
 import QuizResultsPage from "@/pages/quiz/[id]/results";
 import DailyQuizPage from "@/pages/daily";
 import PrivacyPage from "@/pages/privacy";
+import ContactPage from "@/pages/contact";
 import AdminDashboard from "@/pages/admin/index";
 import AdminCategories from "@/pages/admin/categories";
 import AdminNewsletter from "@/pages/admin/newsletter";
+import AdminContact from "@/pages/admin/contact";
 import AdminImport from "@/pages/admin/import";
 import AdminCoursesImport from "@/pages/admin/courses-import";
 import AdminCourses from "@/pages/admin/courses";
@@ -175,6 +177,7 @@ function ClerkProviderWithRoutes() {
               
               <Route path="/daily" component={DailyQuizPage} />
               <Route path="/privacy" component={PrivacyPage} />
+              <Route path="/contact" component={ContactPage} />
               <Route path="/quiz/:id" component={QuizPage} />
               <Route path="/quiz/:id/results" component={QuizResultsPage} />
 
@@ -190,6 +193,9 @@ function ClerkProviderWithRoutes() {
               </Route>
               <Route path="/admin/newsletter">
                 <AdminGuard><AdminNewsletter /></AdminGuard>
+              </Route>
+              <Route path="/admin/contact">
+                <AdminGuard><AdminContact /></AdminGuard>
               </Route>
               <Route path="/admin/import">
                 <AdminGuard><AdminImport /></AdminGuard>

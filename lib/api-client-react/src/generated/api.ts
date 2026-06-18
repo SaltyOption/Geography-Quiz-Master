@@ -26,6 +26,7 @@ import type {
   CheckAnswerBody,
   CheckAnswerResult,
   ClearCourseModuleProgress200,
+  ContactMessages,
   CourseDetail,
   CourseImportBody,
   CourseImportResult,
@@ -54,8 +55,10 @@ import type {
   QuizSummary,
   QuizWithQuestions,
   SaveModuleProgressBody,
+  SubmitContactMessageBody,
   SubmitModuleAttemptBody,
   SubmitQuizAttemptBody,
+  SubmittedContactMessage,
   UpdateCategoryBody,
   UpdateCourseBody,
   UpdateCourseQuestionBody,
@@ -970,6 +973,168 @@ export function useGetNewsletterSubscribers<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetNewsletterSubscribersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Submit a contact form message
+ */
+export const getSubmitContactMessageUrl = () => {
+  return `/api/contact`;
+};
+
+export const submitContactMessage = async (
+  submitContactMessageBody: SubmitContactMessageBody,
+  options?: RequestInit,
+): Promise<SubmittedContactMessage> => {
+  return customFetch<SubmittedContactMessage>(getSubmitContactMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(submitContactMessageBody),
+  });
+};
+
+export const getSubmitContactMessageMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitContactMessage>>,
+    TError,
+    { data: BodyType<SubmitContactMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitContactMessage>>,
+  TError,
+  { data: BodyType<SubmitContactMessageBody> },
+  TContext
+> => {
+  const mutationKey = ["submitContactMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitContactMessage>>,
+    { data: BodyType<SubmitContactMessageBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitContactMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitContactMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitContactMessage>>
+>;
+export type SubmitContactMessageMutationBody =
+  BodyType<SubmitContactMessageBody>;
+export type SubmitContactMessageMutationError = ErrorType<void>;
+
+/**
+ * @summary Submit a contact form message
+ */
+export const useSubmitContactMessage = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitContactMessage>>,
+    TError,
+    { data: BodyType<SubmitContactMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitContactMessage>>,
+  TError,
+  { data: BodyType<SubmitContactMessageBody> },
+  TContext
+> => {
+  return useMutation(getSubmitContactMessageMutationOptions(options));
+};
+
+/**
+ * @summary List submitted contact messages (admin only)
+ */
+export const getListContactMessagesUrl = () => {
+  return `/api/contact/messages`;
+};
+
+export const listContactMessages = async (
+  options?: RequestInit,
+): Promise<ContactMessages> => {
+  return customFetch<ContactMessages>(getListContactMessagesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListContactMessagesQueryKey = () => {
+  return [`/api/contact/messages`] as const;
+};
+
+export const getListContactMessagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listContactMessages>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listContactMessages>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListContactMessagesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listContactMessages>>
+  > = ({ signal }) => listContactMessages({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listContactMessages>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListContactMessagesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listContactMessages>>
+>;
+export type ListContactMessagesQueryError = ErrorType<void>;
+
+/**
+ * @summary List submitted contact messages (admin only)
+ */
+
+export function useListContactMessages<
+  TData = Awaited<ReturnType<typeof listContactMessages>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listContactMessages>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListContactMessagesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

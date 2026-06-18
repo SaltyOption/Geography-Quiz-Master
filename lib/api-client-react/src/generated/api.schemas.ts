@@ -302,6 +302,55 @@ export interface NewsletterSubscribers {
   optedOutCount: number;
 }
 
+export type SubmitContactMessageBodyReason =
+  (typeof SubmitContactMessageBodyReason)[keyof typeof SubmitContactMessageBodyReason];
+
+export const SubmitContactMessageBodyReason = {
+  Quiz_correction: "Quiz correction",
+  Quiz_suggestion: "Quiz suggestion",
+  Website_feedback: "Website feedback",
+  "Partnership_/_advertising": "Partnership / advertising",
+  Other: "Other",
+} as const;
+
+export interface SubmitContactMessageBody {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  name: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  email: string;
+  reason?: SubmitContactMessageBodyReason;
+  /**
+   * @minLength 1
+   * @maxLength 5000
+   */
+  message: string;
+}
+
+export interface SubmittedContactMessage {
+  id: number;
+}
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  /** @nullable */
+  reason: string | null;
+  message: string;
+  createdAt: string;
+}
+
+export interface ContactMessages {
+  messages: ContactMessage[];
+  total: number;
+}
+
 export interface QuestionAnswer {
   questionId: number;
   selectedOption: number;

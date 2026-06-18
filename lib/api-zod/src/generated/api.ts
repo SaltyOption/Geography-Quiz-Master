@@ -228,6 +228,47 @@ export const GetNewsletterSubscribersResponse = zod.object({
 });
 
 /**
+ * @summary Submit a contact form message
+ */
+export const submitContactMessageBodyNameMax = 100;
+
+export const submitContactMessageBodyEmailMax = 200;
+
+export const submitContactMessageBodyMessageMax = 5000;
+
+export const SubmitContactMessageBody = zod.object({
+  name: zod.string().min(1).max(submitContactMessageBodyNameMax),
+  email: zod.string().email().min(1).max(submitContactMessageBodyEmailMax),
+  reason: zod
+    .enum([
+      "Quiz correction",
+      "Quiz suggestion",
+      "Website feedback",
+      "Partnership / advertising",
+      "Other",
+    ])
+    .optional(),
+  message: zod.string().min(1).max(submitContactMessageBodyMessageMax),
+});
+
+/**
+ * @summary List submitted contact messages (admin only)
+ */
+export const ListContactMessagesResponse = zod.object({
+  messages: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      email: zod.string(),
+      reason: zod.string().nullable(),
+      message: zod.string(),
+      createdAt: zod.string(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
  * Returns the deterministic quiz of the day for the current UTC date.
  * @summary Get today's daily quiz selection
  */
