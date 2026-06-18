@@ -676,7 +676,11 @@ router.post("/courses/bulk-import", requireAdmin, async (req, res): Promise<void
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { items, replace_image: replaceImage = false } = parsed.data;
+  const {
+    items,
+    replace_image: replaceImage = false,
+    clear_image: clearImage = false,
+  } = parsed.data;
   if (items.length === 0) {
     res.status(400).json({ error: "No items provided" });
     return;
@@ -747,6 +751,14 @@ router.post("/courses/bulk-import", requireAdmin, async (req, res): Promise<void
           await tx
             .update(coursesTable)
             .set({ imageUrl: courseImageUrl })
+            .where(eq(coursesTable.id, courseId));
+        } else if (clearImage && !courseImageUrl && existingCourse.imageUrl) {
+          // Explicit, opt-in cover removal: only when clear_image is set, the
+          // payload carries no usable image_url, and the course actually has a
+          // cover. Never a silent side effect of a normal re-import.
+          await tx
+            .update(coursesTable)
+            .set({ imageUrl: null })
             .where(eq(coursesTable.id, courseId));
         }
       } else {

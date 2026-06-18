@@ -237,6 +237,7 @@ export default function AdminCoursesImport() {
 
   const [text, setText] = useState("");
   const [replaceImage, setReplaceImage] = useState(false);
+  const [clearImage, setClearImage] = useState(false);
   const [result, setResult] = useState<CourseImportResult | null>(null);
   const [coverError, setCoverError] = useState(false);
 
@@ -259,7 +260,7 @@ export default function AdminCoursesImport() {
     if (!parsed?.ok || !parsed.items) return;
     try {
       const data = await bulkImport.mutateAsync({
-        data: { items: parsed.items, replace_image: replaceImage },
+        data: { items: parsed.items, replace_image: replaceImage, clear_image: clearImage },
       });
       setResult(data);
       qc.invalidateQueries({ queryKey: getListCoursesQueryKey() });
@@ -426,6 +427,26 @@ export default function AdminCoursesImport() {
                 When re-importing an existing course, overwrite its current cover with the{" "}
                 <code>image_url</code> from this payload. Off by default, so re-import only fills
                 in a missing cover and never replaces one you set manually.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-md border bg-muted/30 p-3">
+            <Switch
+              id="clear-image"
+              checked={clearImage}
+              onCheckedChange={setClearImage}
+              disabled={!!coverUrl}
+              data-testid="switch-clear-image"
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="clear-image" className="cursor-pointer text-sm font-medium">
+                Remove existing cover image
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                When re-importing an existing course with no <code>image_url</code> in this
+                payload, remove its current cover so re-import becomes the single source of truth.
+                Off by default and ignored when the payload includes a cover image.
               </p>
             </div>
           </div>
