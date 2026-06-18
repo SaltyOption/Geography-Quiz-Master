@@ -676,7 +676,7 @@ router.post("/courses/bulk-import", requireAdmin, async (req, res): Promise<void
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { items } = parsed.data;
+  const { items, replace_image: replaceImage = false } = parsed.data;
   if (items.length === 0) {
     res.status(400).json({ error: "No items provided" });
     return;
@@ -740,8 +740,10 @@ router.post("/courses/bulk-import", requireAdmin, async (req, res): Promise<void
         courseId = existingCourse.id;
         courseSlug = existingCourse.slug;
         // Fill in a missing cover image on re-import without clobbering one an
-        // admin may have already set.
-        if (courseImageUrl && !existingCourse.imageUrl) {
+        // admin may have already set. When replace_image is explicitly set,
+        // overwrite the existing cover instead (the new URL was already
+        // validated above, same as the create/fill path).
+        if (courseImageUrl && (replaceImage || !existingCourse.imageUrl)) {
           await tx
             .update(coursesTable)
             .set({ imageUrl: courseImageUrl })

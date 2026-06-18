@@ -712,6 +712,8 @@ export interface CourseImportItem {
 
 export interface CourseImportBody {
   items: CourseImportItem[];
+  /** When true, a re-import of an existing course overwrites its current cover image with the image_url from this payload (if any). Off by default, so re-import only fills in a missing cover and never clobbers a cover an admin already set. The replacement image is validated exactly like the create/fill path. */
+  replace_image?: boolean;
 }
 
 export interface CourseImportModuleResult {

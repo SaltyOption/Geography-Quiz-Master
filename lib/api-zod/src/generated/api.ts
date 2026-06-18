@@ -787,6 +787,8 @@ export const ListCoursesResponse = zod.array(ListCoursesResponseItem);
  * @summary Bulk import or update a course from a flat list of question objects
  */
 
+export const bulkImportCourseBodyReplaceImageDefault = false;
+
 export const BulkImportCourseBody = zod.object({
   items: zod.array(
     zod
@@ -817,6 +819,12 @@ export const BulkImportCourseBody = zod.object({
       })
       .describe("One question row in the course bulk import payload."),
   ),
+  replace_image: zod
+    .boolean()
+    .default(bulkImportCourseBodyReplaceImageDefault)
+    .describe(
+      "When true, a re-import of an existing course overwrites its current cover image with the image_url from this payload (if any). Off by default, so re-import only fills in a missing cover and never clobbers a cover an admin already set. The replacement image is validated exactly like the create\/fill path.",
+    ),
 });
 
 export const BulkImportCourseResponse = zod.object({

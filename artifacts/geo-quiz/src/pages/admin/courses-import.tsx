@@ -26,6 +26,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ResponsiveImage } from "@/components/ResponsiveImage";
 
@@ -234,6 +236,7 @@ export default function AdminCoursesImport() {
   const bulkImport = useBulkImportCourse();
 
   const [text, setText] = useState("");
+  const [replaceImage, setReplaceImage] = useState(false);
   const [result, setResult] = useState<CourseImportResult | null>(null);
   const [coverError, setCoverError] = useState(false);
 
@@ -255,7 +258,9 @@ export default function AdminCoursesImport() {
   const handleImport = async () => {
     if (!parsed?.ok || !parsed.items) return;
     try {
-      const data = await bulkImport.mutateAsync({ data: { items: parsed.items } });
+      const data = await bulkImport.mutateAsync({
+        data: { items: parsed.items, replace_image: replaceImage },
+      });
       setResult(data);
       qc.invalidateQueries({ queryKey: getListCoursesQueryKey() });
       toast({
@@ -405,6 +410,25 @@ export default function AdminCoursesImport() {
               ))}
             </div>
           )}
+
+          <div className="flex items-start gap-3 rounded-md border bg-muted/30 p-3">
+            <Switch
+              id="replace-image"
+              checked={replaceImage}
+              onCheckedChange={setReplaceImage}
+              data-testid="switch-replace-image"
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="replace-image" className="cursor-pointer text-sm font-medium">
+                Replace existing cover image
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                When re-importing an existing course, overwrite its current cover with the{" "}
+                <code>image_url</code> from this payload. Off by default, so re-import only fills
+                in a missing cover and never replaces one you set manually.
+              </p>
+            </div>
+          </div>
 
           <Button
             className="w-full"
