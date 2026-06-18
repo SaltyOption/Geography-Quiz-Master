@@ -2,7 +2,7 @@ import type { ImgHTMLAttributes } from "react";
 
 // Widths and naming convention MUST match optimize-images.mjs (the generator)
 // and the SSR builder in artifacts/api-server/src/routes/ssr-pages.ts.
-const OPTIMIZED_WIDTHS = [400, 1024];
+const OPTIMIZED_WIDTHS = [400, 768, 1024];
 // Only locally-hosted images under these prefixes have pre-generated variants.
 const OPTIMIZED_PREFIXES = ["/regions/", "/landmarks/"];
 

@@ -21,7 +21,7 @@ import sharp from "sharp";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "public");
 const DIRS = ["regions", "landmarks"];
-const WIDTHS = [400, 1024];
+const WIDTHS = [400, 768, 1024];
 const SOURCE_EXT = new Set([".png", ".jpg", ".jpeg"]);
 
 async function run() {

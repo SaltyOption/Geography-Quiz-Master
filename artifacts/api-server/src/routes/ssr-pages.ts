@@ -134,7 +134,7 @@ function homeBody(
 // Width list and naming convention MUST match the generator
 // (artifacts/geo-quiz/optimize-images.mjs) and the client component
 // (artifacts/geo-quiz/src/components/ResponsiveImage.tsx).
-const SSR_IMG_WIDTHS = [400, 1024];
+const SSR_IMG_WIDTHS = [400, 768, 1024];
 const SSR_IMG_OPTIMIZED_PREFIXES = ["/regions/", "/landmarks/"];
 
 function ssrImgSrcSet(rawPath: string, format: "avif" | "webp"): string {
