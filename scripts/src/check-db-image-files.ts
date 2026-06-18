@@ -29,6 +29,16 @@
 // wired into a scheduled job or pre-deploy gate that has DB access. Transient
 // network failures (timeouts, DNS errors, 5xx, 429) are reported as warnings
 // but do NOT fail the run, so a flaky CDN or network blip cannot block a deploy.
+//
+// Alerting: a non-zero exit only surfaces in the Replit Deployments pane when
+// someone looks. Admins edit image URLs through the live admin UI between
+// deploys, so a newly-broken image can sit in production unnoticed. When
+// genuinely broken images are found (NOT transient failures), this script POSTs
+// a notification to a configurable webhook (set BROKEN_IMAGE_ALERT_WEBHOOK_URL
+// in the environment/secrets). The payload includes a Slack-compatible `text`
+// summary plus a structured `broken` array (source#id -> url + reason). The
+// notification is best-effort: when the webhook is unset it is a no-op, and a
+// delivery failure is logged but never changes the run's success/exit code.
 
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -53,6 +63,15 @@ const EXTERNAL_TIMEOUT_MS = 10_000;
 const EXTERNAL_CONCURRENCY = 8;
 const EXTERNAL_USER_AGENT =
   "geo-quiz-image-check/1.0 (+broken-image maintenance check)";
+
+// Optional webhook to alert when broken images are found. Slack incoming
+// webhooks and generic JSON webhooks both work (Slack reads `text`, ignores the
+// extra fields). When unset, alerting is a no-op.
+const ALERT_WEBHOOK_URL = process.env.BROKEN_IMAGE_ALERT_WEBHOOK_URL?.trim();
+const ALERT_TIMEOUT_MS = 10_000;
+// Cap the number of rows enumerated in the alert text so a large batch cannot
+// produce an oversized payload; the full list is always in the run logs.
+const ALERT_MAX_ROWS = 50;
 
 // public/ lives in the geo-quiz frontend artifact; that is what the proxy
 // serves these URLs from in production.
@@ -253,6 +272,69 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+type BrokenItem = { source: string; id: number; url: string; reason: string };
+
+async function sendBrokenImageAlert(broken: BrokenItem[]): Promise<void> {
+  if (broken.length === 0) return;
+
+  if (!ALERT_WEBHOOK_URL) {
+    console.log(
+      "\nAlerting skipped: set BROKEN_IMAGE_ALERT_WEBHOOK_URL to receive a notification when broken images are found.",
+    );
+    return;
+  }
+
+  const shown = broken.slice(0, ALERT_MAX_ROWS);
+  const lines = shown.map(
+    (b) => `• ${b.source}#${b.id} -> ${b.url} (${b.reason})`,
+  );
+  if (broken.length > shown.length) {
+    lines.push(`…and ${broken.length - shown.length} more (see run logs).`);
+  }
+  const text = [
+    `:warning: World Geography Trivia — ${broken.length} broken image URL(s) detected.`,
+    ...lines,
+  ].join("\n");
+
+  const payload = { text, count: broken.length, broken };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ALERT_TIMEOUT_MS);
+  try {
+    const res = await fetch(ALERT_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      console.error(
+        `Failed to deliver broken-image alert: webhook returned ${res.status}.`,
+      );
+    } else {
+      console.log(
+        `\nSent broken-image alert for ${broken.length} URL(s) to the configured webhook.`,
+      );
+    }
+    try {
+      await res.body?.cancel();
+    } catch {
+      // ignore
+    }
+  } catch (err) {
+    const reason =
+      err instanceof Error && err.name === "AbortError"
+        ? `timed out after ${ALERT_TIMEOUT_MS}ms`
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    // Best-effort: a delivery failure must not change the run outcome.
+    console.error(`Failed to deliver broken-image alert: ${reason}.`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function main(): Promise<void> {
   const refs = await collectImageRefs();
 
@@ -334,6 +416,27 @@ async function main(): Promise<void> {
     );
     return;
   }
+
+  // Actively notify (best-effort) so a newly-broken image surfaces without
+  // someone watching the Deployments pane. Only genuinely broken images are
+  // included — transient failures are intentionally excluded.
+  const brokenItems: BrokenItem[] = [
+    ...brokenLocal.map((ref) => ({
+      source: ref.source,
+      id: ref.id,
+      url: ref.url,
+      reason: `missing ${ref.missing.length} local file(s): ${ref.missing
+        .map((rel) => `public/${rel}`)
+        .join(", ")}`,
+    })),
+    ...brokenExternal.map(({ ref, result }) => ({
+      source: ref.source,
+      id: ref.id,
+      url: ref.url,
+      reason: result.status === "broken" ? result.reason : "unreachable",
+    })),
+  ];
+  await sendBrokenImageAlert(brokenItems);
 
   process.exitCode = 1;
 }
