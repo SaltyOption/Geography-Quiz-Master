@@ -1,8 +1,11 @@
 import type { ImgHTMLAttributes } from "react";
+import { RESPONSIVE_IMAGE_WIDTHS } from "@workspace/image-config";
 
-// Widths and naming convention MUST match optimize-images.mjs (the generator)
-// and the SSR builder in artifacts/api-server/src/routes/ssr-pages.ts.
-const OPTIMIZED_WIDTHS = [400, 768, 1024];
+// Widths come from the shared @workspace/image-config module so they stay in
+// sync with optimize-images.mjs (the generator) and the SSR builder in
+// artifacts/api-server/src/routes/ssr-pages.ts. The naming convention here must
+// still match those consumers.
+const OPTIMIZED_WIDTHS = RESPONSIVE_IMAGE_WIDTHS;
 // Only locally-hosted images under these prefixes have pre-generated variants.
 const OPTIMIZED_PREFIXES = ["/regions/", "/landmarks/"];
 

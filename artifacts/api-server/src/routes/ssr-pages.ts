@@ -24,6 +24,7 @@ import {
   coursesTable,
   courseModulesTable,
 } from "@workspace/db";
+import { RESPONSIVE_IMAGE_WIDTHS } from "@workspace/image-config";
 import { buildPageHtml, esc, sharedNav, getRawTemplate } from "../lib/ssrTemplate";
 import { isRequestAdmin } from "../middlewares/requireAdmin";
 import { buildVisibleCategoryIds, isCategoryVisible, type CategoryRow } from "../lib/categoryVisibility";
@@ -131,10 +132,11 @@ function homeBody(
 </main>`;
 }
 
-// Width list and naming convention MUST match the generator
-// (artifacts/geo-quiz/optimize-images.mjs) and the client component
-// (artifacts/geo-quiz/src/components/ResponsiveImage.tsx).
-const SSR_IMG_WIDTHS = [400, 768, 1024];
+// Width list comes from the shared @workspace/image-config module so it stays
+// in sync with the generator (artifacts/geo-quiz/optimize-images.mjs) and the
+// client component (artifacts/geo-quiz/src/components/ResponsiveImage.tsx). The
+// naming convention here must still match those consumers.
+const SSR_IMG_WIDTHS = RESPONSIVE_IMAGE_WIDTHS;
 const SSR_IMG_OPTIMIZED_PREFIXES = ["/regions/", "/landmarks/"];
 
 function ssrImgSrcSet(rawPath: string, format: "avif" | "webp"): string {

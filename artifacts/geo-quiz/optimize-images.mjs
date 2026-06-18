@@ -8,20 +8,22 @@
 //   ancient-sites-400.avif  ancient-sites-1024.avif
 // The original is kept as the <img> fallback. Re-runnable / idempotent.
 //
-// The width list and naming convention here MUST stay in sync with the
-// consumers: src/components/ResponsiveImage.tsx and the SSR builder in
-// artifacts/api-server/src/routes/ssr-pages.ts.
+// The width list comes from the shared @workspace/image-config module so it
+// stays in sync with the consumers: src/components/ResponsiveImage.tsx and the
+// SSR builder in artifacts/api-server/src/routes/ssr-pages.ts. The naming
+// convention here must still match those consumers.
 
 import { readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { RESPONSIVE_IMAGE_WIDTHS } from "@workspace/image-config";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "public");
 const DIRS = ["regions", "landmarks"];
-const WIDTHS = [400, 768, 1024];
+const WIDTHS = RESPONSIVE_IMAGE_WIDTHS;
 const SOURCE_EXT = new Set([".png", ".jpg", ".jpeg"]);
 
 async function run() {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { RESPONSIVE_IMAGE_WIDTHS } from "@workspace/image-config";
 
 // Guards against a silent production regression: the <picture> elements rendered
 // by ResponsiveImage (and the SSR builder in api-server) point at pre-generated
@@ -13,9 +14,10 @@ import path from "node:path";
 // is missing one of its generated siblings. Run `pnpm run optimize-images` to
 // regenerate after adding or replacing a source image.
 //
-// The widths/formats MUST match the generator (optimize-images.mjs) and the
-// consumers (src/components/ResponsiveImage.tsx, api-server ssr-pages.ts).
-const OPTIMIZED_WIDTHS = [400, 768, 1024];
+// The widths come from the shared @workspace/image-config module, the same
+// source of truth used by the generator (optimize-images.mjs) and the consumers
+// (src/components/ResponsiveImage.tsx, api-server ssr-pages.ts).
+const OPTIMIZED_WIDTHS = RESPONSIVE_IMAGE_WIDTHS;
 const OPTIMIZED_FORMATS = ["webp", "avif"] as const;
 const DIRS = ["regions", "landmarks"];
 const SOURCE_EXT = new Set([".png", ".jpg", ".jpeg"]);
