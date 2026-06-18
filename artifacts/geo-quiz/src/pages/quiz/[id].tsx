@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import mascotThinkingUrl from "@assets/mascot_swallow_thinking.png";
-import worldCupHeroUrl from "@assets/World_Cup_Hero_Image_1781786129554.avif";
 
 export default function QuizPage() {
   const { id } = useParams();
@@ -152,8 +151,6 @@ export default function QuizPage() {
   if (!currentQuestion) return null;
 
   const primaryCategory = quizData.categories?.[0];
-  const isWorldCupQuiz =
-    quizData.categories?.some((c) => /world\s*cup/i.test(c.name ?? "")) ?? false;
 
   return (
     <div className="container max-w-3xl py-8">
@@ -174,18 +171,6 @@ export default function QuizPage() {
         <ChevronRight className="h-3.5 w-3.5 shrink-0" />
         <span className="text-foreground font-medium truncate max-w-[200px]">{quizData.title}</span>
       </nav>
-
-      {/* Hero image (World Cup quizzes) */}
-      {isWorldCupQuiz && (
-        <div className="mb-6 overflow-hidden rounded-2xl border bg-muted shadow-sm">
-          <img
-            src={worldCupHeroUrl}
-            alt={quizData.title}
-            className="h-40 w-full object-cover sm:h-56"
-            loading="eager"
-          />
-        </div>
-      )}
 
       {/* Category chips */}
       {quizData.categories && quizData.categories.length > 0 && (

@@ -9,7 +9,6 @@ import { Show } from "@clerk/react";
 import { useToast } from "@/hooks/use-toast";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { useJsonLd } from "@/hooks/useJsonLd";
-import worldCupHeroUrl from "@assets/World_Cup_Hero_Image_1781786129554.avif";
 
 export default function CategoryPage() {
   const [, params] = useRoute("/category/:slug");
@@ -125,15 +124,6 @@ export default function CategoryPage() {
 
   const { category, ancestors, descendants, quizzes } = data;
 
-  const isWorldCupCategory = /world\s*cup/i.test(category.name);
-  const heroImageUrl = category.imageUrl
-    ? category.imageUrl.startsWith("/")
-      ? `${import.meta.env.BASE_URL}${category.imageUrl.slice(1)}`
-      : category.imageUrl
-    : isWorldCupCategory
-      ? worldCupHeroUrl
-      : null;
-
   const getQuizProgress = (quizId: number) => {
     if (!progress?.recentAttempts) return null;
     const attempts = progress.recentAttempts.filter((a) => a.quizId === quizId);
@@ -163,10 +153,10 @@ export default function CategoryPage() {
         <span className="font-semibold text-foreground">{category.name}</span>
       </nav>
 
-      {heroImageUrl && (
+      {category.imageUrl && (
         <div className="relative mb-6 h-48 w-full overflow-hidden rounded-2xl sm:h-64 md:h-72">
           <img
-            src={heroImageUrl}
+            src={category.imageUrl.startsWith("/") ? `${import.meta.env.BASE_URL}${category.imageUrl.slice(1)}` : category.imageUrl}
             alt={category.name}
             className="h-full w-full object-cover"
           />
@@ -178,7 +168,7 @@ export default function CategoryPage() {
       )}
       <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          {!heroImageUrl && (
+          {!category.imageUrl && (
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">{category.name}</h1>
           )}
           <p className="mt-2 text-muted-foreground">
