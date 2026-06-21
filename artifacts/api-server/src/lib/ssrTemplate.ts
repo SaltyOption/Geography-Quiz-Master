@@ -16,6 +16,7 @@
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { getMetaDescription } from "@workspace/seo-content";
 
 const SITE_NAME = "World Geography Trivia";
 
@@ -91,6 +92,10 @@ function buildFallbackHtml(
   bodyHtml: string,
   jsonLd?: object | object[],
 ): string {
+  meta = {
+    ...meta,
+    description: getMetaDescription(meta.path) ?? meta.description,
+  };
   const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
   const fullTitle =
     meta.title === SITE_NAME ? meta.title : `${meta.title} | ${SITE_NAME}`;
@@ -142,6 +147,10 @@ export function buildPageHtml(
   jsonLd?: object | object[],
 ): string {
   const template = getTemplate();
+  meta = {
+    ...meta,
+    description: getMetaDescription(meta.path) ?? meta.description,
+  };
   const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
   const fullTitle =
     meta.title === SITE_NAME ? meta.title : `${meta.title} | ${SITE_NAME}`;

@@ -1,0 +1,405 @@
+# Meta Description Rewrites — worldgeographytrivia.com
+
+Each description targets 150–160 characters, includes a primary keyword, and ends with a clear call to action or value hook. Copy-paste ready.
+
+---
+
+## Homepage
+
+**URL:** `https://worldgeographytrivia.com/`
+
+**Current:** Play world geography quizzes and short courses covering capitals, countries, landmarks, and regions.
+
+**Rewritten:** Test your world geography knowledge with free quizzes on capitals, countries, landmarks, and regions. Play the daily quiz or start a learning course today.
+
+*Character count: 157*
+
+---
+
+## Daily Quiz
+
+**URL:** `https://worldgeographytrivia.com/daily`
+
+**Current:** Take today's daily geography quiz on World Geography Trivia. A new quiz every day — test your knowledge of capitals, countries, landmarks, and regions.
+
+**Rewritten:** A new world geography quiz every day. Test yourself on capitals, countries, landmarks, and regions — and see how you improve over time. Free to play.
+
+*Character count: 152*
+
+---
+
+## Courses
+
+**URL:** `https://worldgeographytrivia.com/courses`
+
+**Current:** Learn world geography through structured courses. Master modules on capitals, regions, landmarks, and more — each course builds knowledge step by step.
+
+**Rewritten:** Learn world geography through structured courses on oceans, rivers, deserts, mountains, rainforests, and more. Each course builds knowledge module by module.
+
+*Character count: 159*
+
+---
+
+## By Region
+
+### Europe
+**URL:** `https://worldgeographytrivia.com/category/europe`
+
+**Current:** Explore 1 quiz in the Europe category on World Geography Trivia.
+
+**Rewritten:** Think you know Europe? Test your knowledge of European countries, rivers, mountains, and borders with geography quizzes on World Geography Trivia.
+
+*Character count: 152*
+
+---
+
+### Africa
+**URL:** `https://worldgeographytrivia.com/category/africa`
+
+**Current:** Explore 3 quizzes in the Africa category on World Geography Trivia.
+
+**Rewritten:** Explore Africa with 3 geography quizzes covering African nations, cities, and physical geography. From easy overviews to challenging deep dives.
+
+*Character count: 147*
+
+---
+
+### Middle East
+**URL:** `https://worldgeographytrivia.com/category/middle-east`
+
+**Current:** Explore 1 quiz in the Middle East category on World Geography Trivia.
+
+**Rewritten:** How well do you know the Middle East? Test your knowledge of ancient sites, countries, and landmarks across the region with this challenging geography quiz.
+
+*Character count: 157*
+
+---
+
+### East Asia
+**URL:** `https://worldgeographytrivia.com/category/east-asia`
+
+**Current:** Explore 2 quizzes in the East Asia category on World Geography Trivia.
+
+**Rewritten:** Quiz yourself on East Asia with 2 geography quizzes — an essentials quiz for beginners and a hard deep dive for experts. Countries, cities, and more.
+
+*Character count: 152*
+
+---
+
+### Oceania
+**URL:** `https://worldgeographytrivia.com/category/oceania`
+
+**Current:** Explore 2 quizzes in the Oceania category on World Geography Trivia.
+
+**Rewritten:** Explore Oceania with 2 geography quizzes — a beginner-friendly overview and a challenging deep dive covering Australia, New Zealand, and Pacific islands.
+
+*Character count: 155*
+
+---
+
+### North America
+**URL:** `https://worldgeographytrivia.com/category/north-america`
+
+**Current:** Explore 2 quizzes in the North America category on World Geography Trivia.
+
+**Rewritten:** Test your North America geography knowledge with 2 quizzes — from an easy basics quiz to a hard deep dive on countries, capitals, and landscapes.
+
+*Character count: 148*
+
+---
+
+### Central America
+**URL:** `https://worldgeographytrivia.com/category/central-america`
+
+**Current:** Explore 2 quizzes in the Central America category on World Geography Trivia.
+
+**Rewritten:** How much do you know about Central America? Take a crash course quiz or a hard deep dive covering countries, capitals, and geography across the region.
+
+*Character count: 153*
+
+---
+
+### South America
+**URL:** `https://worldgeographytrivia.com/category/south-america`
+
+**Current:** Explore 2 quizzes in the South America category on World Geography Trivia.
+
+**Rewritten:** Test your South America geography with 2 quizzes — from a medium showcase of countries and capitals to a hard deep dive on rivers, borders, and landmarks.
+
+*Character count: 155*
+
+---
+
+### Caribbean
+**URL:** `https://worldgeographytrivia.com/category/caribbean`
+
+**Current:** Explore 2 quizzes in the Caribbean category on World Geography Trivia.
+
+**Rewritten:** Think you know the Caribbean? Take a quick easy quiz or challenge yourself with our hard deep dive covering islands, capitals, and regional geography.
+
+*Character count: 151*
+
+---
+
+### South Asia
+**URL:** `https://worldgeographytrivia.com/category/south-asia`
+
+**Current:** Explore 2 quizzes in the South Asia category on World Geography Trivia.
+
+**Rewritten:** Explore Southeast Asia with 2 geography quizzes — a medium adventure quiz and a hard deep dive on countries, capitals, rivers, and regional geography.
+
+*Character count: 153*
+
+---
+
+### Antarctica
+**URL:** `https://worldgeographytrivia.com/category/antarctica`
+
+**Current:** Explore quizzes in the Antarctica category on World Geography Trivia.
+
+**Rewritten:** How much do you know about Antarctica? Test your knowledge of the world's southernmost continent — its geography, research stations, and extreme environment.
+
+*Character count: 156*
+
+---
+
+### Asia (General)
+**URL:** `https://worldgeographytrivia.com/category/asia`
+
+**Current:** Explore quizzes in the Asia category on World Geography Trivia.
+
+**Rewritten:** Quiz yourself on Asia's vast geography — countries, capitals, mountain ranges, rivers, and more. Explore the world's largest continent one question at a time.
+
+*Character count: 159*
+
+---
+
+## By Topic
+
+### Capitals
+**URL:** `https://worldgeographytrivia.com/category/capitals`
+
+**Current:** Explore 1 quiz in the Capitals category on World Geography Trivia.
+
+**Rewritten:** How many world capitals do you know? Take our world capitals geography quiz and test your knowledge of capital cities across every continent.
+
+*Character count: 143*
+
+---
+
+### Physical Geography
+**URL:** `https://worldgeographytrivia.com/category/physical-geography`
+
+**Current:** Explore 5 quizzes in the Physical Geography category on World Geography Trivia.
+
+**Rewritten:** 5 quizzes on physical geography — rivers, lakes, islands, oceans, country borders, and outlines. Test your knowledge of the natural world from easy to hard.
+
+*Character count: 158*
+
+---
+
+### Ancient Sites
+**URL:** `https://worldgeographytrivia.com/category/ancient-sites`
+
+**Current:** Explore 1 quiz in the Ancient Sites category on World Geography Trivia.
+
+**Rewritten:** Test your knowledge of the world's ancient sites with a hard geography quiz focused on the Middle East — ruins, temples, and landmarks of the ancient world.
+
+*Character count: 155*
+
+---
+
+### Flags
+**URL:** `https://worldgeographytrivia.com/category/flags`
+
+**Current:** Explore 1 quiz in the Flags category on World Geography Trivia.
+
+**Rewritten:** Can you name that flag? Test your world flag knowledge with our geography quiz featuring flags from countries across every continent. How many can you identify?
+
+*Character count: 158*
+
+---
+
+### Countries
+**URL:** `https://worldgeographytrivia.com/category/countries`
+
+**Current:** Browse the Countries category on World Geography Trivia.
+
+**Rewritten:** Country-focused geography quizzes coming soon to World Geography Trivia. Explore related categories like Capitals, Flags, and Physical Geography in the meantime.
+
+*Character count: 161 — trim to:*
+**Trimmed:** Country geography quizzes coming soon. Explore related topics like Capitals, Flags, and Physical Geography on World Geography Trivia while you wait.
+
+*Character count: 143*
+
+---
+
+### Lakes and Rivers
+**URL:** `https://worldgeographytrivia.com/category/lakes-and-rivers`
+
+**Current:** Browse the Lakes and Rivers category on World Geography Trivia.
+
+**Rewritten:** Lakes and rivers quizzes coming soon to World Geography Trivia. In the meantime, explore Physical Geography quizzes covering rivers, lakes, and more.
+
+*Character count: 152*
+
+---
+
+### Landmarks
+**URL:** `https://worldgeographytrivia.com/category/landmarks`
+
+**Current:** Explore 1 quiz in the Landmarks category on World Geography Trivia.
+
+**Rewritten:** How well do you know the world's famous landmarks? Take our easy geography quiz on iconic sites and monuments from around the globe. Free to play.
+
+*Character count: 150*
+
+---
+
+### Oceans and Seas
+**URL:** `https://worldgeographytrivia.com/category/oceans-and-seas`
+
+**Current:** Explore 1 quiz in the Oceans and Seas category on World Geography Trivia.
+
+**Rewritten:** Test your knowledge of the world's oceans, seas, gulfs, and straits with an easy geography quiz. Perfect for beginners and students studying physical geography.
+
+*Character count: 158*
+
+---
+
+### Climate and Biomes
+**URL:** `https://worldgeographytrivia.com/category/climate-and-biomes`
+
+**Current:** Browse the Climate and Biomes category on World Geography Trivia.
+
+**Rewritten:** Climate and biomes quizzes coming soon. Explore related learning courses on tropical rainforests, temperate forests, and the taiga on World Geography Trivia.
+
+*Character count: 155*
+
+---
+
+### Population and Cities
+**URL:** `https://worldgeographytrivia.com/category/population-and-cities`
+
+**Current:** Browse the Population and Cities category on World Geography Trivia.
+
+**Rewritten:** Population and cities geography quizzes coming soon. Explore related quizzes on world capitals and African cities on World Geography Trivia in the meantime.
+
+*Character count: 155*
+
+---
+
+### Map Skills and Coordinates
+**URL:** `https://worldgeographytrivia.com/category/map-skills-and-coordinates`
+
+**Current:** (not crawled — likely similar boilerplate)
+
+**Rewritten:** Test your map reading skills and knowledge of coordinates with geography quizzes on World Geography Trivia. Great for students and geography enthusiasts.
+
+*Character count: 153*
+
+---
+
+### Regional Geography
+**URL:** `https://worldgeographytrivia.com/category/regional-geography`
+
+**Current:** (not crawled — likely similar boilerplate)
+
+**Rewritten:** Explore regional geography quizzes covering landscapes, borders, and human geography across the world's major regions on World Geography Trivia.
+
+*Character count: 146*
+
+---
+
+## World Cup 2026
+
+**URL:** `https://worldgeographytrivia.com/category/world-cup-2026`
+
+**Current:** Explore 4 quizzes in the World Cup 2026 category on World Geography Trivia.
+
+**Rewritten:** How well do you know the World Cup 2026 team flags? Test yourself with 4 flag identification quizzes covering all 48 nations competing in the tournament.
+
+*Character count: 155*
+
+---
+
+## Learning Courses
+
+### Oceans and Seas (Course)
+**URL:** `https://worldgeographytrivia.com/courses/oceans-and-seas`
+
+**Current:** A course on Oceans and Seas
+
+**Rewritten:** Learn about the world's oceans, seas, currents, and marine ecosystems with this structured geography course covering 7 modules from foundations to ocean change.
+
+*Character count: 158*
+
+---
+
+### Rivers and Lakes (Course)
+**URL:** `https://worldgeographytrivia.com/courses/rivers-and-lakes`
+
+**Current:** A course on Rivers and Lakes
+
+**Rewritten:** Explore the world's major rivers and lakes with this structured geography course. Learn about watersheds, drainage basins, freshwater ecosystems, and more.
+
+*Character count: 153*
+
+---
+
+### World Deserts (Course)
+**URL:** `https://worldgeographytrivia.com/courses/world-deserts`
+
+**Current:** A course on World Deserts
+
+**Rewritten:** Discover the world's deserts — from the Sahara to the Atacama — with this structured geography course covering desert formation, climate, and ecosystems.
+
+*Character count: 153*
+
+---
+
+### Mountains and Alpine Environments (Course)
+**URL:** `https://worldgeographytrivia.com/courses/mountains-alpine`
+
+**Current:** A course on the world's mountain ranges and alpine environments
+
+**Rewritten:** Learn about the world's great mountain ranges and alpine environments with this structured geography course covering formation, climate zones, and key peaks.
+
+*Character count: 156*
+
+---
+
+### Tropical Rainforest (Course)
+**URL:** `https://worldgeographytrivia.com/courses/tropical-rainforest`
+
+**Current:** A course on tropical rainforest ecosystems
+
+**Rewritten:** Explore tropical rainforest ecosystems with this structured geography course. Learn about biodiversity, climate, canopy layers, and regions like the Amazon basin.
+
+*Character count: 158*
+
+---
+
+### Temperate Forest (Course)
+**URL:** `https://worldgeographytrivia.com/courses/temperate-forest`
+
+**Current:** A course on temperate forest ecosystems
+
+**Rewritten:** Discover temperate forest ecosystems around the world with this structured geography course — covering tree species, climate zones, seasonal change, and regions.
+
+*Character count: 158*
+
+---
+
+### Boreal Forest / Taiga (Course)
+**URL:** `https://worldgeographytrivia.com/courses/boreal-forest-taiga`
+
+**Current:** A course on boreal forests and taiga ecosystems
+
+**Rewritten:** Learn about the boreal forest and taiga — Earth's largest land biome — with this structured geography course on climate, wildlife, and the world's northern forests.
+
+*Character count: 160*
+
+---
+
+*Generated for worldgeographytrivia.com · June 2026*

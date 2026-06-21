@@ -22,6 +22,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+import { getMetaDescription } from "@workspace/seo-content";
 
 const { Pool } = pg;
 
@@ -48,9 +49,10 @@ function esc(str) {
  * Returns a copy of `template` (built index.html) with <head> tags
  * overwritten to match the provided route-specific metadata.
  */
-function injectHead(template, { title, description, path }) {
+function injectHead(template, { title, description: rawDescription, path }) {
   const fullTitle =
     title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+  const description = getMetaDescription(path) ?? rawDescription;
   const canonical = domain ? `${domain}${path}` : "";
   const ogImage = domain ? `${domain}/opengraph.jpg` : "";
 

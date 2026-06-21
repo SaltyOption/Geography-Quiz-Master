@@ -17,6 +17,7 @@
     "@workspace/db": "workspace:*",
     "@workspace/image-check": "workspace:*",
     "@workspace/image-config": "workspace:*",
+    "@workspace/seo-content": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",

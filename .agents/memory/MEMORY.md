@@ -5,3 +5,4 @@
 - [Responsive image variants](responsive-image-variants.md) — /regions & /landmarks DB images served as pre-generated -400/-1024 webp+avif; every such path MUST have variants or <picture> shows a broken image (no <img> fallback on 404).
 - [Quiz-detail embedded categories have no slug](quiz-detail-embedded-categories.md) — GET /api/quizzes/:id categories are {id,name,parentId,published,timestamps}; detect by name, never c.slug (it's undefined → crashes QuizPage).
 - [Image reachability shared lib](image-reachability-shared-lib.md) — `@workspace/image-check` backs both the broken-image script and API save guard; a "transient" result must NEVER block a save/deploy.
+- [Page meta description chokepoints](page-meta-chokepoints.md) — per-route meta lives in `@workspace/seo-content`; 3 render paths (prerender.mjs, ssrTemplate.ts, usePageMeta.ts) must stay in sync.

@@ -184,6 +184,9 @@ importers:
       '@workspace/image-config':
         specifier: workspace:*
         version: link:../../lib/image-config
+      '@workspace/seo-content':
+        specifier: workspace:*
+        version: link:../../lib/seo-content
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -378,6 +381,9 @@ importers:
       '@workspace/image-config':
         specifier: workspace:*
         version: link:../../lib/image-config
+      '@workspace/seo-content':
+        specifier: workspace:*
+        version: link:../../lib/seo-content
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -699,6 +705,8 @@ importers:
         version: 25.3.5
 
   lib/image-config: {}
+
+  lib/seo-content: {}
 
   scripts:
     dependencies:

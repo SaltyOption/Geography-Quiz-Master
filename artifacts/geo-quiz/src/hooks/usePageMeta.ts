@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { getMetaDescription } from "@workspace/seo-content";
 
 export interface PageMetaOptions {
   title: string;
@@ -11,6 +12,7 @@ export interface PageMetaOptions {
 
 const SITE_NAME = "World Geography Trivia";
 const DEFAULT_DESCRIPTION =
+  getMetaDescription("/") ??
   "Play world geography quizzes and short courses covering capitals, countries, landmarks, and regions.";
 
 /**
@@ -84,21 +86,24 @@ function applyMeta(opts: PageMetaOptions) {
   } = opts;
 
   const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+  const pathname =
+    typeof window !== "undefined" ? window.location.pathname : "";
+  const metaDescription = getMetaDescription(pathname) ?? description;
 
   document.title = fullTitle;
-  setMetaName("description", description);
+  setMetaName("description", metaDescription);
   setCanonical(canonical);
 
   setMetaProperty("og:type", ogType);
   setMetaProperty("og:site_name", SITE_NAME);
   setMetaProperty("og:title", fullTitle);
-  setMetaProperty("og:description", description);
+  setMetaProperty("og:description", metaDescription);
   setMetaProperty("og:url", canonical);
   setMetaProperty("og:image", ogImage);
 
   setMetaName("twitter:card", twitterCard);
   setMetaName("twitter:title", fullTitle);
-  setMetaName("twitter:description", description);
+  setMetaName("twitter:description", metaDescription);
   setMetaName("twitter:image", ogImage);
 }
 
