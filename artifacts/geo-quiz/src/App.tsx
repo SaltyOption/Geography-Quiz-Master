@@ -16,6 +16,7 @@ import QuizResultsPage from "@/pages/quiz/[id]/results";
 import DailyQuizPage from "@/pages/daily";
 import PrivacyPage from "@/pages/privacy";
 import ContactPage from "@/pages/contact";
+import AboutPage from "@/pages/about";
 import AdminDashboard from "@/pages/admin/index";
 import AdminCategories from "@/pages/admin/categories";
 import AdminNewsletter from "@/pages/admin/newsletter";
@@ -179,6 +180,7 @@ function ClerkProviderWithRoutes() {
               <Route path="/daily" component={DailyQuizPage} />
               <Route path="/privacy" component={PrivacyPage} />
               <Route path="/contact" component={ContactPage} />
+              <Route path="/about" component={AboutPage} />
               <Route path="/quiz/:id" component={QuizPage} />
               <Route path="/quiz/:id/results" component={QuizResultsPage} />
 

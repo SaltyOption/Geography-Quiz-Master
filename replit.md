@@ -74,6 +74,11 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - Admin page `/admin/contact` (linked from the admin dashboard) lists submissions newest-first, each with a `mailto:` reply link.
 - Email delivery is **deferred**: submissions are currently stored only (visible in the admin panel). Emailing each submission to worldgeographytrivia@gmail.com can be added later by connecting a Gmail (or other email) integration and calling a send helper from the `POST /api/contact` handler (best-effort, must not fail the DB save).
 
+## About
+
+- Public, static About page at `/about` (linked in the footer next to Contact/Privacy). Static prose only — no DB, no form. Page component `src/pages/about.tsx` uses the same `usePageMeta` + container/Card layout as the Privacy page, with CTAs to browse quizzes (`/`) and the daily quiz (`/daily`).
+- SEO/crawlability follows the Privacy pattern at all three meta chokepoints: prerender (`prerender.mjs` `aboutBody()` + `writeRoute("/about", …)`), production SSR (`api-server` `ssr-pages.ts` `GET /about`, served before the SPA catch-all), and the sitemap (static URL entry). The About copy lives verbatim in all three (`about.tsx`, `aboutBody()`, the SSR route) — keep them in sync if the text changes.
+
 ## Database Schema
 
 - `quizzes` — id, title, description, category (legacy text label), difficulty, published (boolean, default false), timestamps

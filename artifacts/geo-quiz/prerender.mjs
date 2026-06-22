@@ -242,6 +242,23 @@ function privacyBody() {
 </main>`;
 }
 
+function aboutBody() {
+  const paras = [
+    "World Geography Trivia helps curious learners explore the world one quiz at a time.",
+    "Whether you are brushing up on capitals, testing your knowledge of flags, learning where countries are located, or discovering famous landmarks, this site is designed to make geography feel fun, approachable, and memorable.",
+    "The goal is simple: help you build real geographic knowledge without making it feel like homework. Each quiz is meant to teach as well as test, with questions that encourage you to notice patterns, make connections, and learn something new about the world.",
+    "World Geography Trivia is for travelers, lifelong learners, trivia fans, students, teachers, and anyone who has ever looked at a map and thought, “I should probably know more about that place.”",
+    "So pick a quiz, follow your curiosity, and see where in the world it takes you.",
+  ]
+    .map((p) => `<p style="color:#6b7280;margin-bottom:1rem">${esc(p)}</p>`)
+    .join("\n  ");
+  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
+  <h1 style="font-size:2rem;font-weight:700;margin-bottom:1rem">About World Geography Trivia</h1>
+  ${paras}
+  <p style="margin-top:1rem"><a href="/" style="color:#0e7490">Browse quizzes →</a></p>
+</main>`;
+}
+
 function quizBody(quiz) {
   const cats =
     (quiz.categories ?? [])
@@ -517,6 +534,19 @@ console.log("\nPrerendering static routes…");
 }
 
 // ---------------------------------------------------------------------------
+// 4b. About
+// ---------------------------------------------------------------------------
+{
+  const meta = {
+    title: "About",
+    description:
+      "World Geography Trivia makes geography fun with quizzes on capitals, flags, countries, and landmarks — for travelers, students, teachers, and lifelong learners.",
+    path: "/about",
+  };
+  writeRoute("/about", injectBody(injectHead(template, meta), aboutBody()));
+}
+
+// ---------------------------------------------------------------------------
 // 5. Quizzes (/quiz/:id)
 // ---------------------------------------------------------------------------
 console.log(`\nPrerendering ${data.quizzes.length} quiz pages…`);
@@ -736,6 +766,7 @@ console.log("\nGenerating sitemap.xml and robots.txt…");
     { loc: `${base}/`, changefreq: "daily", priority: "1.0" },
     { loc: `${base}/daily`, changefreq: "daily", priority: "0.9" },
     { loc: `${base}/courses`, changefreq: "weekly", priority: "0.8" },
+    { loc: `${base}/about`, changefreq: "monthly", priority: "0.4" },
     { loc: `${base}/privacy`, changefreq: "monthly", priority: "0.3" },
   ];
 
