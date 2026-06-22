@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { SignUpResultsPrompt } from "@/components/SignUpResultsPrompt";
+import { ShareResults } from "@/components/ShareResults";
 
 export default function QuizResultsPage() {
   const { id } = useParams();
@@ -79,6 +80,15 @@ export default function QuizResultsPage() {
                 <Home className="mr-2 h-5 w-5" /> More Quizzes
               </Link>
             </Button>
+          </div>
+          <div className="mt-8 border-t pt-6">
+            <ShareResults
+              quizId={quizId}
+              quizTitle={quizData?.title || "Geography"}
+              score={result.score}
+              totalQuestions={result.totalQuestions}
+              percentage={result.percentage}
+            />
           </div>
         </CardContent>
       </Card>

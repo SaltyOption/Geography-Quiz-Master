@@ -34,6 +34,7 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - Take any quiz — one question at a time with multiple choice
 - After each answer: feedback, explanation, fun fact
 - Final score and question-by-question results
+- Share results from the results page to X, Facebook, or WhatsApp (or copy the result + quiz link). Uses the native Web Share sheet when available; the shared link points to the public quiz page so others can play. See `ShareResults.tsx`.
 
 ### Authenticated Users
 - Create an account (email/password or Google)
