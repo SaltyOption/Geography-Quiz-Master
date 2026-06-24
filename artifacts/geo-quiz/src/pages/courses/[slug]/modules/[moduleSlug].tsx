@@ -10,6 +10,7 @@ import {
   type ModuleAttemptResult,
   type CourseQuestion,
 } from "@workspace/api-client-react";
+import { renderMarkdown } from "@workspace/markdown";
 import {
   Loader2,
   ArrowLeft,
@@ -21,6 +22,7 @@ import {
   RotateCcw,
   Lock,
   GraduationCap,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Mascot } from "@/components/Mascot";
@@ -327,6 +329,23 @@ export default function ModuleTakingPage() {
                       </>
                     )}
                   </div>
+                  {q.explanation && (
+                    <div
+                      className="ml-7 mt-3 prose prose-stone max-w-none rounded-lg border bg-muted/40 p-3 text-sm leading-relaxed text-foreground prose-a:text-primary [&>p]:m-0"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(q.explanation) }}
+                    />
+                  )}
+                  {q.funFact && (
+                    <div className="ml-7 mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+                      <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                        <Sparkles className="h-3.5 w-3.5" /> Fun Fact
+                      </div>
+                      <div
+                        className="prose prose-stone max-w-none text-sm leading-relaxed text-amber-900 dark:text-amber-100 prose-a:text-amber-900 dark:prose-a:text-amber-100 [&>p]:m-0"
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(q.funFact) }}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
