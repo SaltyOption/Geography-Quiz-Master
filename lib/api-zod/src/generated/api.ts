@@ -1291,3 +1291,161 @@ export const GetUserQuizProgressResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary List factoids (published only for visitors; all for admins)
+ */
+export const ListFactoidsResponseItem = zod.object({
+  id: zod.number(),
+  text: zod.string(),
+  sourceLabel: zod.string().nullable(),
+  sourceUrl: zod.string().nullable(),
+  published: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListFactoidsResponse = zod.array(ListFactoidsResponseItem);
+
+/**
+ * @summary Create a factoid (admin only)
+ */
+export const CreateFactoidBody = zod.object({
+  text: zod.string(),
+  sourceLabel: zod.string().nullish(),
+  sourceUrl: zod.string().nullish(),
+  published: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update a factoid (admin only)
+ */
+export const UpdateFactoidParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateFactoidBody = zod.object({
+  text: zod.string().optional(),
+  sourceLabel: zod.string().nullish(),
+  sourceUrl: zod.string().nullish(),
+  published: zod.boolean().optional(),
+});
+
+export const UpdateFactoidResponse = zod.object({
+  id: zod.number(),
+  text: zod.string(),
+  sourceLabel: zod.string().nullable(),
+  sourceUrl: zod.string().nullable(),
+  published: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete a factoid (admin only)
+ */
+export const DeleteFactoidParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List article summaries newest-first (published only for visitors; all for admins)
+ */
+export const ListArticlesResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  slug: zod.string(),
+  summary: zod.string().nullable(),
+  imageUrl: zod.string().nullable(),
+  published: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListArticlesResponse = zod.array(ListArticlesResponseItem);
+
+/**
+ * @summary Create an article (admin only)
+ */
+export const CreateArticleBody = zod.object({
+  title: zod.string(),
+  slug: zod
+    .string()
+    .optional()
+    .describe("Optional. Auto-generated from title if omitted."),
+  summary: zod.string().nullish(),
+  body: zod.string(),
+  imageUrl: zod.string().nullish(),
+  published: zod.boolean().optional(),
+});
+
+/**
+ * @summary Get a single article by slug (draft returns 404 for visitors)
+ */
+export const GetArticleBySlugParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetArticleBySlugResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  slug: zod.string(),
+  summary: zod.string().nullable(),
+  body: zod.string(),
+  imageUrl: zod.string().nullable(),
+  published: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Get a single article by id (admin only; used by the edit form)
+ */
+export const GetArticleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetArticleResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  slug: zod.string(),
+  summary: zod.string().nullable(),
+  body: zod.string(),
+  imageUrl: zod.string().nullable(),
+  published: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update an article (admin only)
+ */
+export const UpdateArticleParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateArticleBody = zod.object({
+  title: zod.string().optional(),
+  slug: zod.string().optional(),
+  summary: zod.string().nullish(),
+  body: zod.string().optional(),
+  imageUrl: zod.string().nullish(),
+  published: zod.boolean().optional(),
+});
+
+export const UpdateArticleResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  slug: zod.string(),
+  summary: zod.string().nullable(),
+  body: zod.string(),
+  imageUrl: zod.string().nullable(),
+  published: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete an article (admin only)
+ */
+export const DeleteArticleParams = zod.object({
+  id: zod.coerce.number(),
+});

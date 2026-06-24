@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useGetCategoryTree, useListQuizzes, useListCourses, useGetMe, type CategoryNode, type QuizSummary } from "@workspace/api-client-react";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Link } from "wouter";
-import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass, Play } from "lucide-react";
+import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass, Play, Lightbulb } from "lucide-react";
 import { Mascot } from "@/components/Mascot";
 import { ResponsiveImage } from "@/components/ResponsiveImage";
 import { SignUpBanner } from "@/components/SignUpBanner";
@@ -220,6 +220,11 @@ export default function Home() {
                   }
                 >
                   <Compass className="mr-2 h-4 w-4" /> Browse quizzes
+                </Button>
+                <Button asChild size="lg" variant="outline" data-testid="button-hero-did-you-know">
+                  <Link href="/did-you-know">
+                    <Lightbulb className="mr-2 h-4 w-4" /> Did you know?
+                  </Link>
                 </Button>
               </div>
             </div>

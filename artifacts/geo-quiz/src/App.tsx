@@ -29,6 +29,11 @@ import AdminCourseEditor from "@/pages/admin/course-editor";
 import CoursesPage from "@/pages/courses";
 import CourseDetailPage from "@/pages/courses/[slug]";
 import ModuleTakingPage from "@/pages/courses/[slug]/modules/[moduleSlug]";
+import DidYouKnowPage from "@/pages/did-you-know/index";
+import ArticleDetailPage from "@/pages/did-you-know/[slug]";
+import AdminDidYouKnow from "@/pages/admin/did-you-know";
+import AdminCreateArticle from "@/pages/admin/did-you-know/articles/new";
+import AdminEditArticle from "@/pages/admin/did-you-know/articles/[id]";
 import AdminCreateQuiz from "@/pages/admin/quizzes/new";
 import AdminEditQuiz from "@/pages/admin/quizzes/[id]";
 import AdminCreateQuestion from "@/pages/admin/quizzes/[id]/questions/new";
@@ -188,6 +193,9 @@ function ClerkProviderWithRoutes() {
               <Route path="/courses/:slug/modules/:moduleSlug" component={ModuleTakingPage} />
               <Route path="/courses/:slug" component={CourseDetailPage} />
 
+              <Route path="/did-you-know" component={DidYouKnowPage} />
+              <Route path="/did-you-know/:slug" component={ArticleDetailPage} />
+
               <Route path="/admin">
                 <AdminGuard><AdminDashboard /></AdminGuard>
               </Route>
@@ -214,6 +222,15 @@ function ClerkProviderWithRoutes() {
               </Route>
               <Route path="/admin/courses/:slug">
                 <AdminGuard><AdminCourseEditor /></AdminGuard>
+              </Route>
+              <Route path="/admin/did-you-know">
+                <AdminGuard><AdminDidYouKnow /></AdminGuard>
+              </Route>
+              <Route path="/admin/did-you-know/articles/new">
+                <AdminGuard><AdminCreateArticle /></AdminGuard>
+              </Route>
+              <Route path="/admin/did-you-know/articles/:id">
+                <AdminGuard><AdminEditArticle /></AdminGuard>
               </Route>
               <Route path="/admin/quizzes/new">
                 <AdminGuard><AdminCreateQuiz /></AdminGuard>

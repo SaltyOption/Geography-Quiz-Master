@@ -22,6 +22,7 @@ import {
   Mail,
   Inbox,
   ScanSearch,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -175,6 +176,11 @@ export default function AdminDashboard() {
           <Button variant="outline" asChild data-testid="link-manage-courses">
             <Link href="/admin/courses">
               <GraduationCap className="mr-2 h-4 w-4" /> Manage Courses
+            </Link>
+          </Button>
+          <Button variant="outline" asChild data-testid="link-did-you-know">
+            <Link href="/admin/did-you-know">
+              <Lightbulb className="mr-2 h-4 w-4" /> Did You Know
             </Link>
           </Button>
           <Button asChild>

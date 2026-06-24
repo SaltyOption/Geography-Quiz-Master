@@ -18,6 +18,8 @@ import type {
 
 import type {
   AdminCourseDetail,
+  Article,
+  ArticleSummary,
   BulkImportBody,
   BulkImportResult,
   Category,
@@ -32,10 +34,13 @@ import type {
   CourseImportResult,
   CourseQuestion,
   CourseSummary,
+  CreateArticleBody,
   CreateCategoryBody,
+  CreateFactoidBody,
   CreateQuestionBody,
   CreateQuizBody,
   DailyQuiz,
+  Factoid,
   HealthStatus,
   ImageGallery,
   ImageScanResult,
@@ -61,9 +66,11 @@ import type {
   SubmitModuleAttemptBody,
   SubmitQuizAttemptBody,
   SubmittedContactMessage,
+  UpdateArticleBody,
   UpdateCategoryBody,
   UpdateCourseBody,
   UpdateCourseQuestionBody,
+  UpdateFactoidBody,
   UpdateNewsletterSubscriptionBody,
   UpdateQuestionBody,
   UpdateQuizBody,
@@ -3938,3 +3945,841 @@ export function useGetUserQuizProgress<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List factoids (published only for visitors; all for admins)
+ */
+export const getListFactoidsUrl = () => {
+  return `/api/factoids`;
+};
+
+export const listFactoids = async (
+  options?: RequestInit,
+): Promise<Factoid[]> => {
+  return customFetch<Factoid[]>(getListFactoidsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFactoidsQueryKey = () => {
+  return [`/api/factoids`] as const;
+};
+
+export const getListFactoidsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFactoids>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFactoids>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFactoidsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFactoids>>> = ({
+    signal,
+  }) => listFactoids({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFactoids>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFactoidsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFactoids>>
+>;
+export type ListFactoidsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List factoids (published only for visitors; all for admins)
+ */
+
+export function useListFactoids<
+  TData = Awaited<ReturnType<typeof listFactoids>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFactoids>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFactoidsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a factoid (admin only)
+ */
+export const getCreateFactoidUrl = () => {
+  return `/api/factoids`;
+};
+
+export const createFactoid = async (
+  createFactoidBody: CreateFactoidBody,
+  options?: RequestInit,
+): Promise<Factoid> => {
+  return customFetch<Factoid>(getCreateFactoidUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createFactoidBody),
+  });
+};
+
+export const getCreateFactoidMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFactoid>>,
+    TError,
+    { data: BodyType<CreateFactoidBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createFactoid>>,
+  TError,
+  { data: BodyType<CreateFactoidBody> },
+  TContext
+> => {
+  const mutationKey = ["createFactoid"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createFactoid>>,
+    { data: BodyType<CreateFactoidBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createFactoid(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateFactoidMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createFactoid>>
+>;
+export type CreateFactoidMutationBody = BodyType<CreateFactoidBody>;
+export type CreateFactoidMutationError = ErrorType<void>;
+
+/**
+ * @summary Create a factoid (admin only)
+ */
+export const useCreateFactoid = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFactoid>>,
+    TError,
+    { data: BodyType<CreateFactoidBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createFactoid>>,
+  TError,
+  { data: BodyType<CreateFactoidBody> },
+  TContext
+> => {
+  return useMutation(getCreateFactoidMutationOptions(options));
+};
+
+/**
+ * @summary Update a factoid (admin only)
+ */
+export const getUpdateFactoidUrl = (id: number) => {
+  return `/api/factoids/${id}`;
+};
+
+export const updateFactoid = async (
+  id: number,
+  updateFactoidBody: UpdateFactoidBody,
+  options?: RequestInit,
+): Promise<Factoid> => {
+  return customFetch<Factoid>(getUpdateFactoidUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateFactoidBody),
+  });
+};
+
+export const getUpdateFactoidMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateFactoid>>,
+    TError,
+    { id: number; data: BodyType<UpdateFactoidBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateFactoid>>,
+  TError,
+  { id: number; data: BodyType<UpdateFactoidBody> },
+  TContext
+> => {
+  const mutationKey = ["updateFactoid"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateFactoid>>,
+    { id: number; data: BodyType<UpdateFactoidBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateFactoid(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateFactoidMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateFactoid>>
+>;
+export type UpdateFactoidMutationBody = BodyType<UpdateFactoidBody>;
+export type UpdateFactoidMutationError = ErrorType<void>;
+
+/**
+ * @summary Update a factoid (admin only)
+ */
+export const useUpdateFactoid = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateFactoid>>,
+    TError,
+    { id: number; data: BodyType<UpdateFactoidBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateFactoid>>,
+  TError,
+  { id: number; data: BodyType<UpdateFactoidBody> },
+  TContext
+> => {
+  return useMutation(getUpdateFactoidMutationOptions(options));
+};
+
+/**
+ * @summary Delete a factoid (admin only)
+ */
+export const getDeleteFactoidUrl = (id: number) => {
+  return `/api/factoids/${id}`;
+};
+
+export const deleteFactoid = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteFactoidUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteFactoidMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteFactoid>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteFactoid>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteFactoid"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteFactoid>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteFactoid(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteFactoidMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteFactoid>>
+>;
+
+export type DeleteFactoidMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete a factoid (admin only)
+ */
+export const useDeleteFactoid = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteFactoid>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteFactoid>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteFactoidMutationOptions(options));
+};
+
+/**
+ * @summary List article summaries newest-first (published only for visitors; all for admins)
+ */
+export const getListArticlesUrl = () => {
+  return `/api/articles`;
+};
+
+export const listArticles = async (
+  options?: RequestInit,
+): Promise<ArticleSummary[]> => {
+  return customFetch<ArticleSummary[]>(getListArticlesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListArticlesQueryKey = () => {
+  return [`/api/articles`] as const;
+};
+
+export const getListArticlesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listArticles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listArticles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListArticlesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listArticles>>> = ({
+    signal,
+  }) => listArticles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listArticles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListArticlesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listArticles>>
+>;
+export type ListArticlesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List article summaries newest-first (published only for visitors; all for admins)
+ */
+
+export function useListArticles<
+  TData = Awaited<ReturnType<typeof listArticles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listArticles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListArticlesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create an article (admin only)
+ */
+export const getCreateArticleUrl = () => {
+  return `/api/articles`;
+};
+
+export const createArticle = async (
+  createArticleBody: CreateArticleBody,
+  options?: RequestInit,
+): Promise<Article> => {
+  return customFetch<Article>(getCreateArticleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createArticleBody),
+  });
+};
+
+export const getCreateArticleMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createArticle>>,
+    TError,
+    { data: BodyType<CreateArticleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createArticle>>,
+  TError,
+  { data: BodyType<CreateArticleBody> },
+  TContext
+> => {
+  const mutationKey = ["createArticle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createArticle>>,
+    { data: BodyType<CreateArticleBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createArticle(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createArticle>>
+>;
+export type CreateArticleMutationBody = BodyType<CreateArticleBody>;
+export type CreateArticleMutationError = ErrorType<void>;
+
+/**
+ * @summary Create an article (admin only)
+ */
+export const useCreateArticle = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createArticle>>,
+    TError,
+    { data: BodyType<CreateArticleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createArticle>>,
+  TError,
+  { data: BodyType<CreateArticleBody> },
+  TContext
+> => {
+  return useMutation(getCreateArticleMutationOptions(options));
+};
+
+/**
+ * @summary Get a single article by slug (draft returns 404 for visitors)
+ */
+export const getGetArticleBySlugUrl = (slug: string) => {
+  return `/api/articles/by-slug/${slug}`;
+};
+
+export const getArticleBySlug = async (
+  slug: string,
+  options?: RequestInit,
+): Promise<Article> => {
+  return customFetch<Article>(getGetArticleBySlugUrl(slug), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetArticleBySlugQueryKey = (slug: string) => {
+  return [`/api/articles/by-slug/${slug}`] as const;
+};
+
+export const getGetArticleBySlugQueryOptions = <
+  TData = Awaited<ReturnType<typeof getArticleBySlug>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getArticleBySlug>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetArticleBySlugQueryKey(slug);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getArticleBySlug>>
+  > = ({ signal }) => getArticleBySlug(slug, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!slug,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getArticleBySlug>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetArticleBySlugQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getArticleBySlug>>
+>;
+export type GetArticleBySlugQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a single article by slug (draft returns 404 for visitors)
+ */
+
+export function useGetArticleBySlug<
+  TData = Awaited<ReturnType<typeof getArticleBySlug>>,
+  TError = ErrorType<void>,
+>(
+  slug: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getArticleBySlug>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetArticleBySlugQueryOptions(slug, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a single article by id (admin only; used by the edit form)
+ */
+export const getGetArticleUrl = (id: number) => {
+  return `/api/articles/${id}`;
+};
+
+export const getArticle = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Article> => {
+  return customFetch<Article>(getGetArticleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetArticleQueryKey = (id: number) => {
+  return [`/api/articles/${id}`] as const;
+};
+
+export const getGetArticleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getArticle>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getArticle>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetArticleQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getArticle>>> = ({
+    signal,
+  }) => getArticle(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getArticle>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetArticleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getArticle>>
+>;
+export type GetArticleQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a single article by id (admin only; used by the edit form)
+ */
+
+export function useGetArticle<
+  TData = Awaited<ReturnType<typeof getArticle>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getArticle>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetArticleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update an article (admin only)
+ */
+export const getUpdateArticleUrl = (id: number) => {
+  return `/api/articles/${id}`;
+};
+
+export const updateArticle = async (
+  id: number,
+  updateArticleBody: UpdateArticleBody,
+  options?: RequestInit,
+): Promise<Article> => {
+  return customFetch<Article>(getUpdateArticleUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateArticleBody),
+  });
+};
+
+export const getUpdateArticleMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateArticle>>,
+    TError,
+    { id: number; data: BodyType<UpdateArticleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateArticle>>,
+  TError,
+  { id: number; data: BodyType<UpdateArticleBody> },
+  TContext
+> => {
+  const mutationKey = ["updateArticle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateArticle>>,
+    { id: number; data: BodyType<UpdateArticleBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateArticle(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateArticle>>
+>;
+export type UpdateArticleMutationBody = BodyType<UpdateArticleBody>;
+export type UpdateArticleMutationError = ErrorType<void>;
+
+/**
+ * @summary Update an article (admin only)
+ */
+export const useUpdateArticle = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateArticle>>,
+    TError,
+    { id: number; data: BodyType<UpdateArticleBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateArticle>>,
+  TError,
+  { id: number; data: BodyType<UpdateArticleBody> },
+  TContext
+> => {
+  return useMutation(getUpdateArticleMutationOptions(options));
+};
+
+/**
+ * @summary Delete an article (admin only)
+ */
+export const getDeleteArticleUrl = (id: number) => {
+  return `/api/articles/${id}`;
+};
+
+export const deleteArticle = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteArticleUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteArticleMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteArticle>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteArticle>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteArticle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteArticle>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteArticle(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteArticle>>
+>;
+
+export type DeleteArticleMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete an article (admin only)
+ */
+export const useDeleteArticle = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteArticle>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteArticle>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteArticleMutationOptions(options));
+};

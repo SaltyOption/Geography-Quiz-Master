@@ -23,8 +23,11 @@ import {
   quizCategoriesTable,
   coursesTable,
   courseModulesTable,
+  articlesTable,
+  factoidsTable,
 } from "@workspace/db";
 import { RESPONSIVE_IMAGE_WIDTHS } from "@workspace/image-config";
+import { renderMarkdown } from "@workspace/markdown";
 import { buildPageHtml, esc, sharedNav, getRawTemplate } from "../lib/ssrTemplate";
 import { isRequestAdmin } from "../middlewares/requireAdmin";
 import { buildVisibleCategoryIds, isCategoryVisible, type CategoryRow } from "../lib/categoryVisibility";
@@ -821,6 +824,193 @@ router.get("/about", (_req: Request, res: Response) => {
   ${paras}
   <p style="margin-top:1rem"><a href="/" style="color:#0e7490">Browse quizzes →</a></p>
 </main>`,
+  );
+
+  res.set(HTML_HEADERS).send(html);
+});
+
+// ---------------------------------------------------------------------------
+// Route: GET /did-you-know  (factoids + article index)
+// ---------------------------------------------------------------------------
+
+function didYouKnowBody(
+  factoids: { text: string; sourceLabel: string | null; sourceUrl: string | null }[],
+  articles: { slug: string; title: string; summary: string | null }[],
+): string {
+  const factoidItems = factoids
+    .map((f) => {
+      const src =
+        f.sourceUrl && /^https?:\/\//i.test(f.sourceUrl)
+          ? ` <a href="${esc(f.sourceUrl)}" rel="noopener noreferrer" style="color:#0e7490;font-size:0.8rem">${esc(f.sourceLabel || "Source")}</a>`
+          : f.sourceLabel
+            ? ` <span style="color:#9ca3af;font-size:0.8rem">— ${esc(f.sourceLabel)}</span>`
+            : "";
+      return `<li style="padding:0.75rem 0;border-bottom:1px solid #f3f4f6"><span style="color:#374151">${esc(f.text)}</span>${src}</li>`;
+    })
+    .join("\n      ");
+
+  const articleItems = articles
+    .map(
+      (a) =>
+        `<li style="padding:0.5rem 0"><a href="/did-you-know/${esc(a.slug)}" style="color:#0e7490;font-weight:600">${esc(a.title)}</a>` +
+        (a.summary ? ` — <span style="color:#6b7280">${esc(a.summary)}</span>` : "") +
+        `</li>`,
+    )
+    .join("\n      ");
+
+  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
+  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Did You Know?</h1>
+  <p style="color:#6b7280;margin-bottom:1.5rem">Surprising geography facts and in-depth articles about our world.</p>
+  ${
+    factoidItems
+      ? `<section aria-label="Geography facts" style="margin-bottom:2rem">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">Quick Facts</h2>
+    <ul style="padding:0;list-style:none">
+      ${factoidItems}
+    </ul>
+  </section>`
+      : ""
+  }
+  ${
+    articleItems
+      ? `<section aria-label="Articles" style="margin-bottom:2rem">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">Articles</h2>
+    <ul style="padding:0;list-style:none;display:flex;flex-direction:column;gap:0.25rem">
+      ${articleItems}
+    </ul>
+  </section>`
+      : ""
+  }
+</main>`;
+}
+
+function articleDetailBody(article: {
+  title: string;
+  summary: string | null;
+  body: string;
+  imageUrl: string | null;
+}): string {
+  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
+  <nav aria-label="Breadcrumb" style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem">
+    <a href="/" style="color:#0e7490">Home</a> › <a href="/did-you-know" style="color:#0e7490">Did You Know</a>
+  </nav>
+  <article>
+    <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">${esc(article.title)}</h1>
+    ${article.summary ? `<p style="color:#6b7280;margin-bottom:1.5rem">${esc(article.summary)}</p>` : ""}
+    ${article.imageUrl ? `<img src="${esc(article.imageUrl)}" alt="${esc(article.title)}" style="max-width:100%;height:auto;border-radius:0.5rem;margin-bottom:1.5rem" />` : ""}
+    <div>${renderMarkdown(article.body)}</div>
+  </article>
+</main>`;
+}
+
+router.get("/did-you-know", async (req: Request, res: Response) => {
+  const admin = isRequestAdmin(req);
+
+  const [allFactoids, allArticles] = await Promise.all([
+    db
+      .select({
+        text: factoidsTable.text,
+        sourceLabel: factoidsTable.sourceLabel,
+        sourceUrl: factoidsTable.sourceUrl,
+        published: factoidsTable.published,
+      })
+      .from(factoidsTable)
+      .orderBy(sql`${factoidsTable.createdAt} DESC`),
+    db
+      .select({
+        slug: articlesTable.slug,
+        title: articlesTable.title,
+        summary: articlesTable.summary,
+        published: articlesTable.published,
+      })
+      .from(articlesTable)
+      .orderBy(sql`${articlesTable.createdAt} DESC`),
+  ]);
+
+  const factoids = admin ? allFactoids : allFactoids.filter((f) => f.published);
+  const articles = admin ? allArticles : allArticles.filter((a) => a.published);
+
+  const html = buildPageHtml(
+    {
+      title: "Did You Know?",
+      description:
+        "Surprising geography facts and in-depth articles about countries, capitals, landmarks, and the natural world from World Geography Trivia.",
+      path: "/did-you-know",
+    },
+    didYouKnowBody(factoids, articles),
+  );
+
+  res.set(HTML_HEADERS).send(html);
+});
+
+router.get("/did-you-know/:slug", async (req: Request, res: Response) => {
+  const admin = isRequestAdmin(req);
+  const slug = req.params.slug as string;
+
+  const [article] = await db
+    .select()
+    .from(articlesTable)
+    .where(eq(articlesTable.slug, slug))
+    .limit(1);
+
+  if (!article || (!article.published && !admin)) {
+    res.status(404).end();
+    return;
+  }
+
+  const description =
+    article.summary ||
+    `Read "${article.title}" on ${SITE_NAME} — a geography article exploring the world.`;
+
+  const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
+  const url = (p: string) => (domain ? `${domain}${p}` : p);
+  const articleUrl = url(`/did-you-know/${article.slug}`);
+
+  const articleLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        headline: article.title,
+        description,
+        url: articleUrl,
+        ...(article.imageUrl ? { image: article.imageUrl } : {}),
+        datePublished: article.createdAt.toISOString(),
+        dateModified: article.updatedAt.toISOString(),
+        publisher: {
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: domain || "/",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Did You Know",
+            item: url("/did-you-know"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: article.title,
+            item: articleUrl,
+          },
+        ],
+      },
+    ],
+  };
+
+  const html = buildPageHtml(
+    {
+      title: article.title,
+      description,
+      path: `/did-you-know/${article.slug}`,
+    },
+    articleDetailBody(article),
+    articleLd,
   );
 
   res.set(HTML_HEADERS).send(html);

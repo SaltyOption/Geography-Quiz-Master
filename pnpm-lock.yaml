@@ -184,6 +184,9 @@ importers:
       '@workspace/image-config':
         specifier: workspace:*
         version: link:../../lib/image-config
+      '@workspace/markdown':
+        specifier: workspace:*
+        version: link:../../lib/markdown
       '@workspace/seo-content':
         specifier: workspace:*
         version: link:../../lib/seo-content
@@ -381,6 +384,9 @@ importers:
       '@workspace/image-config':
         specifier: workspace:*
         version: link:../../lib/image-config
+      '@workspace/markdown':
+        specifier: workspace:*
+        version: link:../../lib/markdown
       '@workspace/seo-content':
         specifier: workspace:*
         version: link:../../lib/seo-content
@@ -705,6 +711,8 @@ importers:
         version: 25.3.5
 
   lib/image-config: {}
+
+  lib/markdown: {}
 
   lib/seo-content: {}
 

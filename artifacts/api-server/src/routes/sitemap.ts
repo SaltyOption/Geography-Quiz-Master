@@ -1,6 +1,12 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, quizzesTable, categoriesTable, coursesTable } from "@workspace/db";
+import {
+  db,
+  quizzesTable,
+  categoriesTable,
+  coursesTable,
+  articlesTable,
+} from "@workspace/db";
 import { buildVisibleCategoryIds } from "../lib/categoryVisibility";
 
 const router: IRouter = Router();
@@ -21,8 +27,8 @@ router.get("/sitemap.xml", async (req, res) => {
   const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
   const base = domain || `${req.protocol}://${req.get("host")}`;
 
-  const [publishedQuizzes, allCategories, allCourses] = await Promise.all(
-    [
+  const [publishedQuizzes, allCategories, allCourses, publishedArticles] =
+    await Promise.all([
       db
         .select({ id: quizzesTable.id })
         .from(quizzesTable)
@@ -32,8 +38,11 @@ router.get("/sitemap.xml", async (req, res) => {
         .select({ slug: coursesTable.slug })
         .from(coursesTable)
         .orderBy(coursesTable.orderIndex),
-    ],
-  );
+      db
+        .select({ slug: articlesTable.slug })
+        .from(articlesTable)
+        .where(eq(articlesTable.published, true)),
+    ]);
 
   const visibleCategoryIds = buildVisibleCategoryIds(allCategories);
   const publishedCategories = allCategories.filter((c) =>
@@ -72,6 +81,7 @@ router.get("/sitemap.xml", async (req, res) => {
     { loc: `${base}/`, changefreq: "daily", priority: "1.0" },
     { loc: `${base}/daily`, changefreq: "daily", priority: "0.9" },
     { loc: `${base}/courses`, changefreq: "weekly", priority: "0.8" },
+    { loc: `${base}/did-you-know`, changefreq: "weekly", priority: "0.7" },
     { loc: `${base}/privacy`, changefreq: "monthly", priority: "0.3" },
   ];
 
@@ -93,7 +103,19 @@ router.get("/sitemap.xml", async (req, res) => {
     priority: "0.7",
   }));
 
-  const allUrls = [...staticUrls, ...categoryUrls, ...quizUrls, ...courseUrls];
+  const articleUrls = publishedArticles.map((article) => ({
+    loc: `${base}/did-you-know/${article.slug}`,
+    changefreq: "monthly",
+    priority: "0.6",
+  }));
+
+  const allUrls = [
+    ...staticUrls,
+    ...categoryUrls,
+    ...quizUrls,
+    ...courseUrls,
+    ...articleUrls,
+  ];
 
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +

@@ -985,6 +985,222 @@ paths:
         "401":
           description: Unauthorized
 
+  /factoids:
+    get:
+      operationId: listFactoids
+      tags: [did-you-know]
+      summary: List factoids (published only for visitors; all for admins)
+      responses:
+        "200":
+          description: List of factoids
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Factoid"
+    post:
+      operationId: createFactoid
+      tags: [did-you-know]
+      summary: Create a factoid (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFactoidBody"
+      responses:
+        "201":
+          description: Created factoid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factoid"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /factoids/{id}:
+    patch:
+      operationId: updateFactoid
+      tags: [did-you-know]
+      summary: Update a factoid (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFactoidBody"
+      responses:
+        "200":
+          description: Updated factoid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factoid"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteFactoid
+      tags: [did-you-know]
+      summary: Delete a factoid (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+  /articles:
+    get:
+      operationId: listArticles
+      tags: [did-you-know]
+      summary: List article summaries newest-first (published only for visitors; all for admins)
+      responses:
+        "200":
+          description: List of article summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArticleSummary"
+    post:
+      operationId: createArticle
+      tags: [did-you-know]
+      summary: Create an article (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateArticleBody"
+      responses:
+        "201":
+          description: Created article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /articles/by-slug/{slug}:
+    get:
+      operationId: getArticleBySlug
+      tags: [did-you-know]
+      summary: Get a single article by slug (draft returns 404 for visitors)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Article detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "404":
+          description: Not found
+
+  /articles/{id}:
+    get:
+      operationId: getArticle
+      tags: [did-you-know]
+      summary: Get a single article by id (admin only; used by the edit form)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Article detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    patch:
+      operationId: updateArticle
+      tags: [did-you-know]
+      summary: Update an article (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateArticleBody"
+      responses:
+        "200":
+          description: Updated article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteArticle
+      tags: [did-you-know]
+      summary: Delete an article (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
 components:
   schemas:
     Me:
@@ -2569,3 +2785,152 @@ components:
         - lessonsAdded
         - questionsAdded
         - modules
+
+    Factoid:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        sourceLabel:
+          type: ["string", "null"]
+        sourceUrl:
+          type: ["string", "null"]
+        published:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - text
+        - sourceLabel
+        - sourceUrl
+        - published
+        - createdAt
+        - updatedAt
+
+    CreateFactoidBody:
+      type: object
+      properties:
+        text:
+          type: string
+        sourceLabel:
+          type: ["string", "null"]
+        sourceUrl:
+          type: ["string", "null"]
+        published:
+          type: boolean
+      required:
+        - text
+
+    UpdateFactoidBody:
+      type: object
+      properties:
+        text:
+          type: string
+        sourceLabel:
+          type: ["string", "null"]
+        sourceUrl:
+          type: ["string", "null"]
+        published:
+          type: boolean
+
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        slug:
+          type: string
+        summary:
+          type: ["string", "null"]
+        body:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        published:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - slug
+        - summary
+        - body
+        - imageUrl
+        - published
+        - createdAt
+        - updatedAt
+
+    ArticleSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        slug:
+          type: string
+        summary:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        published:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - slug
+        - summary
+        - imageUrl
+        - published
+        - createdAt
+        - updatedAt
+
+    CreateArticleBody:
+      type: object
+      properties:
+        title:
+          type: string
+        slug:
+          type: string
+          description: "Optional. Auto-generated from title if omitted."
+        summary:
+          type: ["string", "null"]
+        body:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        published:
+          type: boolean
+      required:
+        - title
+        - body
+
+    UpdateArticleBody:
+      type: object
+      properties:
+        title:
+          type: string
+        slug:
+          type: string
+        summary:
+          type: ["string", "null"]
+        body:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        published:
+          type: boolean

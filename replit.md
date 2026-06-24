@@ -79,6 +79,16 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - Public, static About page at `/about` (linked in the footer next to Contact/Privacy). Static prose only — no DB, no form. Page component `src/pages/about.tsx` uses the same `usePageMeta` + container/Card layout as the Privacy page, with CTAs to browse quizzes (`/`) and the daily quiz (`/daily`).
 - SEO/crawlability follows the Privacy pattern at all three meta chokepoints: prerender (`prerender.mjs` `aboutBody()` + `writeRoute("/about", …)`), production SSR (`api-server` `ssr-pages.ts` `GET /about`, served before the SPA catch-all), and the sitemap (static URL entry). The About copy lives verbatim in all three (`about.tsx`, `aboutBody()`, the SSR route) — keep them in sync if the text changes.
 
+## Did You Know
+
+- Public page at `/did-you-know` (linked from the home hero "Did you know?" button and the footer). Shows two sections: **Quick Facts** (short factoids, each with an optional source link) and **Articles** (blog-style long reads). Reads are public; writes are admin-only.
+- Each article has its own page at `/did-you-know/:slug` rendered blog-style. Article bodies are Markdown.
+- **Markdown**: `lib/markdown` (`@workspace/markdown`) is the single safe Markdown→HTML renderer shared by every render path (client `dangerouslySetInnerHTML`, production SSR, and prerender). Input is HTML-escaped first, then a fixed allow-list of tags is generated. Link hrefs are restricted to http(s)/relative; other schemes (javascript:, data:) fall back to plain text. `isSafeHttpUrl(url)` exports the same http(s)-only policy used for non-Markdown links.
+- **Factoid `sourceUrl` safety**: a saved source URL is rendered as an `<a href>` on the public page, so it must never carry a `javascript:`/`data:` scheme. The server (`routes/factoids.ts`) normalizes on create/update — empty → `null`, non-http(s) → `400` — and the client + SSR + prerender all gate the anchor behind `isSafeHttpUrl`. Any new place that renders a stored URL as an href must apply the same check.
+- **Admin** (`/admin/did-you-know`, linked from the admin dashboard): inline create/edit/delete + publish toggle for factoids; an article list with publish toggle, edit, and delete. Article create/edit live at `/admin/did-you-know/articles/new` and `/admin/did-you-know/articles/:id` (shared `ArticleForm` component); slug auto-generates from the title when blank.
+- **Visibility**: both factoids and articles have a `published` flag (default draft). Non-admins see only published rows on the list and detail endpoints (draft article detail returns `404`); admins see all. The server is the security boundary; the client admin guard is UX only.
+- **SEO/crawlability** mirrors the Privacy/About pattern at all three chokepoints: prerender (`prerender.mjs` `didYouKnowBody()` + `articleDetailBody()`), production SSR (`ssr-pages.ts`), and the **live** sitemap (`sitemap.ts` — `/did-you-know` plus a URL per published article). Per-article pages emit Article + BreadcrumbList JSON-LD.
+
 ## Database Schema
 
 - `quizzes` — id, title, description, category (legacy text label), difficulty, published (boolean, default false), timestamps
@@ -87,6 +97,8 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - `categories` — id, name, parent_id (self-ref, ON DELETE SET NULL), published (boolean, default false), timestamps. Forms an unlimited-depth tree.
 - `quiz_categories` — composite PK (quiz_id, category_id), both ON DELETE CASCADE. Many-to-many join table; quizzes can belong to multiple categories.
 - `question_categories` — composite PK (question_id, category_id), both ON DELETE CASCADE. Many-to-many join table; questions can be tagged with multiple categories and reused independently of their quiz.
+- `factoids` — id, text, source_label (nullable), source_url (nullable, http(s) only), published (boolean, default false), timestamps. Short "Did You Know" facts.
+- `articles` — id, title, slug (unique), summary (nullable), body (Markdown), image_url (nullable), published (boolean, default false), timestamps. Blog-style long reads for the "Did You Know" page.
 
 ## Category Hierarchy
 

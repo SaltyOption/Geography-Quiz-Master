@@ -5,3 +5,4 @@ export * from "./categories";
 export * from "./courses";
 export * from "./newsletter";
 export * from "./contact";
+export * from "./articles";

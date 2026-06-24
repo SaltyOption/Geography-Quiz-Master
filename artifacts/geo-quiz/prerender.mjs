@@ -23,6 +23,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
 import { getMetaDescription } from "@workspace/seo-content";
+import { renderMarkdown } from "@workspace/markdown";
 
 const { Pool } = pg;
 
@@ -259,6 +260,60 @@ function aboutBody() {
 </main>`;
 }
 
+function didYouKnowBody(factoids, articles) {
+  const factoidItems = factoids
+    .map((f) => {
+      const src =
+        f.source_url && /^https?:\/\//i.test(f.source_url)
+          ? ` <a href="${esc(f.source_url)}" rel="noopener noreferrer" style="color:#0e7490;font-size:0.8rem">${esc(f.source_label || "Source")}</a>`
+          : f.source_label
+            ? ` <span style="color:#9ca3af;font-size:0.8rem">— ${esc(f.source_label)}</span>`
+            : "";
+      return `<li style="padding:0.75rem 0;border-bottom:1px solid #f3f4f6"><span style="color:#374151">${esc(f.text)}</span>${src}</li>`;
+    })
+    .join("\n      ");
+
+  const articleItems = articles
+    .map(
+      (a) =>
+        `<li style="padding:0.5rem 0"><a href="/did-you-know/${esc(a.slug)}" style="color:#0e7490;font-weight:600">${esc(a.title)}</a>` +
+        (a.summary ? ` — <span style="color:#6b7280">${esc(a.summary)}</span>` : "") +
+        `</li>`,
+    )
+    .join("\n      ");
+
+  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
+  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Did You Know?</h1>
+  <p style="color:#6b7280;margin-bottom:1.5rem">Surprising geography facts and in-depth articles about our world.</p>
+  ${factoidItems ? `<section aria-label="Geography facts" style="margin-bottom:2rem">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">Quick Facts</h2>
+    <ul style="padding:0;list-style:none">
+      ${factoidItems}
+    </ul>
+  </section>` : ""}
+  ${articleItems ? `<section aria-label="Articles" style="margin-bottom:2rem">
+    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">Articles</h2>
+    <ul style="padding:0;list-style:none;display:flex;flex-direction:column;gap:0.25rem">
+      ${articleItems}
+    </ul>
+  </section>` : ""}
+</main>`;
+}
+
+function articleDetailBody(article) {
+  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
+  <nav aria-label="Breadcrumb" style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem">
+    <a href="/" style="color:#0e7490">Home</a> › <a href="/did-you-know" style="color:#0e7490">Did You Know</a>
+  </nav>
+  <article>
+    <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">${esc(article.title)}</h1>
+    ${article.summary ? `<p style="color:#6b7280;margin-bottom:1.5rem">${esc(article.summary)}</p>` : ""}
+    ${article.image_url ? `<img src="${esc(article.image_url)}" alt="${esc(article.title)}" style="max-width:100%;height:auto;border-radius:0.5rem;margin-bottom:1.5rem" />` : ""}
+    <div>${renderMarkdown(article.body)}</div>
+  </article>
+</main>`;
+}
+
 function quizBody(quiz) {
   const cats =
     (quiz.categories ?? [])
@@ -338,8 +393,15 @@ function courseDetailBody(course, modules) {
 // ---------------------------------------------------------------------------
 
 async function loadData(pool) {
-  const [quizzesRes, categoriesRes, coursesRes, quizCatRes, modulesRes] =
-    await Promise.all([
+  const [
+    quizzesRes,
+    categoriesRes,
+    coursesRes,
+    quizCatRes,
+    modulesRes,
+    factoidsRes,
+    articlesRes,
+  ] = await Promise.all([
       pool.query(
         `SELECT q.id, q.title, q.description, q.difficulty,
                 COUNT(qu.id)::int AS question_count
@@ -377,6 +439,20 @@ async function loadData(pool) {
         `SELECT id, course_id, slug, title, description, order_index
          FROM course_modules
          ORDER BY course_id, order_index`,
+      ),
+      // Did You Know — published factoids (for the index page)
+      pool.query(
+        `SELECT text, source_label, source_url
+         FROM factoids
+         WHERE published = true
+         ORDER BY created_at DESC`,
+      ),
+      // Did You Know — published articles (index + detail pages)
+      pool.query(
+        `SELECT slug, title, summary, body, image_url, created_at, updated_at
+         FROM articles
+         WHERE published = true
+         ORDER BY created_at DESC`,
       ),
     ]);
 
@@ -420,6 +496,8 @@ async function loadData(pool) {
     categoryQuizIds,
     courses: coursesRes.rows,
     courseModules,
+    factoids: factoidsRes.rows,
+    articles: articlesRes.rows,
   };
 }
 
@@ -729,6 +807,87 @@ for (const course of data.courses) {
 }
 
 // ---------------------------------------------------------------------------
+// 7b. Did You Know index (/did-you-know)
+// ---------------------------------------------------------------------------
+{
+  const meta = {
+    title: "Did You Know?",
+    description:
+      "Surprising geography facts and in-depth articles about countries, capitals, landmarks, and the natural world from World Geography Trivia.",
+    path: "/did-you-know",
+  };
+  writeRoute(
+    "/did-you-know",
+    injectBody(
+      injectHead(template, meta),
+      didYouKnowBody(data.factoids, data.articles),
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 7c. Did You Know article pages (/did-you-know/:slug)
+// ---------------------------------------------------------------------------
+console.log(`\nPrerendering ${data.articles.length} article pages…`);
+for (const article of data.articles) {
+  const description =
+    article.summary ||
+    `Read "${article.title}" on ${SITE_NAME} — a geography article exploring the world.`;
+  const meta = {
+    title: article.title,
+    description,
+    path: `/did-you-know/${article.slug}`,
+  };
+
+  const articleUrl = domain
+    ? `${domain}/did-you-know/${article.slug}`
+    : `/did-you-know/${article.slug}`;
+  const articleLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        headline: article.title,
+        description,
+        url: articleUrl,
+        ...(article.image_url ? { image: article.image_url } : {}),
+        datePublished: new Date(article.created_at).toISOString(),
+        dateModified: new Date(article.updated_at).toISOString(),
+        publisher: {
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: domain || "/",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Did You Know",
+            item: domain ? `${domain}/did-you-know` : "/did-you-know",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: article.title,
+            item: articleUrl,
+          },
+        ],
+      },
+    ],
+  };
+
+  let articleHtml = injectBody(
+    injectHead(template, meta),
+    articleDetailBody(article),
+  );
+  articleHtml = injectJsonLd(articleHtml, articleLd);
+  writeRoute(`/did-you-know/${article.slug}`, articleHtml);
+}
+
+// ---------------------------------------------------------------------------
 // 8. sitemap.xml — generated from live DB data + VITE_CANONICAL_DOMAIN
 // ---------------------------------------------------------------------------
 console.log("\nGenerating sitemap.xml and robots.txt…");
@@ -766,6 +925,7 @@ console.log("\nGenerating sitemap.xml and robots.txt…");
     { loc: `${base}/`, changefreq: "daily", priority: "1.0" },
     { loc: `${base}/daily`, changefreq: "daily", priority: "0.9" },
     { loc: `${base}/courses`, changefreq: "weekly", priority: "0.8" },
+    { loc: `${base}/did-you-know`, changefreq: "weekly", priority: "0.7" },
     { loc: `${base}/about`, changefreq: "monthly", priority: "0.4" },
     { loc: `${base}/privacy`, changefreq: "monthly", priority: "0.3" },
   ];
@@ -788,7 +948,19 @@ console.log("\nGenerating sitemap.xml and robots.txt…");
     priority: "0.7",
   }));
 
-  const allUrls = [...staticUrls, ...categoryUrls, ...quizUrls, ...courseUrls];
+  const articleUrls = data.articles.map((article) => ({
+    loc: `${base}/did-you-know/${article.slug}`,
+    changefreq: "monthly",
+    priority: "0.6",
+  }));
+
+  const allUrls = [
+    ...staticUrls,
+    ...categoryUrls,
+    ...quizUrls,
+    ...courseUrls,
+    ...articleUrls,
+  ];
 
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
@@ -798,7 +970,7 @@ console.log("\nGenerating sitemap.xml and robots.txt…");
 
   writeFileSync(join(distDir, "sitemap.xml"), xml, "utf-8");
   console.log(
-    `  ✓  sitemap.xml (${allUrls.length} URLs: ${data.quizzes.length} quizzes, ${data.categories.length} categories, ${data.courses.length} courses)`,
+    `  ✓  sitemap.xml (${allUrls.length} URLs: ${data.quizzes.length} quizzes, ${data.categories.length} categories, ${data.courses.length} courses, ${data.articles.length} articles)`,
   );
 }
 

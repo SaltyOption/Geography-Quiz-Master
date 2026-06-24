@@ -12,6 +12,8 @@ import coursesRouter from "./courses";
 import sitemapRouter from "./sitemap";
 import imagesRouter from "./images";
 import contactRouter from "./contact";
+import articlesRouter from "./articles";
+import factoidsRouter from "./factoids";
 
 const router: IRouter = Router();
 
@@ -24,6 +26,8 @@ router.use(newsletterRouter);
 router.use(dailyQuizRouter);
 router.use(categoriesRouter);
 router.use(coursesRouter);
+router.use(articlesRouter);
+router.use(factoidsRouter);
 router.use(quizzesRouter);
 router.use(questionsRouter);
 router.use(quizAttemptsRouter);

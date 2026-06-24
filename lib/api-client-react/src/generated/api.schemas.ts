@@ -787,6 +787,86 @@ export interface CourseImportResult {
   modules: CourseImportModuleResult[];
 }
 
+export interface Factoid {
+  id: number;
+  text: string;
+  /** @nullable */
+  sourceLabel: string | null;
+  /** @nullable */
+  sourceUrl: string | null;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateFactoidBody {
+  text: string;
+  /** @nullable */
+  sourceLabel?: string | null;
+  /** @nullable */
+  sourceUrl?: string | null;
+  published?: boolean;
+}
+
+export interface UpdateFactoidBody {
+  text?: string;
+  /** @nullable */
+  sourceLabel?: string | null;
+  /** @nullable */
+  sourceUrl?: string | null;
+  published?: boolean;
+}
+
+export interface Article {
+  id: number;
+  title: string;
+  slug: string;
+  /** @nullable */
+  summary: string | null;
+  body: string;
+  /** @nullable */
+  imageUrl: string | null;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ArticleSummary {
+  id: number;
+  title: string;
+  slug: string;
+  /** @nullable */
+  summary: string | null;
+  /** @nullable */
+  imageUrl: string | null;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateArticleBody {
+  title: string;
+  /** Optional. Auto-generated from title if omitted. */
+  slug?: string;
+  /** @nullable */
+  summary?: string | null;
+  body: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  published?: boolean;
+}
+
+export interface UpdateArticleBody {
+  title?: string;
+  slug?: string;
+  /** @nullable */
+  summary?: string | null;
+  body?: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  published?: boolean;
+}
+
 export type ValidateImageUrlParams = {
   url: string;
 };

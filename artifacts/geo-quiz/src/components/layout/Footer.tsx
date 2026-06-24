@@ -7,6 +7,13 @@ export function Footer() {
         <span>© {new Date().getFullYear()} World Geography Trivia</span>
         <div className="flex items-center gap-6">
           <Link
+            href="/did-you-know"
+            className="font-medium hover:text-foreground hover:underline underline-offset-4"
+            data-testid="link-footer-did-you-know"
+          >
+            Did You Know
+          </Link>
+          <Link
             href="/about"
             className="font-medium hover:text-foreground hover:underline underline-offset-4"
             data-testid="link-footer-about"
