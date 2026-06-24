@@ -95,6 +95,21 @@ export function ArticleForm({
     setBody(next, urlStart, urlStart + urlPlaceholder.length);
   }
 
+  function handleBodyKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+    const key = event.key.toLowerCase();
+    if (key === "b") {
+      event.preventDefault();
+      applyInline("**", "**", "bold text");
+    } else if (key === "i") {
+      event.preventDefault();
+      applyInline("*", "*", "italic text");
+    } else if (key === "k") {
+      event.preventDefault();
+      applyLink();
+    }
+  }
+
   function applyLinePrefix(getPrefix: (index: number) => string) {
     const ta = bodyRef.current;
     if (!ta) return;
@@ -293,6 +308,7 @@ export function ArticleForm({
                     }
                     className="min-h-[320px] font-mono text-sm"
                     {...field}
+                    onKeyDown={handleBodyKeyDown}
                     ref={(el) => {
                       field.ref(el);
                       bodyRef.current = el;
