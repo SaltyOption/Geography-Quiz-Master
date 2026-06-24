@@ -164,6 +164,17 @@ describe("PATCH /api/articles/:id", () => {
     expect(res.status).toBe(200);
     expect(recordedUpdates[0]).toMatchObject({ slug: "new-slug" });
   });
+
+  it("400s a non-numeric id without reading or writing the DB", async () => {
+    pushDbResult([articleRow({ id: 1 })]);
+
+    const res = await asAdmin(
+      request(app).patch("/api/articles/abc").send({ published: true }),
+    );
+    expect(res.status).toBe(400);
+    expect(recordedUpdates).toHaveLength(0);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
 });
 
 describe("GET /api/articles/:id", () => {
@@ -198,6 +209,14 @@ describe("GET /api/articles/:id", () => {
     const res = await request(app).get("/api/articles/5");
     expect(res.status).toBe(401);
   });
+
+  it("400s a non-numeric id without reading the DB", async () => {
+    pushDbResult([articleRow({ id: 5 })]);
+
+    const res = await asAdmin(request(app).get("/api/articles/abc"));
+    expect(res.status).toBe(400);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
 });
 
 describe("DELETE /api/articles/:id", () => {
@@ -230,6 +249,14 @@ describe("DELETE /api/articles/:id", () => {
 
     const res = await request(app).delete("/api/articles/3");
     expect(res.status).toBe(401);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
+
+  it("400s a non-numeric id without deleting from the DB", async () => {
+    pushDbResult([articleRow({ id: 3 })]);
+
+    const res = await asAdmin(request(app).delete("/api/articles/abc"));
+    expect(res.status).toBe(400);
     expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
   });
 });
