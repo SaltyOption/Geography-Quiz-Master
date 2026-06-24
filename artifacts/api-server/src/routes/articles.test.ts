@@ -3,7 +3,13 @@ import express from "express";
 import request from "supertest";
 import { clerkMiddleware } from "@clerk/express";
 import router from "./index";
-import { resetDbQueue, pushDbResult, recordedInserts, recordedUpdates } from "../test/db-mock";
+import {
+  resetDbQueue,
+  pushDbResult,
+  recordedInserts,
+  recordedUpdates,
+  dbResultQueue,
+} from "../test/db-mock";
 
 const ADMIN_ID = "user_article_admin";
 const ORIGINAL_ADMIN_IDS = process.env.ADMIN_USER_IDS;
@@ -157,5 +163,73 @@ describe("PATCH /api/articles/:id", () => {
     );
     expect(res.status).toBe(200);
     expect(recordedUpdates[0]).toMatchObject({ slug: "new-slug" });
+  });
+});
+
+describe("GET /api/articles/:id", () => {
+  it("returns the article to admins", async () => {
+    pushDbResult([articleRow({ id: 5, title: "Draft Read", slug: "draft-read", published: false })]);
+
+    const res = await asAdmin(request(app).get("/api/articles/5"));
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(5);
+    expect(res.body.published).toBe(false);
+    expect(res.body.body).toBe("The Nile is a major river.");
+  });
+
+  it("404s when the article does not exist", async () => {
+    pushDbResult([]); // no row found
+
+    const res = await asAdmin(request(app).get("/api/articles/999"));
+    expect(res.status).toBe(404);
+  });
+
+  it("rejects signed-in non-admins with 403 and never reads", async () => {
+    pushDbResult([articleRow({ id: 5 })]);
+
+    const res = await request(app)
+      .get("/api/articles/5")
+      .set("x-test-user-id", "user_regular");
+    expect(res.status).toBe(403);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
+
+  it("rejects unauthenticated visitors with 401", async () => {
+    const res = await request(app).get("/api/articles/5");
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("DELETE /api/articles/:id", () => {
+  it("returns 204 when an article is deleted", async () => {
+    pushDbResult([articleRow({ id: 3, slug: "to-delete" })]);
+
+    const res = await asAdmin(request(app).delete("/api/articles/3"));
+    expect(res.status).toBe(204);
+  });
+
+  it("404s when the article does not exist", async () => {
+    pushDbResult([]); // delete().returning() yields no row
+
+    const res = await asAdmin(request(app).delete("/api/articles/999"));
+    expect(res.status).toBe(404);
+  });
+
+  it("rejects signed-in non-admins with 403 and never deletes", async () => {
+    pushDbResult([articleRow({ id: 3 })]);
+
+    const res = await request(app)
+      .delete("/api/articles/3")
+      .set("x-test-user-id", "user_regular");
+    expect(res.status).toBe(403);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
+
+  it("rejects unauthenticated visitors with 401 and never deletes", async () => {
+    pushDbResult([articleRow({ id: 3 })]);
+
+    const res = await request(app).delete("/api/articles/3");
+    expect(res.status).toBe(401);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
   });
 });
