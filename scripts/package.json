@@ -6,11 +6,13 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "check-db-image-files": "tsx ./src/check-db-image-files.ts",
+    "seed-did-you-know": "tsx ./src/seed-did-you-know.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
     "@workspace/image-check": "workspace:*",
+    "@workspace/markdown": "workspace:*",
     "@workspace/image-config": "workspace:*",
     "drizzle-orm": "catalog:"
   },
