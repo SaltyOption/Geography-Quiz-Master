@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTextarea } from "@/components/MarkdownTextarea";
 import {
   Dialog,
   DialogContent,
@@ -309,21 +310,21 @@ export default function CourseEditor() {
 
               <div className="space-y-2">
                 <Label htmlFor="q-explanation">Explanation</Label>
-                <Textarea
+                <MarkdownTextarea
                   id="q-explanation"
                   value={form.explanation}
-                  onChange={(e) => setForm({ ...form, explanation: e.target.value })}
-                  rows={2}
+                  onChange={(value) => setForm({ ...form, explanation: value })}
+                  rows={3}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="q-funfact">Fun fact (optional)</Label>
-                <Textarea
+                <MarkdownTextarea
                   id="q-funfact"
                   value={form.funFact}
-                  onChange={(e) => setForm({ ...form, funFact: e.target.value })}
-                  rows={2}
+                  onChange={(value) => setForm({ ...form, funFact: value })}
+                  rows={3}
                 />
               </div>
 

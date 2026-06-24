@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTextarea } from "@/components/MarkdownTextarea";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -269,7 +270,14 @@ export default function AdminCreateQuestion() {
                     <FormItem>
                       <FormLabel className="font-bold">Explanation</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Explain why the correct answer is right..." className="h-24" {...field} />
+                        <MarkdownTextarea
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          inputRef={field.ref}
+                          placeholder="Explain why the correct answer is right..."
+                          rows={4}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -283,7 +291,14 @@ export default function AdminCreateQuestion() {
                     <FormItem>
                       <FormLabel className="font-bold">Fun Fact (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Add an interesting related fact..." className="h-20" {...field} />
+                        <MarkdownTextarea
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          inputRef={field.ref}
+                          placeholder="Add an interesting related fact..."
+                          rows={3}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

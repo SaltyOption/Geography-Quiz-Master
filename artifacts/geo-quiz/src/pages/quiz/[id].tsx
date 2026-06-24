@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useParams, Link } from "wouter";
 import { useGetQuiz, useSubmitQuizAttempt, useCheckAnswer, getGetQuizQueryKey, type CheckAnswerResult } from "@workspace/api-client-react";
+import { renderMarkdown } from "@workspace/markdown";
 import { ArrowRight, ChevronRight, Home, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { useJsonLd } from "@/hooks/useJsonLd";
@@ -292,18 +293,20 @@ export default function QuizPage() {
                   )}
                 </div>
 
-                <div className="rounded-xl border bg-muted/40 p-4 text-base leading-relaxed text-foreground">
-                  {feedback.explanation}
-                </div>
+                <div
+                  className="prose prose-stone max-w-none rounded-xl border bg-muted/40 p-4 text-base leading-relaxed text-foreground prose-a:text-primary [&>p]:m-0"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(feedback.explanation) }}
+                />
 
                 {feedback.funFact && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
                     <div className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                       <Sparkles className="h-4 w-4" /> Fun Fact
                     </div>
-                    <p className="text-base leading-relaxed text-amber-900 dark:text-amber-100">
-                      {feedback.funFact}
-                    </p>
+                    <div
+                      className="prose prose-stone max-w-none text-base leading-relaxed text-amber-900 dark:text-amber-100 prose-a:text-amber-900 dark:prose-a:text-amber-100 [&>p]:m-0"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(feedback.funFact) }}
+                    />
                   </div>
                 )}
               </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
 import { useGetQuiz, getGetQuizQueryKey, QuizAttemptResult } from "@workspace/api-client-react";
+import { renderMarkdown } from "@workspace/markdown";
 import { CheckCircle2, XCircle, RotateCcw, Home, Award, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,7 +137,11 @@ export default function QuizResultsPage() {
                 </div>
                 
                 <div className="text-sm text-muted-foreground border-t pt-4">
-                  <strong>Explanation:</strong> {qr.explanation}
+                  <strong>Explanation:</strong>{" "}
+                  <span
+                    className="prose prose-stone inline max-w-none text-sm text-muted-foreground prose-a:text-primary [&_p]:m-0 [&_p]:inline"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(qr.explanation) }}
+                  />
                 </div>
               </CardContent>
             </Card>
