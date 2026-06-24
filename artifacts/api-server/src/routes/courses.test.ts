@@ -803,3 +803,107 @@ describe("course id-bearing endpoints reject a non-numeric id with 400", () => {
     expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
   });
 });
+
+describe("course-module progress save/resume happy paths", () => {
+  const SAVED_AT = new Date("2026-02-01T12:00:00.000Z");
+  const SAVED_ANSWERS = [
+    { questionId: 100, selectedOption: 0 },
+    { questionId: 101, selectedOption: 2 },
+  ];
+
+  describe("GET /api/course-modules/:moduleId/progress", () => {
+    it("returns previously saved answers for the signed-in user", async () => {
+      pushDbResult([
+        { moduleId: 5, answers: SAVED_ANSWERS, updatedAt: SAVED_AT },
+      ]);
+
+      const res = await request(app)
+        .get("/api/course-modules/5/progress")
+        .set("x-test-user-id", NON_ADMIN_ID);
+
+      expect(res.status).toBe(200);
+      expect(res.body.moduleId).toBe(5);
+      expect(res.body.answers).toEqual(SAVED_ANSWERS);
+      expect(res.body.updatedAt).toBe(SAVED_AT.toISOString());
+    });
+
+    it("returns null when no progress has been saved", async () => {
+      pushDbResult([]); // no saved row
+
+      const res = await request(app)
+        .get("/api/course-modules/5/progress")
+        .set("x-test-user-id", NON_ADMIN_ID);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toBeNull();
+    });
+
+    it("returns 401 for anonymous users", async () => {
+      const res = await request(app).get("/api/course-modules/5/progress");
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe("PUT /api/course-modules/:moduleId/progress", () => {
+    it("saves in-progress answers and returns them back", async () => {
+      pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]); // loadModuleById
+      pushDbResult([
+        { moduleId: 5, answers: SAVED_ANSWERS, updatedAt: SAVED_AT },
+      ]); // upsert returning
+
+      const res = await request(app)
+        .put("/api/course-modules/5/progress")
+        .set("x-test-user-id", NON_ADMIN_ID)
+        .send({ answers: SAVED_ANSWERS });
+
+      expect(res.status).toBe(200);
+      expect(res.body.moduleId).toBe(5);
+      expect(res.body.answers).toEqual(SAVED_ANSWERS);
+      expect(res.body.updatedAt).toBe(SAVED_AT.toISOString());
+      // The upsert writes the user's answers scoped to their own id + module.
+      expect(recordedInserts).toHaveLength(1);
+      expect(recordedInserts[0]).toEqual({
+        moduleId: 5,
+        userId: NON_ADMIN_ID,
+        answers: SAVED_ANSWERS,
+      });
+    });
+
+    it("returns 404 when the module does not exist", async () => {
+      pushDbResult([]); // loadModuleById -> none
+
+      const res = await request(app)
+        .put("/api/course-modules/9999/progress")
+        .set("x-test-user-id", NON_ADMIN_ID)
+        .send({ answers: SAVED_ANSWERS });
+
+      expect(res.status).toBe(404);
+      expect(recordedInserts).toHaveLength(0);
+    });
+
+    it("returns 401 for anonymous users without writing to the DB", async () => {
+      const res = await request(app)
+        .put("/api/course-modules/5/progress")
+        .send({ answers: SAVED_ANSWERS });
+
+      expect(res.status).toBe(401);
+      expect(recordedInserts).toHaveLength(0);
+    });
+  });
+
+  describe("DELETE /api/course-modules/:moduleId/progress", () => {
+    it("clears saved progress for the signed-in user", async () => {
+      const res = await request(app)
+        .delete("/api/course-modules/5/progress")
+        .set("x-test-user-id", NON_ADMIN_ID);
+
+      expect(res.status).toBe(200);
+      expect(res.body.saved).toBe(true);
+    });
+
+    it("returns 401 for anonymous users", async () => {
+      const res = await request(app).delete("/api/course-modules/5/progress");
+      expect(res.status).toBe(401);
+    });
+  });
+});
