@@ -845,7 +845,12 @@ function didYouKnowBody(
           : f.sourceLabel
             ? ` <span style="color:#9ca3af;font-size:0.8rem">— ${esc(f.sourceLabel)}</span>`
             : "";
-      return `<li style="padding:0.75rem 0;border-bottom:1px solid #f3f4f6"><span style="color:#374151">${esc(f.text)}</span>${src}</li>`;
+      // renderMarkdown HTML-escapes its input and wraps in <p>; strip the
+      // wrapping paragraph so the fact stays inline within the <span>.
+      const textHtml = renderMarkdown(f.text)
+        .replace(/^<p>/, "")
+        .replace(/<\/p>\s*$/, "");
+      return `<li style="padding:0.75rem 0;border-bottom:1px solid #f3f4f6"><span style="color:#374151">${textHtml}</span>${src}</li>`;
     })
     .join("\n      ");
 

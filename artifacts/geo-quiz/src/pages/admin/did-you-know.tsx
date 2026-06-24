@@ -14,6 +14,7 @@ import {
   type ArticleSummary,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { renderMarkdown } from "@workspace/markdown";
 import {
   Plus,
   Edit2,
@@ -29,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTextarea } from "@/components/MarkdownTextarea";
 import {
   Dialog,
   DialogContent,
@@ -143,10 +144,10 @@ function FactoidDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="factoid-text">Fact</Label>
-            <Textarea
+            <MarkdownTextarea
               id="factoid-text"
               value={form.text}
-              onChange={(e) => setForm((f) => ({ ...f, text: e.target.value }))}
+              onChange={(text) => setForm((f) => ({ ...f, text }))}
               rows={4}
               placeholder="The Sahara Desert is roughly the size of the United States."
               data-testid="input-factoid-text"
@@ -309,7 +310,10 @@ export default function AdminDidYouKnow() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-foreground">{f.text}</p>
+                    <div
+                      className="prose prose-stone max-w-none text-foreground prose-a:text-primary [&>p]:m-0"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(f.text) }}
+                    />
                     {(f.sourceLabel || f.sourceUrl) && (
                       <p className="mt-1 text-sm text-muted-foreground">
                         {f.sourceUrl ? (

@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useListFactoids, useListArticles } from "@workspace/api-client-react";
-import { isSafeHttpUrl } from "@workspace/markdown";
+import { isSafeHttpUrl, renderMarkdown } from "@workspace/markdown";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Lightbulb, BookOpen, ArrowRight, ExternalLink, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,7 +70,10 @@ export default function DidYouKnowPage() {
                     data-testid={`card-factoid-${f.id}`}
                   >
                     <CardContent className="flex flex-1 flex-col gap-3 p-6">
-                      <p className="text-base leading-relaxed text-foreground">{f.text}</p>
+                      <div
+                        className="prose prose-stone max-w-none text-base leading-relaxed text-foreground prose-a:text-primary [&>p]:m-0"
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(f.text) }}
+                      />
                       {isSafeHttpUrl(f.sourceUrl) ? (
                         <a
                           href={f.sourceUrl!}
