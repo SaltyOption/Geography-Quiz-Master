@@ -40,6 +40,10 @@ export const articleFormSchema = z.object({
 
 export type ArticleFormValues = z.infer<typeof articleFormSchema>;
 
+const isMac =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+const modKey = isMac ? "⌘" : "Ctrl";
+
 export function ArticleForm({
   defaultValues,
   onSubmit,
@@ -220,8 +224,8 @@ export function ArticleForm({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  title="Bold"
-                  aria-label="Bold"
+                  title={`Bold (${modKey}+B)`}
+                  aria-label={`Bold (${modKey}+B)`}
                   data-testid="button-format-bold"
                   onClick={() => applyInline("**", "**", "bold text")}
                 >
@@ -232,8 +236,8 @@ export function ArticleForm({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  title="Italic"
-                  aria-label="Italic"
+                  title={`Italic (${modKey}+I)`}
+                  aria-label={`Italic (${modKey}+I)`}
                   data-testid="button-format-italic"
                   onClick={() => applyInline("*", "*", "italic text")}
                 >
@@ -268,8 +272,8 @@ export function ArticleForm({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  title="Link"
-                  aria-label="Link"
+                  title={`Link (${modKey}+K)`}
+                  aria-label={`Link (${modKey}+K)`}
                   data-testid="button-format-link"
                   onClick={applyLink}
                 >
@@ -335,6 +339,11 @@ export function ArticleForm({
                 Markdown supported: headings (#, ##, ###), **bold**, *italic*, `code`,
                 [links](url), and bullet/numbered lists.
               </FormDescription>
+              <p className="text-xs text-muted-foreground">
+                Shortcuts: <kbd className="rounded border bg-muted px-1">{modKey}+B</kbd> bold,{" "}
+                <kbd className="rounded border bg-muted px-1">{modKey}+I</kbd> italic,{" "}
+                <kbd className="rounded border bg-muted px-1">{modKey}+K</kbd> link.
+              </p>
               <FormMessage />
             </FormItem>
           )}
