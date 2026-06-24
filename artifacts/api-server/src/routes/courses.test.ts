@@ -8,6 +8,7 @@ import {
   pushDbResult,
   recordedInserts,
   recordedUpdates,
+  dbResultQueue,
 } from "../test/db-mock";
 
 const ADMIN_ID = "user_courses_admin_999";
@@ -741,5 +742,64 @@ describe("PATCH /api/course-questions/:id", () => {
     expect(res.body.text).toBe("Updated question?");
     expect(res.body.correctOption).toBe(2);
     expect(res.body.funFact).toBe("Neat.");
+  });
+});
+
+describe("course id-bearing endpoints reject a non-numeric id with 400", () => {
+  it("GET /api/course-modules/:moduleId/progress 400s a non-numeric id without reading the DB", async () => {
+    pushDbResult([{ id: 1 }]);
+
+    const res = await request(app)
+      .get("/api/course-modules/abc/progress")
+      .set("x-test-user-id", NON_ADMIN_ID);
+    expect(res.status).toBe(400);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
+
+  it("PUT /api/course-modules/:moduleId/progress 400s a non-numeric id without reading or writing the DB", async () => {
+    pushDbResult([{ id: 1 }]);
+
+    const res = await request(app)
+      .put("/api/course-modules/abc/progress")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ answers: [] });
+    expect(res.status).toBe(400);
+    expect(recordedUpdates).toHaveLength(0);
+    expect(recordedInserts).toHaveLength(0);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
+
+  it("DELETE /api/course-modules/:moduleId/progress 400s a non-numeric id without deleting from the DB", async () => {
+    pushDbResult([{ id: 1 }]);
+
+    const res = await request(app)
+      .delete("/api/course-modules/abc/progress")
+      .set("x-test-user-id", NON_ADMIN_ID);
+    expect(res.status).toBe(400);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
+
+  it("POST /api/course-modules/:moduleId/attempts 400s a non-numeric id without reading or writing the DB", async () => {
+    pushDbResult([{ id: 1 }]);
+
+    const res = await request(app)
+      .post("/api/course-modules/abc/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ answers: [] });
+    expect(res.status).toBe(400);
+    expect(recordedInserts).toHaveLength(0);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
+
+  it("PATCH /api/course-questions/:id 400s a non-numeric id (as admin) without reading or writing the DB", async () => {
+    pushDbResult([{ id: 1 }]);
+
+    const res = await request(app)
+      .patch("/api/course-questions/abc")
+      .set("x-test-user-id", ADMIN_ID)
+      .send({ text: "Updated?" });
+    expect(res.status).toBe(400);
+    expect(recordedUpdates).toHaveLength(0);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
   });
 });
