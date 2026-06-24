@@ -3,7 +3,13 @@ import express from "express";
 import request from "supertest";
 import { clerkMiddleware } from "@clerk/express";
 import router from "./index";
-import { resetDbQueue, pushDbResult, recordedInserts, recordedUpdates } from "../test/db-mock";
+import {
+  resetDbQueue,
+  pushDbResult,
+  recordedInserts,
+  recordedUpdates,
+  dbResultQueue,
+} from "../test/db-mock";
 
 const ADMIN_ID = "user_factoid_admin";
 const ORIGINAL_ADMIN_IDS = process.env.ADMIN_USER_IDS;
@@ -106,5 +112,26 @@ describe("PATCH /api/factoids/:id sourceUrl validation", () => {
     );
     expect(res.status).toBe(200);
     expect(recordedUpdates[0]).toMatchObject({ sourceUrl: "https://example.com/b" });
+  });
+});
+
+describe("factoid endpoints reject a non-numeric id with 400", () => {
+  it("PATCH /api/factoids/:id 400s a non-numeric id without reading or writing the DB", async () => {
+    pushDbResult([factoidRow({ id: 1 })]);
+
+    const res = await asAdmin(
+      request(app).patch("/api/factoids/abc").send({ published: true }),
+    );
+    expect(res.status).toBe(400);
+    expect(recordedUpdates).toHaveLength(0);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
+  });
+
+  it("DELETE /api/factoids/:id 400s a non-numeric id without deleting from the DB", async () => {
+    pushDbResult([factoidRow({ id: 1 })]);
+
+    const res = await asAdmin(request(app).delete("/api/factoids/abc"));
+    expect(res.status).toBe(400);
+    expect(dbResultQueue).toHaveLength(1); // queued result was never consumed
   });
 });
