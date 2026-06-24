@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save, Loader2 } from "lucide-react";
 import { Link } from "wouter";
+import { renderMarkdown } from "@workspace/markdown";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -47,6 +48,7 @@ export function ArticleForm({
   });
 
   const imageUrl = form.watch("imageUrl");
+  const body = form.watch("body");
 
   return (
     <Form {...form}>
@@ -136,15 +138,32 @@ export function ArticleForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Body</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder={
-                    "Write the article in Markdown.\n\n## A heading\n\nUse **bold**, *italic*, `code`, [links](https://example.com), and\n- bullet lists\n- like this"
-                  }
-                  className="min-h-[320px] font-mono text-sm"
-                  {...field}
-                />
-              </FormControl>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <FormControl>
+                  <Textarea
+                    placeholder={
+                      "Write the article in Markdown.\n\n## A heading\n\nUse **bold**, *italic*, `code`, [links](https://example.com), and\n- bullet lists\n- like this"
+                    }
+                    className="min-h-[320px] font-mono text-sm"
+                    {...field}
+                  />
+                </FormControl>
+                <div className="min-h-[320px] overflow-auto rounded-md border bg-muted/30 p-4">
+                  <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Preview
+                  </p>
+                  {body ? (
+                    <div
+                      className="prose prose-stone max-w-none prose-headings:font-bold prose-a:text-primary"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Your formatted article will appear here as you type.
+                    </p>
+                  )}
+                </div>
+              </div>
               <FormDescription>
                 Markdown supported: headings (#, ##, ###), **bold**, *italic*, `code`,
                 [links](url), and bullet/numbered lists.
