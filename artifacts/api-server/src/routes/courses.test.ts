@@ -8,8 +8,10 @@ import {
   pushDbResult,
   recordedInserts,
   recordedUpdates,
+  recordedDeletes,
   dbResultQueue,
 } from "../test/db-mock";
+import { courseModuleProgressTable } from "@workspace/db";
 
 const ADMIN_ID = "user_courses_admin_999";
 const NON_ADMIN_ID = "user_courses_normal_888";
@@ -427,6 +429,50 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
     expect(res.body.score).toBe(4);
     expect(res.body.percentage).toBe(80);
     expect(res.body.mastered).toBe(true);
+  });
+
+  it("drops the in-progress save when a signed-in user finishes a module", async () => {
+    // module lookup
+    pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]);
+    // allModules (only this module — no prev, no lock check)
+    pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]);
+    // lessons
+    pushDbResult([{ id: 10 }]);
+    // questions
+    pushDbResult([
+      {
+        id: 100,
+        lessonId: 10,
+        text: "Q",
+        options: ["a", "b", "c", "d"],
+        correctOption: 0,
+        explanation: "ex",
+        funFact: null,
+      },
+    ]);
+
+    const res = await request(app)
+      .post("/api/course-modules/5/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ answers: [{ questionId: 100, selectedOption: 0 }] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.saved).toBe(true);
+    // The attempt is recorded ...
+    expect(recordedInserts).toHaveLength(1);
+    // ... and the in-progress progress row for this module is cleared.
+    expect(recordedDeletes).toContain(courseModuleProgressTable);
+  });
+
+  it("rejects an anonymous attempt without touching progress", async () => {
+    const res = await request(app)
+      .post("/api/course-modules/6/attempts")
+      .send({ answers: [{ questionId: 110, selectedOption: 0 }] });
+
+    // Anonymous users cannot submit, so nothing is persisted or cleared.
+    expect(res.status).toBe(401);
+    expect(recordedInserts).toHaveLength(0);
+    expect(recordedDeletes).not.toContain(courseModuleProgressTable);
   });
 });
 

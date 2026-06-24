@@ -5,6 +5,9 @@ export const dbResultQueue: unknown[] = [];
 // the queued read results.
 export const recordedInserts: unknown[] = [];
 export const recordedUpdates: unknown[] = [];
+// Tables passed to `db.delete(...)` so tests can assert which rows a flow
+// removes (delete has no payload to record, only the target table + a where).
+export const recordedDeletes: unknown[] = [];
 
 export function pushDbResult(...values: unknown[]): void {
   dbResultQueue.push(...values);
@@ -14,6 +17,7 @@ export function resetDbQueue(): void {
   dbResultQueue.length = 0;
   recordedInserts.length = 0;
   recordedUpdates.length = 0;
+  recordedDeletes.length = 0;
 }
 
 function makeChain(): Record<string, unknown> {
@@ -61,6 +65,9 @@ export const dbMock = {
   selectDistinct: (..._args: unknown[]) => makeChain(),
   insert: (..._args: unknown[]) => makeChain(),
   update: (..._args: unknown[]) => makeChain(),
-  delete: (..._args: unknown[]) => makeChain(),
+  delete: (table: unknown, ..._args: unknown[]) => {
+    recordedDeletes.push(table);
+    return makeChain();
+  },
   transaction: async <T>(fn: (tx: typeof dbMock) => Promise<T>): Promise<T> => fn(dbMock),
 };
