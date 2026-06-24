@@ -277,6 +277,7 @@ export default function AdminCreateQuestion() {
                           inputRef={field.ref}
                           placeholder="Explain why the correct answer is right..."
                           rows={4}
+                          showPreview
                         />
                       </FormControl>
                       <FormMessage />
@@ -298,6 +299,7 @@ export default function AdminCreateQuestion() {
                           inputRef={field.ref}
                           placeholder="Add an interesting related fact..."
                           rows={3}
+                          showPreview
                         />
                       </FormControl>
                       <FormMessage />

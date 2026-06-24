@@ -315,6 +315,7 @@ export default function CourseEditor() {
                   value={form.explanation}
                   onChange={(value) => setForm({ ...form, explanation: value })}
                   rows={3}
+                  showPreview
                 />
               </div>
 
@@ -325,6 +326,7 @@ export default function CourseEditor() {
                   value={form.funFact}
                   onChange={(value) => setForm({ ...form, funFact: value })}
                   rows={3}
+                  showPreview
                 />
               </div>
 

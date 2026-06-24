@@ -8,6 +8,7 @@ import {
   List,
   ListOrdered,
 } from "lucide-react";
+import { renderMarkdown } from "@workspace/markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,8 @@ export interface MarkdownTextareaProps {
   toolbar?: "inline" | "full";
   /** Shows the keyboard-shortcut hint line below the field. */
   showHints?: boolean;
+  /** Shows a live rendered Markdown preview beneath the field. */
+  showPreview?: boolean;
 }
 
 export function MarkdownTextarea({
@@ -44,6 +47,7 @@ export function MarkdownTextarea({
   className,
   toolbar = "inline",
   showHints = true,
+  showPreview = false,
   ...rest
 }: MarkdownTextareaProps) {
   const testId = rest["data-testid"];
@@ -222,6 +226,26 @@ export function MarkdownTextarea({
           inputRef?.(el);
         }}
       />
+      {showPreview && (
+        <div
+          className="overflow-auto rounded-md border bg-muted/30 p-3"
+          data-testid={testId ? `${testId}-preview` : undefined}
+        >
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Preview
+          </p>
+          {value.trim() ? (
+            <div
+              className="prose prose-sm prose-stone max-w-none prose-headings:font-bold prose-a:text-primary"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(value) }}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Your formatted text will appear here as you type.
+            </p>
+          )}
+        </div>
+      )}
       {showHints && (
         <p className="text-xs text-muted-foreground">
           Markdown supported. Shortcuts:{" "}
