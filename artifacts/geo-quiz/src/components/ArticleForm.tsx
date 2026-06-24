@@ -1,7 +1,18 @@
+import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, Loader2 } from "lucide-react";
+import {
+  Save,
+  Loader2,
+  Bold,
+  Italic,
+  Heading,
+  Code,
+  Link as LinkIcon,
+  List,
+  ListOrdered,
+} from "lucide-react";
 import { Link } from "wouter";
 import { renderMarkdown } from "@workspace/markdown";
 import { Button } from "@/components/ui/button";
@@ -49,6 +60,56 @@ export function ArticleForm({
 
   const imageUrl = form.watch("imageUrl");
   const body = form.watch("body");
+
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+
+  function setBody(next: string, selStart: number, selEnd: number) {
+    form.setValue("body", next, { shouldDirty: true, shouldValidate: true });
+    requestAnimationFrame(() => {
+      const ta = bodyRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(selStart, selEnd);
+    });
+  }
+
+  function applyInline(prefix: string, suffix: string, placeholder: string) {
+    const ta = bodyRef.current;
+    if (!ta) return;
+    const { selectionStart: start, selectionEnd: end, value } = ta;
+    const selected = value.slice(start, end) || placeholder;
+    const next = value.slice(0, start) + prefix + selected + suffix + value.slice(end);
+    const selStart = start + prefix.length;
+    setBody(next, selStart, selStart + selected.length);
+  }
+
+  function applyLink() {
+    const ta = bodyRef.current;
+    if (!ta) return;
+    const { selectionStart: start, selectionEnd: end, value } = ta;
+    const label = value.slice(start, end) || "label";
+    const urlPlaceholder = "https://example.com";
+    const next =
+      value.slice(0, start) + `[${label}](${urlPlaceholder})` + value.slice(end);
+    const urlStart = start + label.length + 3;
+    setBody(next, urlStart, urlStart + urlPlaceholder.length);
+  }
+
+  function applyLinePrefix(getPrefix: (index: number) => string) {
+    const ta = bodyRef.current;
+    if (!ta) return;
+    const { selectionStart: start, selectionEnd: end, value } = ta;
+    const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+    let lineEnd = value.indexOf("\n", end);
+    if (lineEnd === -1) lineEnd = value.length;
+    const newBlock = value
+      .slice(lineStart, lineEnd)
+      .split("\n")
+      .map((line, index) => getPrefix(index) + line)
+      .join("\n");
+    const next = value.slice(0, lineStart) + newBlock + value.slice(lineEnd);
+    setBody(next, lineStart, lineStart + newBlock.length);
+  }
 
   return (
     <Form {...form}>
@@ -138,6 +199,92 @@ export function ArticleForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Body</FormLabel>
+              <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/30 p-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Bold"
+                  aria-label="Bold"
+                  data-testid="button-format-bold"
+                  onClick={() => applyInline("**", "**", "bold text")}
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Italic"
+                  aria-label="Italic"
+                  data-testid="button-format-italic"
+                  onClick={() => applyInline("*", "*", "italic text")}
+                >
+                  <Italic className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Heading"
+                  aria-label="Heading"
+                  data-testid="button-format-heading"
+                  onClick={() => applyLinePrefix(() => "## ")}
+                >
+                  <Heading className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Inline code"
+                  aria-label="Inline code"
+                  data-testid="button-format-code"
+                  onClick={() => applyInline("`", "`", "code")}
+                >
+                  <Code className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Link"
+                  aria-label="Link"
+                  data-testid="button-format-link"
+                  onClick={applyLink}
+                >
+                  <LinkIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Bullet list"
+                  aria-label="Bullet list"
+                  data-testid="button-format-bullet-list"
+                  onClick={() => applyLinePrefix(() => "- ")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Numbered list"
+                  aria-label="Numbered list"
+                  data-testid="button-format-numbered-list"
+                  onClick={() => applyLinePrefix((index) => `${index + 1}. `)}
+                >
+                  <ListOrdered className="h-4 w-4" />
+                </Button>
+              </div>
               <div className="grid gap-4 lg:grid-cols-2">
                 <FormControl>
                   <Textarea
@@ -146,6 +293,10 @@ export function ArticleForm({
                     }
                     className="min-h-[320px] font-mono text-sm"
                     {...field}
+                    ref={(el) => {
+                      field.ref(el);
+                      bodyRef.current = el;
+                    }}
                   />
                 </FormControl>
                 <div className="min-h-[320px] overflow-auto rounded-md border bg-muted/30 p-4">
