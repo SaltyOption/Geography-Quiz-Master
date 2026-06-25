@@ -272,3 +272,58 @@ describe("POST /api/quiz-attempts — bypass protection", () => {
     expect(recordedInserts).toHaveLength(0);
   });
 });
+
+describe("POST /api/quiz-attempts — rate limiting", () => {
+  // The limiter is an in-memory, module-scoped sliding window: 30 attempts per
+  // 10-minute window, keyed by user id (or IP for anonymous callers). It is
+  // created once when the route module loads and is shared across every test in
+  // this file. There is no exported reset, so to avoid bleeding into (or being
+  // polluted by) the other tests we use a dedicated user id whose window starts
+  // fresh and is never touched elsewhere.
+  const RATE_LIMIT_USER_ID = "user_quiz_attempts_ratelimit_777";
+  const MAX_ATTEMPTS = 30;
+
+  function submitOnce() {
+    return request(app)
+      .post("/api/quiz-attempts")
+      .set("x-test-user-id", RATE_LIMIT_USER_ID)
+      .send({
+        quizId: 1,
+        answers: [{ questionId: 100, selectedOption: 0 }],
+      });
+  }
+
+  it("returns 429 once a user exceeds the window and stops persisting attempts", async () => {
+    // Drive the limiter right up to its limit. Each attempt needs its own DB
+    // results queued (visibility lookup + questions lookup); we queue them per
+    // iteration so the awaited insert at the end of one request doesn't consume
+    // the next request's read results.
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      pushDbResult([{ published: true }]);
+      pushDbResult([makeQuestion(100, 0)]);
+
+      const res = await submitOnce();
+      expect(res.status).toBe(200);
+    }
+
+    // Every one of the allowed attempts was persisted (one insert each).
+    expect(recordedInserts).toHaveLength(MAX_ATTEMPTS);
+    const insertsBefore = recordedInserts.length;
+
+    // The next submission is over the limit. The rate-limit check runs before
+    // any DB access, so no read results are queued — a 429 here proves nothing
+    // was even looked up.
+    const blocked = await submitOnce();
+    expect(blocked.status).toBe(429);
+    expect(blocked.body).toHaveProperty("error");
+
+    // Crucially, the blocked request writes nothing — the limiter stops the
+    // write-amplification path, not just the response.
+    expect(recordedInserts).toHaveLength(insertsBefore);
+
+    // Still rate-limited on subsequent rapid-fire submissions within the window.
+    const blockedAgain = await submitOnce();
+    expect(blockedAgain.status).toBe(429);
+    expect(recordedInserts).toHaveLength(insertsBefore);
+  });
+});
