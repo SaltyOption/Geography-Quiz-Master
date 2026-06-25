@@ -18,13 +18,25 @@ import {
   UpdateCourseQuestionParams,
   UpdateCourseQuestionBody,
   UpdateCourseBody,
+  CheckCourseModuleAnswerParams,
+  CheckCourseModuleAnswerBody,
 } from "@workspace/api-zod";
 import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 import { validateImageUrlReachable, imageValidationMessage } from "../lib/imageValidation";
+import { createRateLimiter, getRateLimitKey } from "../lib/rateLimit";
 
 const router: IRouter = Router();
 
 export const COURSE_MASTERY_THRESHOLD = 80;
+
+// Sliding-window rate limiter for single-answer reveals inside course modules.
+// Like the quiz check endpoint, this hands back answer keys one question at a
+// time, so it is a scraping target; the limit is sized generously for real play
+// but still bounds bulk enumeration: 300 checks per 10-minute window per user.
+const checkCourseAnswerRateLimit = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 300,
+});
 
 function slugify(input: string): string {
   return (
@@ -424,6 +436,114 @@ router.get("/courses/:slug/modules/:moduleSlug", async (req, res): Promise<void>
     lessons: lessonsOut,
   });
 });
+
+// Reveal a single course-module answer (correct option, explanation, fun fact)
+// after the learner commits to a choice. The play-time GET module route strips
+// this content from non-admins; this hands it back one question at a time so the
+// module UI can give immediate inline feedback — mirroring the quiz player. Same
+// gating as the module GET: sign-in required, the module must be unlocked, and
+// the question must belong to one of the module's lessons (blocks cross-module
+// answer-key exfiltration).
+router.post(
+  "/courses/:slug/modules/:moduleSlug/questions/:questionId/check",
+  async (req, res): Promise<void> => {
+    const params = CheckCourseModuleAnswerParams.safeParse({
+      slug: Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug,
+      moduleSlug: Array.isArray(req.params.moduleSlug)
+        ? req.params.moduleSlug[0]
+        : req.params.moduleSlug,
+      questionId: Array.isArray(req.params.questionId)
+        ? req.params.questionId[0]
+        : req.params.questionId,
+    });
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const parsed = CheckCourseModuleAnswerBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const userId = getAuth(req)?.userId ?? null;
+    if (!userId) {
+      res.status(401).json({ error: "Sign in to access courses" });
+      return;
+    }
+
+    if (!checkCourseAnswerRateLimit(getRateLimitKey(req, userId))) {
+      res.status(429).json({ error: "Too many requests. Please try again later." });
+      return;
+    }
+
+    const [course] = await db
+      .select()
+      .from(coursesTable)
+      .where(eq(coursesTable.slug, params.data.slug))
+      .limit(1);
+    if (!course) {
+      res.status(404).json({ error: "Course not found" });
+      return;
+    }
+
+    const allModules = await db
+      .select()
+      .from(courseModulesTable)
+      .where(eq(courseModulesTable.courseId, course.id))
+      .orderBy(asc(courseModulesTable.orderIndex), asc(courseModulesTable.id));
+
+    const idx = allModules.findIndex((m) => m.slug === params.data.moduleSlug);
+    if (idx < 0) {
+      res.status(404).json({ error: "Module not found" });
+      return;
+    }
+    const mod = allModules[idx];
+    const prevMod = idx > 0 ? allModules[idx - 1] : null;
+
+    // Same lock check as the module GET — a locked module's answers stay hidden.
+    if (prevMod) {
+      const stats = await getModuleStatsForUser([prevMod.id], userId);
+      const prevStats = stats.get(prevMod.id);
+      if (!(prevStats && prevStats.mastered)) {
+        res.status(403).json({
+          error: "Module is locked. Master the previous module first.",
+          previousModuleSlug: prevMod.slug,
+        });
+        return;
+      }
+    }
+
+    // The question must belong to this module (via one of its lessons).
+    const lessons = await db
+      .select({ id: courseLessonsTable.id })
+      .from(courseLessonsTable)
+      .where(eq(courseLessonsTable.moduleId, mod.id));
+    const lessonIds = lessons.map((l) => l.id);
+
+    const [question] =
+      lessonIds.length > 0
+        ? await db
+            .select()
+            .from(courseQuestionsTable)
+            .where(eq(courseQuestionsTable.id, params.data.questionId))
+        : [];
+    if (!question || !lessonIds.includes(question.lessonId)) {
+      res.status(404).json({ error: "Question not found" });
+      return;
+    }
+
+    res.json({
+      questionId: question.id,
+      selectedOption: parsed.data.selectedOption,
+      correctOption: question.correctOption,
+      isCorrect: parsed.data.selectedOption === question.correctOption,
+      explanation: question.explanation,
+      funFact: question.funFact ?? null,
+    });
+  },
+);
 
 // Helper: load module by id (used by progress endpoints below).
 async function loadModuleById(moduleId: number) {

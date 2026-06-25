@@ -3232,6 +3232,133 @@ export function useGetCourseModule<
 }
 
 /**
+ * @summary Check a single course-module answer and reveal its explanation and fun fact
+ */
+export const getCheckCourseModuleAnswerUrl = (
+  slug: string,
+  moduleSlug: string,
+  questionId: number,
+) => {
+  return `/api/courses/${slug}/modules/${moduleSlug}/questions/${questionId}/check`;
+};
+
+export const checkCourseModuleAnswer = async (
+  slug: string,
+  moduleSlug: string,
+  questionId: number,
+  checkAnswerBody: CheckAnswerBody,
+  options?: RequestInit,
+): Promise<CheckAnswerResult> => {
+  return customFetch<CheckAnswerResult>(
+    getCheckCourseModuleAnswerUrl(slug, moduleSlug, questionId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(checkAnswerBody),
+    },
+  );
+};
+
+export const getCheckCourseModuleAnswerMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkCourseModuleAnswer>>,
+    TError,
+    {
+      slug: string;
+      moduleSlug: string;
+      questionId: number;
+      data: BodyType<CheckAnswerBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkCourseModuleAnswer>>,
+  TError,
+  {
+    slug: string;
+    moduleSlug: string;
+    questionId: number;
+    data: BodyType<CheckAnswerBody>;
+  },
+  TContext
+> => {
+  const mutationKey = ["checkCourseModuleAnswer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkCourseModuleAnswer>>,
+    {
+      slug: string;
+      moduleSlug: string;
+      questionId: number;
+      data: BodyType<CheckAnswerBody>;
+    }
+  > = (props) => {
+    const { slug, moduleSlug, questionId, data } = props ?? {};
+
+    return checkCourseModuleAnswer(
+      slug,
+      moduleSlug,
+      questionId,
+      data,
+      requestOptions,
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckCourseModuleAnswerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkCourseModuleAnswer>>
+>;
+export type CheckCourseModuleAnswerMutationBody = BodyType<CheckAnswerBody>;
+export type CheckCourseModuleAnswerMutationError = ErrorType<void>;
+
+/**
+ * @summary Check a single course-module answer and reveal its explanation and fun fact
+ */
+export const useCheckCourseModuleAnswer = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkCourseModuleAnswer>>,
+    TError,
+    {
+      slug: string;
+      moduleSlug: string;
+      questionId: number;
+      data: BodyType<CheckAnswerBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof checkCourseModuleAnswer>>,
+  TError,
+  {
+    slug: string;
+    moduleSlug: string;
+    questionId: number;
+    data: BodyType<CheckAnswerBody>;
+  },
+  TContext
+> => {
+  return useMutation(getCheckCourseModuleAnswerMutationOptions(options));
+};
+
+/**
  * @summary Admin - get a course with full nested modules, lessons, and questions (no mastery gating)
  */
 export const getGetAdminCourseUrl = (slug: string) => {

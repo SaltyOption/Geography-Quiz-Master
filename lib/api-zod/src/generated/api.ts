@@ -1054,6 +1054,34 @@ export const GetCourseModuleResponse = zod.object({
 });
 
 /**
+ * @summary Check a single course-module answer and reveal its explanation and fun fact
+ */
+export const CheckCourseModuleAnswerParams = zod.object({
+  slug: zod.coerce.string(),
+  moduleSlug: zod.coerce.string(),
+  questionId: zod.coerce.number(),
+});
+
+export const checkCourseModuleAnswerBodySelectedOptionMin = 0;
+export const checkCourseModuleAnswerBodySelectedOptionMax = 3;
+
+export const CheckCourseModuleAnswerBody = zod.object({
+  selectedOption: zod
+    .number()
+    .min(checkCourseModuleAnswerBodySelectedOptionMin)
+    .max(checkCourseModuleAnswerBodySelectedOptionMax),
+});
+
+export const CheckCourseModuleAnswerResponse = zod.object({
+  questionId: zod.number(),
+  selectedOption: zod.number(),
+  correctOption: zod.number(),
+  isCorrect: zod.boolean(),
+  explanation: zod.string(),
+  funFact: zod.string().nullable(),
+});
+
+/**
  * @summary Admin - get a course with full nested modules, lessons, and questions (no mastery gating)
  */
 export const GetAdminCourseParams = zod.object({

@@ -7,8 +7,10 @@ import {
   useSubmitCourseModuleAttempt,
   useSaveCourseModuleProgress,
   useClearCourseModuleProgress,
+  useCheckCourseModuleAnswer,
   type ModuleAttemptResult,
   type CourseQuestion,
+  type CheckAnswerResult,
 } from "@workspace/api-client-react";
 import { renderMarkdown } from "@workspace/markdown";
 import {
@@ -46,6 +48,7 @@ export default function ModuleTakingPage() {
   const submit = useSubmitCourseModuleAttempt();
   const saveProgress = useSaveCourseModuleProgress();
   const clearProgress = useClearCourseModuleProgress();
+  const checkAnswer = useCheckCourseModuleAnswer();
 
   const questions = useMemo<FlatQuestion[]>(() => {
     if (!data) return [];
@@ -61,6 +64,7 @@ export default function ModuleTakingPage() {
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
+  const [feedback, setFeedback] = useState<CheckAnswerResult | null>(null);
   const [answers, setAnswers] = useState<Array<{ questionId: number; selectedOption: number }>>([]);
   const [result, setResult] = useState<ModuleAttemptResult | null>(null);
   const [resumed, setResumed] = useState(false);
@@ -193,6 +197,26 @@ export default function ModuleTakingPage() {
     const nextAnswers = [...answers, { questionId: current.id, selectedOption: optionIndex }];
     setAnswers(nextAnswers);
 
+    // Reveal the explanation and fun fact for this question immediately, matching
+    // the quiz player. The play-time module payload omits the answer key, so we
+    // ask the server one question at a time. Non-fatal: the final submission still
+    // scores every answer, so if the reveal fails the learner can keep going.
+    checkAnswer.mutate(
+      {
+        slug: slug!,
+        moduleSlug: moduleSlug!,
+        questionId: current.id,
+        data: { selectedOption: optionIndex },
+      },
+      {
+        onSuccess: (res) => setFeedback(res),
+        onError: (err) => {
+          // eslint-disable-next-line no-console
+          console.error("Failed to check answer", err);
+        },
+      },
+    );
+
     // Save progress for signed-in users so they can resume on a later visit.
     // Fire-and-forget — surface failures to the console only.
     if (isSignedIn) {
@@ -213,6 +237,7 @@ export default function ModuleTakingPage() {
       setIdx((i) => i + 1);
       setSelected(null);
       setAnswered(false);
+      setFeedback(null);
       return;
     }
     try {
@@ -231,6 +256,7 @@ export default function ModuleTakingPage() {
     setIdx(0);
     setSelected(null);
     setAnswered(false);
+    setFeedback(null);
     setAnswers([]);
     setResult(null);
     setResumed(false);
@@ -462,22 +488,72 @@ export default function ModuleTakingPage() {
         </div>
 
         {answered && (
-          <div className="mt-6 flex justify-end pt-2">
-            <Button
-              size="lg"
-              onClick={handleNext}
-              disabled={submit.isPending}
-              data-testid="button-next"
-            >
-              {submit.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              {idx < total - 1 ? (
-                <>
-                  Next question <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              ) : (
-                "Finish module"
-              )}
-            </Button>
+          <div className="mt-6 space-y-4">
+            {checkAnswer.isPending && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Checking your answer…
+              </div>
+            )}
+
+            {feedback && (
+              <div
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4"
+                data-testid="module-feedback"
+              >
+                <div
+                  className={`flex items-center gap-2 text-xl font-serif font-bold ${
+                    feedback.isCorrect ? "text-green-600 dark:text-green-400" : "text-destructive"
+                  }`}
+                >
+                  {feedback.isCorrect ? (
+                    <>
+                      <CheckCircle2 className="h-6 w-6" /> Correct!
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-6 w-6" /> Not quite
+                    </>
+                  )}
+                </div>
+
+                {feedback.explanation && (
+                  <div
+                    className="prose prose-stone max-w-none rounded-xl border bg-muted/40 p-4 text-base leading-relaxed text-foreground prose-a:text-primary [&>p]:m-0"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(feedback.explanation) }}
+                  />
+                )}
+
+                {feedback.funFact && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+                    <div className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                      <Sparkles className="h-4 w-4" /> Fun Fact
+                    </div>
+                    <div
+                      className="prose prose-stone max-w-none text-base leading-relaxed text-amber-900 dark:text-amber-100 prose-a:text-amber-900 dark:prose-a:text-amber-100 [&>p]:m-0"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(feedback.funFact) }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <Button
+                size="lg"
+                onClick={handleNext}
+                disabled={submit.isPending || checkAnswer.isPending}
+                data-testid="button-next"
+              >
+                {submit.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                {idx < total - 1 ? (
+                  <>
+                    Next question <ArrowRight className="ml-2 h-5 w-5" />
+                  </>
+                ) : (
+                  "Finish module"
+                )}
+              </Button>
+            </div>
           </div>
         )}
       </div>

@@ -786,6 +786,49 @@ paths:
         "404":
           description: Not found
 
+  /courses/{slug}/modules/{moduleSlug}/questions/{questionId}/check:
+    post:
+      operationId: checkCourseModuleAnswer
+      tags: [courses]
+      summary: Check a single course-module answer and reveal its explanation and fun fact
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: moduleSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckAnswerBody"
+      responses:
+        "200":
+          description: Answer feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckAnswerResult"
+        "400":
+          description: Invalid request
+        "401":
+          description: Not signed in
+        "403":
+          description: Module is locked (previous module not yet mastered)
+        "404":
+          description: Course, module, or question not found
+
   /admin/courses/{slug}:
     get:
       operationId: getAdminCourse
