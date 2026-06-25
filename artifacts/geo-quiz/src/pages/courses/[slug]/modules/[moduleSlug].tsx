@@ -92,6 +92,25 @@ export default function ModuleTakingPage() {
       setIdx(questions.length - 1);
       setSelected(last.selectedOption);
       setAnswered(true);
+      // Repopulate the inline explanation/fun fact for the restored question,
+      // matching what the learner saw when they first answered it. The play-time
+      // payload omits the answer key, so we ask the server via the check endpoint.
+      // Non-fatal: a failure just leaves the feedback area empty.
+      checkAnswer.mutate(
+        {
+          slug: slug!,
+          moduleSlug: moduleSlug!,
+          questionId: last.questionId,
+          data: { selectedOption: last.selectedOption },
+        },
+        {
+          onSuccess: (res) => setFeedback(res),
+          onError: (err) => {
+            // eslint-disable-next-line no-console
+            console.error("Failed to restore answer feedback", err);
+          },
+        },
+      );
     } else {
       setIdx(filtered.length);
       setSelected(null);
