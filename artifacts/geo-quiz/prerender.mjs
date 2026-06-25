@@ -397,6 +397,30 @@ function courseDetailBody(course, modules) {
 // Database queries
 // ---------------------------------------------------------------------------
 
+// Run a query against a table that may not exist in production yet.
+//
+// The prerender runs during the production *build*, but Replit applies the
+// dev→prod schema diff only AFTER a successful build (as part of publish). So
+// the first publish that introduces a new table cannot see that table here —
+// it gets created later in the same publish. Treat "relation does not exist"
+// (Postgres 42P01) as an empty result so the build still succeeds and the
+// publish can proceed; the table is created during that publish and the next
+// build prerenders its routes. Any other error (connection, syntax, etc.)
+// still propagates and fails the build.
+async function queryOptionalTable(pool, sql, label) {
+  try {
+    return await pool.query(sql);
+  } catch (err) {
+    if (err && err.code === "42P01") {
+      console.warn(
+        `  ⚠ Skipping ${label}: table not in production yet (it will be created on publish).`,
+      );
+      return { rows: [] };
+    }
+    throw err;
+  }
+}
+
 async function loadData(pool) {
   const [
     quizzesRes,
@@ -445,19 +469,25 @@ async function loadData(pool) {
          FROM course_modules
          ORDER BY course_id, order_index`,
       ),
-      // Did You Know — published factoids (for the index page)
-      pool.query(
+      // Did You Know — published factoids (for the index page).
+      // Optional: the table may not exist on the first publish that adds it.
+      queryOptionalTable(
+        pool,
         `SELECT text, source_label, source_url
          FROM factoids
          WHERE published = true
          ORDER BY created_at DESC`,
+        "Did You Know factoids",
       ),
-      // Did You Know — published articles (index + detail pages)
-      pool.query(
+      // Did You Know — published articles (index + detail pages).
+      // Optional: the table may not exist on the first publish that adds it.
+      queryOptionalTable(
+        pool,
         `SELECT slug, title, summary, body, image_url, created_at, updated_at
          FROM articles
          WHERE published = true
          ORDER BY created_at DESC`,
+        "Did You Know articles",
       ),
     ]);
 

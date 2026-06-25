@@ -7,3 +7,4 @@
 - [Image reachability shared lib](image-reachability-shared-lib.md) — `@workspace/image-check` backs both the broken-image script and API save guard; a "transient" result must NEVER block a save/deploy.
 - [URL href safety policy](url-href-safety-policy.md) — stored/user URLs rendered as <a href> must pass `isSafeHttpUrl` on ALL paths (client, SSR, prerender) AND be rejected at the write path; not just some.
 - [Page meta description chokepoints](page-meta-chokepoints.md) — per-route meta lives in `@workspace/seo-content`; 3 render paths (prerender.mjs, ssrTemplate.ts, usePageMeta.ts) must stay in sync.
+- [Build-time prod DB reads](build-time-prod-db-reads.md) — prerender queries PROD DB at build time; a new table queried there deadlocks first publish (schema applied only after build). Tolerate 42P01, never 42703; never migrate prod via scripts/hooks.
