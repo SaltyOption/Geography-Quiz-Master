@@ -121,6 +121,34 @@ async function getModuleStatsForUser(
   return map;
 }
 
+// Single source of truth for the "master before you unlock" rule. A module is
+// locked for a user only when there is a previous module they have not yet
+// mastered. Non-signed-in users and the first module in a course are never
+// locked. Returns the 403 response payload when locked, or null when the user
+// may proceed — callers send it as `res.status(403).json(lock)` and the
+// module-summary paths use `isModuleLocked` for the boolean flag.
+function getModuleLockResponse(
+  prevMod: { id: number; slug: string } | null,
+  userId: string | null,
+  stats: Map<number, ModuleAttemptStats>,
+): { error: string; previousModuleSlug: string } | null {
+  if (!userId || !prevMod) return null;
+  const prevStats = stats.get(prevMod.id);
+  if (prevStats && prevStats.mastered) return null;
+  return {
+    error: "Module is locked. Master the previous module first.",
+    previousModuleSlug: prevMod.slug,
+  };
+}
+
+function isModuleLocked(
+  prevMod: { id: number; slug: string } | null,
+  userId: string | null,
+  stats: Map<number, ModuleAttemptStats>,
+): boolean {
+  return getModuleLockResponse(prevMod, userId, stats) !== null;
+}
+
 router.get("/courses", async (req, res): Promise<void> => {
   const auth = getAuth(req);
   const userId = auth?.userId ?? null;
@@ -232,12 +260,8 @@ router.get("/courses/:slug", async (req, res): Promise<void> => {
 
   const moduleSummaries = modules.map((m, idx) => {
     const s = stats.get(m.id);
-    let locked = false;
-    if (userId && idx > 0) {
-      const prev = modules[idx - 1];
-      const prevStats = stats.get(prev.id);
-      locked = !(prevStats && prevStats.mastered);
-    }
+    const prev = idx > 0 ? modules[idx - 1] : null;
+    const locked = isModuleLocked(prev, userId, stats);
     return {
       id: m.id,
       slug: m.slug,
@@ -307,15 +331,10 @@ router.get("/courses/:slug/modules/:moduleSlug", async (req, res): Promise<void>
       )
     : new Map<number, ModuleAttemptStats>();
 
-  if (userId && prevMod) {
-    const prevStats = stats.get(prevMod.id);
-    if (!(prevStats && prevStats.mastered)) {
-      res.status(403).json({
-        error: "Module is locked. Master the previous module first.",
-        previousModuleSlug: prevMod.slug,
-      });
-      return;
-    }
+  const moduleLock = getModuleLockResponse(prevMod, userId, stats);
+  if (moduleLock) {
+    res.status(403).json(moduleLock);
+    return;
   }
 
   const lessons = await db
@@ -368,12 +387,8 @@ router.get("/courses/:slug/modules/:moduleSlug", async (req, res): Promise<void>
     moduleIdx: number,
   ) {
     const s = stats.get(m.id);
-    let locked = false;
-    if (userId && moduleIdx > 0) {
-      const prev = allModules[moduleIdx - 1];
-      const prevStats = stats.get(prev.id);
-      locked = !(prevStats && prevStats.mastered);
-    }
+    const prev = moduleIdx > 0 ? allModules[moduleIdx - 1] : null;
+    const locked = isModuleLocked(prev, userId, stats);
     return {
       id: m.id,
       slug: m.slug,
@@ -503,16 +518,14 @@ router.post(
     const prevMod = idx > 0 ? allModules[idx - 1] : null;
 
     // Same lock check as the module GET — a locked module's answers stay hidden.
-    if (prevMod) {
-      const stats = await getModuleStatsForUser([prevMod.id], userId);
-      const prevStats = stats.get(prevMod.id);
-      if (!(prevStats && prevStats.mastered)) {
-        res.status(403).json({
-          error: "Module is locked. Master the previous module first.",
-          previousModuleSlug: prevMod.slug,
-        });
-        return;
-      }
+    const lockStats = await getModuleStatsForUser(
+      prevMod ? [prevMod.id] : [],
+      userId,
+    );
+    const answerLock = getModuleLockResponse(prevMod, userId, lockStats);
+    if (answerLock) {
+      res.status(403).json(answerLock);
+      return;
     }
 
     // The question must belong to this module (via one of its lessons).
@@ -691,16 +704,14 @@ router.post("/course-modules/:moduleId/attempts", async (req, res): Promise<void
   const modIdx = allModules.findIndex((m) => m.id === mod.id);
   const prevMod = modIdx > 0 ? allModules[modIdx - 1] : null;
 
-  if (prevMod) {
-    const prevStats = await getModuleStatsForUser([prevMod.id], userId);
-    const prevMastered = prevStats.get(prevMod.id)?.mastered ?? false;
-    if (!prevMastered) {
-      res.status(403).json({
-        error: "Module is locked. Master the previous module first.",
-        previousModuleSlug: prevMod.slug,
-      });
-      return;
-    }
+  const submitLockStats = await getModuleStatsForUser(
+    prevMod ? [prevMod.id] : [],
+    userId,
+  );
+  const submitLock = getModuleLockResponse(prevMod, userId, submitLockStats);
+  if (submitLock) {
+    res.status(403).json(submitLock);
+    return;
   }
 
   const lessons = await db
