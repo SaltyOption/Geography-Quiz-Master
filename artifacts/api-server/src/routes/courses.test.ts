@@ -843,6 +843,124 @@ describe("POST /api/course-modules/:moduleId/attempts — lock enforcement", () 
   });
 });
 
+describe("GET /api/courses/:slug/modules/:moduleSlug — lock enforcement", () => {
+  it("returns 401 for anonymous users", async () => {
+    const res = await request(app).get("/api/courses/geo/modules/mod-2");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 (Module locked) when the previous module is not mastered", async () => {
+    // course lookup
+    pushDbResult([{ id: 2, slug: "geo", title: "Geo", description: "d", imageUrl: null }]);
+    // allModules — two modules, so mod-2 has a predecessor (mod-1)
+    pushDbResult([
+      { id: 11, courseId: 2, slug: "mod-1", title: "Mod 1", orderIndex: 0 },
+      { id: 12, courseId: 2, slug: "mod-2", title: "Mod 2", orderIndex: 1 },
+    ]);
+    // getModuleStatsForUser for all module ids — no attempts yet, nothing mastered
+    pushDbResult([]);
+
+    const res = await request(app)
+      .get("/api/courses/geo/modules/mod-2")
+      .set("x-test-user-id", NON_ADMIN_ID);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/locked/i);
+    expect(res.body.previousModuleSlug).toBe("mod-1");
+  });
+
+  it("returns 200 with the module once the previous module is mastered", async () => {
+    // course lookup
+    pushDbResult([{ id: 3, slug: "geo", title: "Geo", description: "d", imageUrl: null }]);
+    // allModules — two modules
+    pushDbResult([
+      { id: 21, courseId: 3, slug: "mod-a", title: "Mod A", orderIndex: 0 },
+      { id: 22, courseId: 3, slug: "mod-b", title: "Mod B", orderIndex: 1 },
+    ]);
+    // getModuleStatsForUser for all module ids — prev (21) mastered (>= 80)
+    pushDbResult([{ moduleId: 21, attempts: 1, bestPercentage: 100 }]);
+    // lessons for the requested module (22)
+    pushDbResult([{ id: 50, slug: "l1", title: "Lesson 1", orderIndex: 0 }]);
+    // questions for the lesson
+    pushDbResult([
+      { id: 500, lessonId: 50, text: "Q", options: ["a", "b", "c", "d"], correctOption: 0, explanation: "ex", funFact: null, learningObjective: null, difficulty: null, questionType: null, orderIndex: 0 },
+    ]);
+    // saved in-progress lookup — none
+    pushDbResult([]);
+
+    const res = await request(app)
+      .get("/api/courses/geo/modules/mod-b")
+      .set("x-test-user-id", NON_ADMIN_ID);
+
+    expect(res.status).toBe(200);
+    expect(res.body.slug).toBe("mod-b");
+    expect(res.body.lessons).toHaveLength(1);
+    expect(res.body.lessons[0].questions).toHaveLength(1);
+    // Non-admins must not see the answer key on the play-time module read.
+    expect(res.body.lessons[0].questions[0]).not.toHaveProperty("correctOption");
+  });
+});
+
+describe("POST /api/courses/:slug/modules/:moduleSlug/questions/:id/check — lock enforcement", () => {
+  it("returns 401 for anonymous users", async () => {
+    const res = await request(app)
+      .post("/api/courses/geo/modules/mod-2/questions/500/check")
+      .send({ selectedOption: 0 });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 (Module locked) when the previous module is not mastered", async () => {
+    // course lookup
+    pushDbResult([{ id: 2, slug: "geo", title: "Geo", description: "d", imageUrl: null }]);
+    // allModules — two modules, so mod-2 has a predecessor (mod-1)
+    pushDbResult([
+      { id: 11, courseId: 2, slug: "mod-1", title: "Mod 1", orderIndex: 0 },
+      { id: 12, courseId: 2, slug: "mod-2", title: "Mod 2", orderIndex: 1 },
+    ]);
+    // getModuleStatsForUser for prevMod (11) — not mastered
+    pushDbResult([]);
+
+    const res = await request(app)
+      .post("/api/courses/geo/modules/mod-2/questions/500/check")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ selectedOption: 0 });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/locked/i);
+    expect(res.body.previousModuleSlug).toBe("mod-1");
+  });
+
+  it("returns 200 with the revealed answer once the previous module is mastered", async () => {
+    // course lookup
+    pushDbResult([{ id: 3, slug: "geo", title: "Geo", description: "d", imageUrl: null }]);
+    // allModules — two modules
+    pushDbResult([
+      { id: 21, courseId: 3, slug: "mod-a", title: "Mod A", orderIndex: 0 },
+      { id: 22, courseId: 3, slug: "mod-b", title: "Mod B", orderIndex: 1 },
+    ]);
+    // getModuleStatsForUser for prevMod (21) — mastered (>= 80)
+    pushDbResult([{ moduleId: 21, attempts: 1, bestPercentage: 100 }]);
+    // lessons for the requested module (22)
+    pushDbResult([{ id: 50 }]);
+    // question lookup — belongs to lesson 50 (this module)
+    pushDbResult([
+      { id: 500, lessonId: 50, text: "Q", options: ["a", "b", "c", "d"], correctOption: 2, explanation: "Because.", funFact: "Fun!" },
+    ]);
+
+    const res = await request(app)
+      .post("/api/courses/geo/modules/mod-b/questions/500/check")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ selectedOption: 2 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.questionId).toBe(500);
+    expect(res.body.correctOption).toBe(2);
+    expect(res.body.isCorrect).toBe(true);
+    expect(res.body.explanation).toBe("Because.");
+    expect(res.body.funFact).toBe("Fun!");
+  });
+});
+
 describe("GET /api/courses", () => {
   it("allows anonymous users (returns empty list when no courses)", async () => {
     pushDbResult([]); // courses
