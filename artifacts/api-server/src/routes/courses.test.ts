@@ -431,6 +431,99 @@ describe("POST /api/course-modules/:moduleId/attempts", () => {
     expect(res.body.mastered).toBe(true);
   });
 
+  it("persists an attempt row whose values match the computed result", async () => {
+    // module lookup
+    pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]);
+    // allModules (only this module — no prev, no lock check)
+    pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]);
+    // lessons
+    pushDbResult([{ id: 10 }]);
+    // questions — 4 questions, learner answers 3 correctly (75%, not mastered)
+    pushDbResult([
+      {
+        id: 100,
+        lessonId: 10,
+        text: "Q1",
+        options: ["a", "b", "c", "d"],
+        correctOption: 0,
+        explanation: "ex",
+        funFact: null,
+      },
+      {
+        id: 101,
+        lessonId: 10,
+        text: "Q2",
+        options: ["a", "b", "c", "d"],
+        correctOption: 1,
+        explanation: "ex",
+        funFact: null,
+      },
+      {
+        id: 102,
+        lessonId: 10,
+        text: "Q3",
+        options: ["a", "b", "c", "d"],
+        correctOption: 2,
+        explanation: "ex",
+        funFact: null,
+      },
+      {
+        id: 103,
+        lessonId: 10,
+        text: "Q4",
+        options: ["a", "b", "c", "d"],
+        correctOption: 3,
+        explanation: "ex",
+        funFact: null,
+      },
+    ]);
+
+    const res = await request(app)
+      .post("/api/course-modules/5/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({
+        answers: [
+          { questionId: 100, selectedOption: 0 },
+          { questionId: 101, selectedOption: 1 },
+          { questionId: 102, selectedOption: 2 },
+          { questionId: 103, selectedOption: 0 },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    // Sanity-check the response the browser sees.
+    expect(res.body.score).toBe(3);
+    expect(res.body.totalQuestions).toBe(4);
+    expect(res.body.percentage).toBe(75);
+    expect(res.body.mastered).toBe(false);
+
+    // The recorded insert is the attempt row written to the DB. Assert the
+    // persisted values match the computed result, not just the JSON response.
+    const attemptInsert = recordedInserts.find(
+      (p): p is {
+        moduleId: number;
+        userId: string;
+        score: number;
+        totalQuestions: number;
+        percentage: number;
+        mastered: boolean;
+      } =>
+        typeof p === "object" &&
+        p !== null &&
+        "moduleId" in p &&
+        "percentage" in p,
+    );
+    expect(attemptInsert).toBeDefined();
+    expect(attemptInsert).toMatchObject({
+      moduleId: 5,
+      userId: NON_ADMIN_ID,
+      score: 3,
+      totalQuestions: 4,
+      percentage: 75,
+      mastered: false,
+    });
+  });
+
   it("drops the in-progress save when a signed-in user finishes a module", async () => {
     // module lookup
     pushDbResult([{ id: 5, courseId: 1, slug: "m1", title: "M1", orderIndex: 0 }]);
