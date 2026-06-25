@@ -636,6 +636,135 @@ describe("POST /api/course-modules/:moduleId/attempts — bypass protection", ()
   });
 });
 
+describe("POST /api/course-modules/:moduleId/attempts — persisted result matches displayed result", () => {
+  // End-to-end style check for the "finished module" flow: a signed-in learner
+  // completes a module with a known set of answers and submits. We assert that
+  // the row written to course_module_attempts matches the score / percentage /
+  // mastered values the client is shown (res.body), not just that the response
+  // looks right — and that the in-progress course_module_progress save is
+  // cleared afterwards so unlock logic and profile stats stay trustworthy.
+  function pushMasteredModuleReads(): void {
+    // module lookup
+    pushDbResult([{ id: 42, courseId: 7, slug: "capitals", title: "Capitals", orderIndex: 0 }]);
+    // allModules (only this module — first in course, so no lock check)
+    pushDbResult([{ id: 42, courseId: 7, slug: "capitals", title: "Capitals", orderIndex: 0 }]);
+    // lessons
+    pushDbResult([{ id: 70 }]);
+    // questions — 5 questions with known correct options
+    pushDbResult([
+      { id: 700, lessonId: 70, text: "Q1", options: ["a", "b", "c", "d"], correctOption: 0, explanation: "ex", funFact: null },
+      { id: 701, lessonId: 70, text: "Q2", options: ["a", "b", "c", "d"], correctOption: 1, explanation: "ex", funFact: null },
+      { id: 702, lessonId: 70, text: "Q3", options: ["a", "b", "c", "d"], correctOption: 2, explanation: "ex", funFact: null },
+      { id: 703, lessonId: 70, text: "Q4", options: ["a", "b", "c", "d"], correctOption: 3, explanation: "ex", funFact: null },
+      { id: 704, lessonId: 70, text: "Q5", options: ["a", "b", "c", "d"], correctOption: 0, explanation: "ex", funFact: null },
+    ]);
+    // getModuleStatsForUser for the current module (previouslyMastered check) — none yet
+    pushDbResult([]);
+  }
+
+  it("persists a course_module_attempts row matching the displayed score/percentage/mastered and clears saved progress", async () => {
+    pushMasteredModuleReads();
+
+    // Answer all 5 correctly -> 5/5 = 100%, which clears the 80% mastery bar.
+    const answers = [
+      { questionId: 700, selectedOption: 0 },
+      { questionId: 701, selectedOption: 1 },
+      { questionId: 702, selectedOption: 2 },
+      { questionId: 703, selectedOption: 3 },
+      { questionId: 704, selectedOption: 0 },
+    ];
+
+    const res = await request(app)
+      .post("/api/course-modules/42/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ answers });
+
+    // The displayed result (what the browser shows on the results screen).
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(5);
+    expect(res.body.totalQuestions).toBe(5);
+    expect(res.body.percentage).toBe(100);
+    expect(res.body.mastered).toBe(true);
+    expect(res.body.saved).toBe(true);
+
+    // The persisted attempt row must match the displayed values, not just the
+    // response — drive the assertion off res.body so the two can never drift.
+    const attemptInsert = recordedInserts.find(
+      (p): p is {
+        moduleId: number;
+        userId: string;
+        score: number;
+        totalQuestions: number;
+        percentage: number;
+        mastered: boolean;
+        answers: unknown;
+      } =>
+        typeof p === "object" &&
+        p !== null &&
+        "moduleId" in p &&
+        "percentage" in p &&
+        "mastered" in p,
+    );
+    expect(attemptInsert).toBeDefined();
+    expect(attemptInsert).toMatchObject({
+      moduleId: 42,
+      userId: NON_ADMIN_ID,
+      score: res.body.score,
+      totalQuestions: res.body.totalQuestions,
+      percentage: res.body.percentage,
+      mastered: res.body.mastered,
+    });
+    // The submitted answers are stored verbatim on the attempt row.
+    expect(attemptInsert?.answers).toEqual(answers);
+
+    // After a successful submit the in-progress save for this module is dropped.
+    expect(recordedDeletes).toContain(courseModuleProgressTable);
+  });
+
+  it("persists mastered=false when the displayed result is below the threshold", async () => {
+    pushMasteredModuleReads();
+
+    // Answer only 3 of 5 correctly -> 3/5 = 60%, below the 80% threshold.
+    const answers = [
+      { questionId: 700, selectedOption: 0 },
+      { questionId: 701, selectedOption: 1 },
+      { questionId: 702, selectedOption: 2 },
+      { questionId: 703, selectedOption: 0 }, // wrong
+      { questionId: 704, selectedOption: 1 }, // wrong
+    ];
+
+    const res = await request(app)
+      .post("/api/course-modules/42/attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({ answers });
+
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(3);
+    expect(res.body.percentage).toBe(60);
+    expect(res.body.mastered).toBe(false);
+
+    const attemptInsert = recordedInserts.find(
+      (p): p is {
+        score: number;
+        percentage: number;
+        mastered: boolean;
+      } =>
+        typeof p === "object" &&
+        p !== null &&
+        "percentage" in p &&
+        "mastered" in p,
+    );
+    expect(attemptInsert).toBeDefined();
+    expect(attemptInsert).toMatchObject({
+      score: res.body.score,
+      percentage: res.body.percentage,
+      mastered: res.body.mastered,
+    });
+    // A below-threshold finish is still a finished module, so progress clears.
+    expect(recordedDeletes).toContain(courseModuleProgressTable);
+  });
+});
+
 describe("POST /api/course-modules/:moduleId/attempts — lock enforcement", () => {
   it("returns 403 when the previous module has not been mastered", async () => {
     // module lookup — module 12 is the second in course 2
