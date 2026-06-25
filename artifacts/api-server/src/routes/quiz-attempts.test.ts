@@ -132,3 +132,143 @@ describe("POST /api/quiz-attempts", () => {
     expect(recordedInserts).toHaveLength(0);
   });
 });
+
+describe("POST /api/quiz-attempts — bypass protection", () => {
+  it("deduplicates repeated answers for the same question so the score can't be inflated", async () => {
+    // quiz visibility lookup
+    pushDbResult([{ published: true }]);
+    // The route dedupes by questionId before the questions lookup, so only the
+    // single distinct id is queried — return that one question.
+    pushDbResult([makeQuestion(100, 0)]);
+
+    // Submit the SAME correct answer 5 times for question 100. Without dedup
+    // this would score 5/5; with dedup it must be exactly 1/1.
+    const res = await request(app)
+      .post("/api/quiz-attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({
+        quizId: 1,
+        answers: [
+          { questionId: 100, selectedOption: 0 },
+          { questionId: 100, selectedOption: 0 },
+          { questionId: 100, selectedOption: 0 },
+          { questionId: 100, selectedOption: 0 },
+          { questionId: 100, selectedOption: 0 },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.score).toBe(1);
+    expect(res.body.totalQuestions).toBe(1);
+    expect(res.body.percentage).toBe(100);
+    expect(res.body.questionResults).toHaveLength(1);
+
+    // The persisted answers array is deduplicated too.
+    const attemptInsert = recordedInserts.find(
+      (p): p is { answers: { questionId: number; selectedOption: number }[] } =>
+        typeof p === "object" && p !== null && "answers" in p,
+    );
+    expect(attemptInsert).toBeDefined();
+    expect(attemptInsert?.answers).toHaveLength(1);
+  });
+
+  it("ignores answers whose questionId belongs to a different quiz", async () => {
+    // quiz visibility lookup (quiz 1, published)
+    pushDbResult([{ published: true }]);
+    // The questions lookup returns one in-quiz question (quizId 1) and one that
+    // belongs to a DIFFERENT quiz (quizId 2) — a cross-quiz id injection. The
+    // foreign question's correctOption is 0; the caller "knows" it and answers
+    // correctly, trying to score points and probe another quiz's answer key.
+    pushDbResult([
+      makeQuestion(100, 0), // belongs to quiz 1
+      {
+        id: 500,
+        quizId: 2, // belongs to a different quiz
+        text: "Q500",
+        options: ["a", "b", "c", "d"],
+        correctOption: 0,
+        explanation: "secret-explanation",
+        funFact: "secret-funfact",
+      },
+    ]);
+
+    const res = await request(app)
+      .post("/api/quiz-attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({
+        quizId: 1,
+        answers: [
+          { questionId: 100, selectedOption: 0 }, // valid, correct
+          { questionId: 500, selectedOption: 0 }, // foreign, "correct" but ignored
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    // Only the in-quiz question is scored — the injected foreign id contributes
+    // nothing to the score or the total.
+    expect(res.body.score).toBe(1);
+    expect(res.body.totalQuestions).toBe(1);
+    expect(res.body.questionResults).toHaveLength(1);
+    expect(res.body.questionResults[0].questionId).toBe(100);
+    // The other quiz's answer key / content is never leaked back to the caller.
+    const leaked = JSON.stringify(res.body);
+    expect(leaked).not.toContain("secret-explanation");
+    expect(leaked).not.toContain("secret-funfact");
+
+    const attemptInsert = recordedInserts.find(
+      (p): p is { answers: { questionId: number }[] } =>
+        typeof p === "object" && p !== null && "answers" in p,
+    );
+    // Note: the foreign answer is stored verbatim in the raw answers payload but
+    // is never scored — only the in-quiz score/total are persisted.
+    expect(attemptInsert).toBeDefined();
+  });
+
+  it("returns 400 and writes nothing when no answers are valid for this quiz", async () => {
+    // quiz visibility lookup (quiz 1, published)
+    pushDbResult([{ published: true }]);
+    // The only answered question belongs to a different quiz, so after the
+    // in-quiz filter there are zero scorable answers.
+    pushDbResult([
+      {
+        id: 500,
+        quizId: 2,
+        text: "Q500",
+        options: ["a", "b", "c", "d"],
+        correctOption: 0,
+        explanation: "ex",
+        funFact: null,
+      },
+    ]);
+
+    const res = await request(app)
+      .post("/api/quiz-attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({
+        quizId: 1,
+        answers: [{ questionId: 500, selectedOption: 0 }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+    // No attempt row with a zero total is persisted.
+    expect(recordedInserts).toHaveLength(0);
+  });
+
+  it("returns 404 for a non-admin submitting against a draft quiz and writes nothing", async () => {
+    // quiz visibility lookup — quiz exists but is unpublished (draft).
+    pushDbResult([{ published: false }]);
+
+    const res = await request(app)
+      .post("/api/quiz-attempts")
+      .set("x-test-user-id", NON_ADMIN_ID)
+      .send({
+        quizId: 1,
+        answers: [{ questionId: 100, selectedOption: 0 }],
+      });
+
+    expect(res.status).toBe(404);
+    // Draft content is never scored or persisted for a non-admin.
+    expect(recordedInserts).toHaveLength(0);
+  });
+});
