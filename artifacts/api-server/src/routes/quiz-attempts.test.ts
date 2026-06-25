@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import { clerkMiddleware } from "@clerk/express";
@@ -325,5 +325,58 @@ describe("POST /api/quiz-attempts — rate limiting", () => {
     const blockedAgain = await submitOnce();
     expect(blockedAgain.status).toBe(429);
     expect(recordedInserts).toHaveLength(insertsBefore);
+  });
+
+  it("lets a user submit again once their window has elapsed", async () => {
+    // Use a dedicated user id (and fake the clock) so this recovery scenario
+    // starts from a fresh window, independent of the block-path test above.
+    const RECOVERY_USER_ID = "user_quiz_attempts_ratelimit_recovery_555";
+    const WINDOW_MS = 10 * 60 * 1000;
+
+    function submitRecovery() {
+      return request(app)
+        .post("/api/quiz-attempts")
+        .set("x-test-user-id", RECOVERY_USER_ID)
+        .send({
+          quizId: 1,
+          answers: [{ questionId: 100, selectedOption: 0 }],
+        });
+    }
+
+    // Fake only Date so the limiter's Date.now() is controllable while
+    // supertest's real network/timer I/O keeps working normally.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-06-25T00:00:00.000Z"));
+
+      // Fill the window right up to the limit.
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        pushDbResult([{ published: true }]);
+        pushDbResult([makeQuestion(100, 0)]);
+        const res = await submitRecovery();
+        expect(res.status).toBe(200);
+      }
+      const insertsAfterFill = recordedInserts.length;
+      expect(insertsAfterFill).toBe(MAX_ATTEMPTS);
+
+      // One more inside the same window is blocked and persists nothing.
+      const blocked = await submitRecovery();
+      expect(blocked.status).toBe(429);
+      expect(recordedInserts).toHaveLength(insertsAfterFill);
+
+      // Advance the clock past the window so the sliding window resets.
+      vi.setSystemTime(Date.now() + WINDOW_MS + 1000);
+
+      // The next submission is allowed again — and writes a fresh attempt.
+      pushDbResult([{ published: true }]);
+      pushDbResult([makeQuestion(100, 0)]);
+      const recovered = await submitRecovery();
+      expect(recovered.status).toBe(200);
+      expect(recovered.body.score).toBe(1);
+      expect(recovered.body.totalQuestions).toBe(1);
+      expect(recordedInserts).toHaveLength(insertsAfterFill + 1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
