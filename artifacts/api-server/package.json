@@ -18,6 +18,7 @@
     "@workspace/image-check": "workspace:*",
     "@workspace/image-config": "workspace:*",
     "@workspace/markdown": "workspace:*",
+    "@workspace/ssr-bodies": "workspace:*",
     "@workspace/seo-content": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2",

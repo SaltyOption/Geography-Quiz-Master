@@ -23,28 +23,33 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
 import { getMetaDescription } from "@workspace/seo-content";
-import { renderMarkdown } from "@workspace/markdown";
+// Crawlable page bodies come from the shared package so this script and the
+// api-server SSR routes emit identical markup — edit them there, not here.
+import {
+  SITE_NAME,
+  esc,
+  homeBody,
+  dailyBody,
+  coursesBody,
+  privacyBody,
+  aboutBody,
+  didYouKnowBody,
+  articleDetailBody,
+  quizBody,
+  categoryBody,
+  courseDetailBody,
+} from "@workspace/ssr-bodies";
 
 const { Pool } = pg;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = join(__dirname, "dist/public");
 
-const SITE_NAME = "World Geography Trivia";
 const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
 
 // ---------------------------------------------------------------------------
 // HTML utilities
 // ---------------------------------------------------------------------------
-
-/** Minimal HTML-attribute and text escaping for injected values. */
-function esc(str) {
-  return String(str ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
 
 /**
  * Returns a copy of `template` (built index.html) with <head> tags
@@ -129,268 +134,12 @@ function injectJsonLd(html, ldData) {
   return html.replace("</head>", `${scriptTag}\n</head>`);
 }
 
-/** Build a minimal shared nav that's consistent across prerendered pages. */
-function sharedNav() {
-  return `<header style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1rem;background:#fff">
-    <a href="/" style="font-weight:700;color:#0e7490;text-decoration:none">${esc(SITE_NAME)}</a>
-  </header>`;
-}
-
 /** Write a prerendered file; creates parent directories as needed. */
 function writeRoute(routePath, html) {
   const dir = join(distDir, routePath.slice(1));
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "index.html"), html, "utf-8");
   console.log(`  ✓  ${routePath}`);
-}
-
-// ---------------------------------------------------------------------------
-// Static route body generators
-// ---------------------------------------------------------------------------
-
-function homeBody(categories, courses) {
-  // Build a tree from the flat categories list for grouped rendering
-  const catMap = {};
-  for (const c of categories) catMap[c.id] = { ...c, children: [] };
-  const roots = [];
-  for (const c of categories) {
-    if (c.parent_id && catMap[c.parent_id]) {
-      catMap[c.parent_id].children.push(catMap[c.id]);
-    } else if (!c.parent_id) {
-      roots.push(catMap[c.id]);
-    }
-  }
-
-  // Render each root category with its children as a section
-  const categorySections = roots
-    .map((root) => {
-      const childLinks = root.children.length
-        ? root.children
-            .map(
-              (child) =>
-                `<li><a href="/category/${esc(child.slug)}" style="color:#0e7490">${esc(child.name)}</a></li>`,
-            )
-            .join("\n        ")
-        : "";
-      return (
-        `<section style="margin-bottom:1.5rem">` +
-        `<h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">` +
-        `<a href="/category/${esc(root.slug)}" style="color:#1f2937;text-decoration:none">${esc(root.name)}</a>` +
-        `</h2>` +
-        (childLinks
-          ? `<ul style="padding:0 0 0 1rem;list-style:none;display:flex;flex-direction:column;gap:0.25rem">${childLinks}</ul>`
-          : "") +
-        `</section>`
-      );
-    })
-    .join("\n  ");
-
-  const courseItems = courses
-    .map(
-      (c) =>
-        `<li><a href="/courses/${esc(c.slug)}" style="color:#0e7490">${esc(c.title)}</a></li>`,
-    )
-    .join("\n      ");
-
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Explore the World</h1>
-  <p style="color:#6b7280;margin-bottom:1.5rem">Continents, capitals, cultures, and landmarks — one quick quiz at a time.</p>
-  <nav aria-label="Quick links" style="margin-bottom:1.5rem">
-    <ul style="padding:0;list-style:none;display:flex;gap:1rem">
-      <li><a href="/daily" style="color:#0e7490">Daily Quiz</a></li>
-      <li><a href="/courses" style="color:#0e7490">Courses</a></li>
-    </ul>
-  </nav>
-  ${categorySections ? `<section aria-label="Browse by category" style="margin-bottom:2rem">${categorySections}</section>` : ""}
-  ${courseItems ? `<section aria-label="Learning courses" style="margin-bottom:2rem">
-    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem"><a href="/courses" style="color:#1f2937;text-decoration:none">Learning Courses</a></h2>
-    <ul style="padding:0 0 0 1rem;list-style:none;display:flex;flex-direction:column;gap:0.25rem">
-      ${courseItems}
-    </ul>
-  </section>` : ""}
-</main>`;
-}
-
-function dailyBody() {
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Daily Quiz</h1>
-  <p style="color:#6b7280">A new geography quiz every day. Test your knowledge of capitals, countries, landmarks, and regions.</p>
-  <p style="margin-top:1rem"><a href="/daily" style="color:#0e7490;font-weight:600">Take today's quiz →</a></p>
-</main>`;
-}
-
-function coursesBody(courses) {
-  const items = courses
-    .map(
-      (c) =>
-        `<li><a href="/courses/${esc(c.slug)}" style="color:#0e7490;font-weight:600">${esc(c.title)}</a>` +
-        (c.description ? ` — <span style="color:#6b7280">${esc(c.description)}</span>` : "") +
-        `</li>`,
-    )
-    .join("\n    ");
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Geography Courses</h1>
-  <p style="color:#6b7280;margin-bottom:1.5rem">Learn geography through structured modules with explanations and fun facts.</p>
-  ${items.length ? `<ul style="padding:0;list-style:none;display:flex;flex-direction:column;gap:0.5rem">\n    ${items}\n  </ul>` : ""}
-</main>`;
-}
-
-function privacyBody() {
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Privacy Policy</h1>
-  <p style="color:#6b7280">We never sell your data. We collect only what we need to run the site, and you can delete your account at any time.</p>
-  <p style="margin-top:1rem"><a href="/" style="color:#0e7490">Back to home →</a></p>
-</main>`;
-}
-
-function aboutBody() {
-  const paras = [
-    "World Geography Trivia helps curious learners explore the world one quiz at a time.",
-    "Whether you are brushing up on capitals, testing your knowledge of flags, learning where countries are located, or discovering famous landmarks, this site is designed to make geography feel fun, approachable, and memorable.",
-    "The goal is simple: help you build real geographic knowledge without making it feel like homework. Each quiz is meant to teach as well as test, with questions that encourage you to notice patterns, make connections, and learn something new about the world.",
-    "World Geography Trivia is for travelers, lifelong learners, trivia fans, students, teachers, and anyone who has ever looked at a map and thought, “I should probably know more about that place.”",
-    "So pick a quiz, follow your curiosity, and see where in the world it takes you.",
-  ]
-    .map((p) => `<p style="color:#6b7280;margin-bottom:1rem">${esc(p)}</p>`)
-    .join("\n  ");
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:1rem">About World Geography Trivia</h1>
-  ${paras}
-  <p style="margin-top:1rem"><a href="/" style="color:#0e7490">Browse quizzes →</a></p>
-</main>`;
-}
-
-function didYouKnowBody(factoids, articles) {
-  const factoidItems = factoids
-    .map((f) => {
-      const src =
-        f.source_url && /^https?:\/\//i.test(f.source_url)
-          ? ` <a href="${esc(f.source_url)}" rel="noopener noreferrer" style="color:#0e7490;font-size:0.8rem">${esc(f.source_label || "Source")}</a>`
-          : f.source_label
-            ? ` <span style="color:#9ca3af;font-size:0.8rem">— ${esc(f.source_label)}</span>`
-            : "";
-      // renderMarkdown HTML-escapes its input and wraps in <p>; strip the
-      // wrapping paragraph so the fact stays inline within the <span>.
-      const textHtml = renderMarkdown(f.text)
-        .replace(/^<p>/, "")
-        .replace(/<\/p>\s*$/, "");
-      return `<li style="padding:0.75rem 0;border-bottom:1px solid #f3f4f6"><span style="color:#374151">${textHtml}</span>${src}</li>`;
-    })
-    .join("\n      ");
-
-  const articleItems = articles
-    .map(
-      (a) =>
-        `<li style="padding:0.5rem 0"><a href="/did-you-know/${esc(a.slug)}" style="color:#0e7490;font-weight:600">${esc(a.title)}</a>` +
-        (a.summary ? ` — <span style="color:#6b7280">${esc(a.summary)}</span>` : "") +
-        `</li>`,
-    )
-    .join("\n      ");
-
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">Did You Know?</h1>
-  <p style="color:#6b7280;margin-bottom:1.5rem">Surprising geography facts and in-depth articles about our world.</p>
-  ${factoidItems ? `<section aria-label="Geography facts" style="margin-bottom:2rem">
-    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">Quick Facts</h2>
-    <ul style="padding:0;list-style:none">
-      ${factoidItems}
-    </ul>
-  </section>` : ""}
-  ${articleItems ? `<section aria-label="Articles" style="margin-bottom:2rem">
-    <h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.5rem">Articles</h2>
-    <ul style="padding:0;list-style:none;display:flex;flex-direction:column;gap:0.25rem">
-      ${articleItems}
-    </ul>
-  </section>` : ""}
-</main>`;
-}
-
-function articleDetailBody(article) {
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <nav aria-label="Breadcrumb" style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem">
-    <a href="/" style="color:#0e7490">Home</a> › <a href="/did-you-know" style="color:#0e7490">Did You Know</a>
-  </nav>
-  <article>
-    <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">${esc(article.title)}</h1>
-    ${article.summary ? `<p style="color:#6b7280;margin-bottom:1.5rem">${esc(article.summary)}</p>` : ""}
-    ${article.image_url ? `<img src="${esc(article.image_url)}" alt="${esc(article.title)}" style="max-width:100%;height:auto;border-radius:0.5rem;margin-bottom:1.5rem" />` : ""}
-    <div>${renderMarkdown(article.body)}</div>
-  </article>
-</main>`;
-}
-
-function quizBody(quiz) {
-  const cats =
-    (quiz.categories ?? [])
-      .map((c) => `<a href="/category/${esc(c.slug)}" style="color:#0e7490">${esc(c.name)}</a>`)
-      .join(", ") || "";
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <nav aria-label="Breadcrumb" style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem">
-    <a href="/" style="color:#0e7490">Home</a>${cats ? ` › ${cats}` : ""}
-  </nav>
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">${esc(quiz.title)}</h1>
-  ${quiz.description ? `<p style="color:#6b7280;margin-bottom:1rem">${esc(quiz.description)}</p>` : ""}
-  <dl style="color:#6b7280;font-size:0.875rem;margin-bottom:1.5rem">
-    <dt style="display:inline;font-weight:600">Difficulty:</dt>
-    <dd style="display:inline;margin-left:0.25rem;text-transform:capitalize">${esc(quiz.difficulty)}</dd>
-    <dt style="display:inline;margin-left:1rem;font-weight:600">Questions:</dt>
-    <dd style="display:inline;margin-left:0.25rem">${esc(quiz.question_count)}</dd>
-  </dl>
-  <p><a href="/quiz/${esc(quiz.id)}" style="color:#fff;background:#0e7490;padding:0.5rem 1.25rem;border-radius:0.5rem;text-decoration:none;font-weight:600">Start Quiz →</a></p>
-</main>`;
-}
-
-function categoryBody(category, quizzes) {
-  const quizItems = quizzes
-    .map(
-      (q) =>
-        `<li><a href="/quiz/${esc(q.id)}" style="color:#0e7490;font-weight:600">${esc(q.title)}</a>` +
-        (q.difficulty
-          ? ` <span style="color:#9ca3af;font-size:0.8rem">(${esc(q.difficulty)})</span>`
-          : "") +
-        `</li>`,
-    )
-    .join("\n      ");
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <nav aria-label="Breadcrumb" style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem">
-    <a href="/" style="color:#0e7490">Home</a> › ${esc(category.name)}
-  </nav>
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">${esc(category.name)}</h1>
-  ${quizItems
-    ? `<p style="color:#6b7280;margin-bottom:1rem">${esc(quizzes.length)} ${quizzes.length === 1 ? "quiz" : "quizzes"} in this category</p>
-  <ul style="padding:0;list-style:none;display:flex;flex-direction:column;gap:0.5rem">
-      ${quizItems}
-    </ul>`
-    : `<p style="color:#6b7280">No quizzes in this category yet.</p>`
-  }
-</main>`;
-}
-
-function courseDetailBody(course, modules) {
-  const modItems = modules
-    .map(
-      (m, i) =>
-        `<li style="padding:0.5rem 0;border-bottom:1px solid #f3f4f6">` +
-        `<span style="color:#6b7280;font-size:0.8rem;margin-right:0.5rem">${i + 1}.</span>` +
-        `<strong>${esc(m.title)}</strong>` +
-        (m.description ? ` — <span style="color:#6b7280">${esc(m.description)}</span>` : "") +
-        `</li>`,
-    )
-    .join("\n    ");
-  return `${sharedNav()}<main style="padding:2rem 1rem;max-width:48rem;margin:0 auto">
-  <nav aria-label="Breadcrumb" style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem">
-    <a href="/" style="color:#0e7490">Home</a> › <a href="/courses" style="color:#0e7490">Courses</a> › ${esc(course.title)}
-  </nav>
-  <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">${esc(course.title)}</h1>
-  ${course.description ? `<p style="color:#6b7280;margin-bottom:1.5rem">${esc(course.description)}</p>` : ""}
-  ${modItems
-    ? `<h2 style="font-size:1.125rem;font-weight:600;margin-bottom:0.75rem">Modules</h2>
-  <ul style="padding:0;list-style:none">
-    ${modItems}
-  </ul>`
-    : ""
-  }
-</main>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -519,20 +268,50 @@ async function loadData(pool) {
     }
   }
 
+  // Normalize snake_case pg rows to the camelCase shapes the shared
+  // @workspace/ssr-bodies builders expect (matching the api-server's Drizzle
+  // rows). `questions: []` is deliberate — the prerender path omits the
+  // question listing; the runtime SSR route renders it.
+  const quizzes = quizzesRes.rows.map((q) => ({
+    id: q.id,
+    title: q.title,
+    description: q.description,
+    difficulty: q.difficulty,
+    questionCount: q.question_count,
+    questions: [],
+  }));
+
   const quizMap = {};
-  for (const q of quizzesRes.rows) {
+  for (const q of quizzes) {
     quizMap[q.id] = { ...q, categories: quizCategories[q.id] ?? [] };
   }
 
   return {
-    quizzes: quizzesRes.rows,
+    quizzes,
     quizMap,
-    categories: categoriesRes.rows,
+    categories: categoriesRes.rows.map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      parentId: c.parent_id,
+    })),
     categoryQuizIds,
     courses: coursesRes.rows,
     courseModules,
-    factoids: factoidsRes.rows,
-    articles: articlesRes.rows,
+    factoids: factoidsRes.rows.map((f) => ({
+      text: f.text,
+      sourceLabel: f.source_label,
+      sourceUrl: f.source_url,
+    })),
+    articles: articlesRes.rows.map((a) => ({
+      slug: a.slug,
+      title: a.title,
+      summary: a.summary,
+      body: a.body,
+      imageUrl: a.image_url,
+      createdAt: a.created_at,
+      updatedAt: a.updated_at,
+    })),
   };
 }
 
@@ -667,7 +446,7 @@ for (const quiz of data.quizzes) {
   const fullQuiz = data.quizMap[quiz.id];
   const description =
     quiz.description ||
-    `Test your knowledge with the "${quiz.title}" geography quiz. ${quiz.question_count} multiple-choice questions.`;
+    `Test your knowledge with the "${quiz.title}" geography quiz. ${quiz.questionCount} multiple-choice questions.`;
   const meta = {
     title: quiz.title,
     description,
@@ -722,10 +501,10 @@ for (const cat of data.categories) catById[cat.id] = cat;
 
 function getCategoryAncestors(cat) {
   const chain = [];
-  let current = catById[cat.parent_id];
+  let current = catById[cat.parentId];
   while (current) {
     chain.unshift(current);
-    current = catById[current.parent_id];
+    current = catById[current.parentId];
   }
   return chain;
 }
@@ -769,7 +548,13 @@ for (const cat of data.categories) {
     ],
   };
 
-  let catHtml = injectBody(injectHead(template, meta), categoryBody(cat, quizzes));
+  // Direct children only; data.categories is already visibility-filtered by
+  // the recursive published-only query.
+  const subcategories = data.categories.filter((c) => c.parentId === cat.id);
+  let catHtml = injectBody(
+    injectHead(template, meta),
+    categoryBody(cat, ancestors, subcategories, quizzes),
+  );
   catHtml = injectJsonLd(catHtml, breadcrumbLd);
   writeRoute(`/category/${cat.slug}`, catHtml);
 }
@@ -885,9 +670,9 @@ for (const article of data.articles) {
         headline: article.title,
         description,
         url: articleUrl,
-        ...(article.image_url ? { image: article.image_url } : {}),
-        datePublished: new Date(article.created_at).toISOString(),
-        dateModified: new Date(article.updated_at).toISOString(),
+        ...(article.imageUrl ? { image: article.imageUrl } : {}),
+        datePublished: new Date(article.createdAt).toISOString(),
+        dateModified: new Date(article.updatedAt).toISOString(),
         publisher: {
           "@type": "Organization",
           name: SITE_NAME,
@@ -968,7 +753,7 @@ console.log("\nGenerating sitemap.xml and robots.txt…");
   const categoryUrls = data.categories.map((cat) => ({
     loc: `${base}/category/${cat.slug}`,
     changefreq: "weekly",
-    priority: cat.parent_id ? "0.7" : "0.8",
+    priority: cat.parentId ? "0.7" : "0.8",
   }));
 
   const quizUrls = data.quizzes.map((quiz) => ({

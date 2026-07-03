@@ -1,5 +1,5 @@
-import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { and, eq, desc, sql, type SQL } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { db, quizAttemptsTable, quizzesTable } from "@workspace/db";
 import { GetUserQuizProgressParams } from "@workspace/api-zod";
@@ -7,59 +7,70 @@ import { isRequestAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
 
-const requireAuth = (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  req.userId = userId;
-  next();
-};
+function getUserId(req: Request, res: Response): string | null {
+  const userId = getAuth(req)?.userId ?? null;
+  if (!userId) res.status(401).json({ error: "Unauthorized" });
+  return userId;
+}
 
-router.get("/user/progress", requireAuth, async (req: any, res): Promise<void> => {
-  const userId = req.userId as string;
+/**
+ * Attempts joined to their quiz, visible to this caller: non-admins never see
+ * attempts whose quiz has since been moved to draft. Applied in SQL so limits
+ * and aggregates operate on the visible set, not on rows discarded afterwards.
+ */
+function visibleAttemptsFilter(userId: string, admin: boolean, extra?: SQL): SQL | undefined {
+  return and(
+    eq(quizAttemptsTable.userId, userId),
+    ...(admin ? [] : [eq(quizzesTable.published, true)]),
+    ...(extra ? [extra] : []),
+  );
+}
+
+const percentageExpr = sql<number>`
+  case when ${quizAttemptsTable.totalQuestions} > 0
+    then ${quizAttemptsTable.score}::numeric * 100 / ${quizAttemptsTable.totalQuestions}
+    else 0
+  end`;
+
+router.get("/user/progress", async (req, res): Promise<void> => {
+  const userId = getUserId(req, res);
+  if (!userId) return;
   const admin = isRequestAdmin(req);
+  const where = visibleAttemptsFilter(userId, admin);
 
-  const allAttempts = await db
+  // Aggregates cover the user's full visible history; the 50-row limit below
+  // only bounds the recent-attempts list.
+  const [stats] = await db
+    .select({
+      totalAttempts: sql<number>`count(*)::int`,
+      totalQuizzesTaken: sql<number>`count(distinct ${quizAttemptsTable.quizId})::int`,
+      averagePercentage: sql<number>`coalesce(round(avg(${percentageExpr}), 1), 0)::float`,
+      bestPercentage: sql<number>`coalesce(round(max(${percentageExpr}), 1), 0)::float`,
+    })
+    .from(quizAttemptsTable)
+    .innerJoin(quizzesTable, eq(quizAttemptsTable.quizId, quizzesTable.id))
+    .where(where);
+
+  const attempts = await db
     .select({
       id: quizAttemptsTable.id,
       quizId: quizAttemptsTable.quizId,
       quizTitle: quizzesTable.title,
-      published: quizzesTable.published,
       score: quizAttemptsTable.score,
       totalQuestions: quizAttemptsTable.totalQuestions,
       completedAt: quizAttemptsTable.createdAt,
     })
     .from(quizAttemptsTable)
     .innerJoin(quizzesTable, eq(quizAttemptsTable.quizId, quizzesTable.id))
-    .where(eq(quizAttemptsTable.userId, userId))
+    .where(where)
     .orderBy(desc(quizAttemptsTable.createdAt))
     .limit(50);
 
-  // Non-admins never see attempts whose quiz has since been moved to draft.
-  const attempts = admin ? allAttempts : allAttempts.filter((a) => a.published);
-
-  const totalAttempts = attempts.length;
-  const uniqueQuizIds = new Set(attempts.map((a) => a.quizId));
-  const totalQuizzesTaken = uniqueQuizIds.size;
-
-  const percentages = attempts.map((a) =>
-    a.totalQuestions > 0 ? (a.score / a.totalQuestions) * 100 : 0
-  );
-  const averagePercentage =
-    percentages.length > 0
-      ? Math.round((percentages.reduce((s, p) => s + p, 0) / percentages.length) * 10) / 10
-      : 0;
-  const bestPercentage =
-    percentages.length > 0 ? Math.round(Math.max(...percentages) * 10) / 10 : 0;
-
   res.json({
-    totalAttempts,
-    totalQuizzesTaken,
-    averagePercentage,
-    bestPercentage,
+    totalAttempts: stats?.totalAttempts ?? 0,
+    totalQuizzesTaken: stats?.totalQuizzesTaken ?? 0,
+    averagePercentage: stats?.averagePercentage ?? 0,
+    bestPercentage: stats?.bestPercentage ?? 0,
     recentAttempts: attempts.map((a) => ({
       id: a.id,
       quizId: a.quizId,
@@ -75,8 +86,9 @@ router.get("/user/progress", requireAuth, async (req: any, res): Promise<void> =
   });
 });
 
-router.get("/user/progress/:quizId", requireAuth, async (req: any, res): Promise<void> => {
-  const userId = req.userId as string;
+router.get("/user/progress/:quizId", async (req, res): Promise<void> => {
+  const userId = getUserId(req, res);
+  if (!userId) return;
   const admin = isRequestAdmin(req);
   const rawId = Array.isArray(req.params.quizId) ? req.params.quizId[0] : req.params.quizId;
   const params = GetUserQuizProgressParams.safeParse({ quizId: rawId });
@@ -85,25 +97,21 @@ router.get("/user/progress/:quizId", requireAuth, async (req: any, res): Promise
     return;
   }
 
-  const attempts = await db
+  const quizAttempts = await db
     .select({
       id: quizAttemptsTable.id,
       quizId: quizAttemptsTable.quizId,
       quizTitle: quizzesTable.title,
-      published: quizzesTable.published,
       score: quizAttemptsTable.score,
       totalQuestions: quizAttemptsTable.totalQuestions,
       completedAt: quizAttemptsTable.createdAt,
     })
     .from(quizAttemptsTable)
     .innerJoin(quizzesTable, eq(quizAttemptsTable.quizId, quizzesTable.id))
-    .where(eq(quizAttemptsTable.userId, userId))
+    .where(
+      visibleAttemptsFilter(userId, admin, eq(quizAttemptsTable.quizId, params.data.quizId)),
+    )
     .orderBy(desc(quizAttemptsTable.createdAt));
-
-  // Non-admins never see history for a quiz that has since been moved to draft.
-  const quizAttempts = attempts.filter(
-    (a) => a.quizId === params.data.quizId && (admin || a.published),
-  );
 
   const bestScore = quizAttempts.length > 0 ? Math.max(...quizAttempts.map((a) => a.score)) : 0;
   const bestPercentage =

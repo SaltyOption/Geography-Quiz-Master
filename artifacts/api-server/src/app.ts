@@ -1,4 +1,10 @@
-import express, { type Express, type RequestHandler } from "express";
+import express, {
+  type Express,
+  type NextFunction,
+  type Request,
+  type Response,
+  type RequestHandler,
+} from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { sep } from "path";
@@ -17,6 +23,14 @@ import { BUNDLED_PUBLIC_DIR } from "./lib/ssrTemplate";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+
+// Behind exactly one reverse proxy in production (the platform's load
+// balancer), so trust a single hop: req.ip becomes the client address the
+// proxy appended to X-Forwarded-For, and later spoofed entries are ignored.
+// Rate limiting keys off req.ip and breaks if this is set to `true` (which
+// would trust the client-controlled leftmost entry) or left unset (which
+// would bucket everyone under the proxy's own address).
+app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS ?? 1));
 
 app.use(
   pinoHttp({
@@ -40,7 +54,33 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-app.use(cors({ credentials: true, origin: true }));
+// Credentialed CORS must never reflect arbitrary origins: Clerk sessions are
+// cookie-backed, so a wildcard here would let any website a signed-in admin
+// visits read and mutate /api/* with the admin's cookies. Only our own
+// domains may make credentialed cross-origin requests. Same-origin and
+// non-browser requests carry no Origin header and are unaffected.
+const allowedOrigins = new Set(
+  [
+    process.env.VITE_CANONICAL_DOMAIN,
+    ...(process.env.CORS_ALLOWED_ORIGINS?.split(",") ?? []),
+  ]
+    .map((origin) => origin?.trim().replace(/\/+$/, ""))
+    .filter((origin): origin is string => Boolean(origin)),
+);
+const isLocalhostOrigin = (origin: string): boolean =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      const allowed =
+        !origin ||
+        allowedOrigins.has(origin) ||
+        (process.env.NODE_ENV === "development" && isLocalhostOrigin(origin));
+      callback(null, allowed);
+    },
+  }),
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
@@ -101,5 +141,28 @@ if (devViteProxy) {
   );
   app.use(ssrPagesRouter);
 }
+
+// Terminal error handler. Without it, Express 5's default handler answers
+// with an HTML error page (including a stack trace outside production),
+// which breaks every JSON-parsing client on the unhappy path. Client errors
+// raised by middleware (e.g. body-parser's 400 on malformed JSON) keep their
+// status; everything else is an opaque 500 — details go to the log only.
+app.use(
+  (err: unknown, req: Request, res: Response, _next: NextFunction) => {
+    logger.error({ err, url: req.url?.split("?")[0] }, "unhandled request error");
+    if (res.headersSent) return;
+    const status =
+      typeof err === "object" && err !== null && "status" in err &&
+      typeof err.status === "number" && err.status >= 400 && err.status < 500
+        ? err.status
+        : 500;
+    const message = status === 500 ? "Internal server error" : (err as Error).message;
+    if (req.path === "/api" || req.path.startsWith("/api/")) {
+      res.status(status).json({ error: message });
+    } else {
+      res.status(status).type("text/plain").send(message);
+    }
+  },
+);
 
 export default app;

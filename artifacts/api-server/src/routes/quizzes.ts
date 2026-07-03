@@ -90,11 +90,20 @@ async function getCategoriesByQuizIds(
   return map;
 }
 
-async function setQuizCategories(quizId: number, categoryIds: number[]): Promise<void> {
-  await db.delete(quizCategoriesTable).where(eq(quizCategoriesTable.quizId, quizId));
+type DbExecutor = Pick<typeof db, "select" | "insert" | "update" | "delete">;
+
+// Delete-then-insert, so it must run inside the caller's transaction (`dbc`):
+// a failure after the delete would otherwise leave the quiz with no
+// categories at all.
+async function setQuizCategories(
+  quizId: number,
+  categoryIds: number[],
+  dbc: DbExecutor = db,
+): Promise<void> {
+  await dbc.delete(quizCategoriesTable).where(eq(quizCategoriesTable.quizId, quizId));
   if (categoryIds.length === 0) return;
 
-  const existing = await db
+  const existing = await dbc
     .select({ id: categoriesTable.id })
     .from(categoriesTable)
     .where(inArray(categoriesTable.id, categoryIds));
@@ -102,7 +111,7 @@ async function setQuizCategories(quizId: number, categoryIds: number[]): Promise
   const toInsert = categoryIds.filter((id) => validIds.has(id));
   if (toInsert.length === 0) return;
 
-  await db
+  await dbc
     .insert(quizCategoriesTable)
     .values(toInsert.map((categoryId) => ({ quizId, categoryId })));
 }
@@ -145,11 +154,13 @@ router.post("/quizzes", requireAdmin, async (req, res): Promise<void> => {
 
   const { categoryIds, ...quizData } = parsed.data;
 
-  const [quiz] = await db.insert(quizzesTable).values(quizData).returning();
-
-  if (categoryIds && categoryIds.length > 0) {
-    await setQuizCategories(quiz.id, categoryIds);
-  }
+  const quiz = await db.transaction(async (tx) => {
+    const [created] = await tx.insert(quizzesTable).values(quizData).returning();
+    if (categoryIds && categoryIds.length > 0) {
+      await setQuizCategories(created.id, categoryIds, tx);
+    }
+    return created;
+  });
 
   res.status(201).json({
     id: quiz.id,
@@ -555,24 +566,29 @@ router.patch("/quizzes/:id", requireAdmin, async (req, res): Promise<void> => {
 
   const { categoryIds, ...updateFields } = parsed.data;
 
-  let quiz: typeof quizzesTable.$inferSelect | undefined;
-  if (Object.keys(updateFields).length > 0) {
-    [quiz] = await db
-      .update(quizzesTable)
-      .set(updateFields)
-      .where(eq(quizzesTable.id, params.data.id))
-      .returning();
-  } else {
-    [quiz] = await db.select().from(quizzesTable).where(eq(quizzesTable.id, params.data.id));
-  }
+  // One transaction: a failure while replacing categories must roll back the
+  // field update too, not leave the quiz updated with its categories wiped.
+  const quiz = await db.transaction(async (tx) => {
+    let updated: typeof quizzesTable.$inferSelect | undefined;
+    if (Object.keys(updateFields).length > 0) {
+      [updated] = await tx
+        .update(quizzesTable)
+        .set(updateFields)
+        .where(eq(quizzesTable.id, params.data.id))
+        .returning();
+    } else {
+      [updated] = await tx.select().from(quizzesTable).where(eq(quizzesTable.id, params.data.id));
+    }
+
+    if (updated && categoryIds !== undefined) {
+      await setQuizCategories(updated.id, categoryIds, tx);
+    }
+    return updated;
+  });
 
   if (!quiz) {
     res.status(404).json({ error: "Quiz not found" });
     return;
-  }
-
-  if (categoryIds !== undefined) {
-    await setQuizCategories(quiz.id, categoryIds);
   }
 
   res.json({

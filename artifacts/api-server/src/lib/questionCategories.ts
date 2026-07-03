@@ -45,16 +45,22 @@ export async function getCategoriesForQuestion(
   return map.get(questionId) ?? [];
 }
 
+type DbExecutor = Pick<typeof db, "select" | "insert" | "update" | "delete">;
+
+// Delete-then-insert, so it must run inside the caller's transaction (`dbc`):
+// a failure after the delete would otherwise leave the question with no
+// categories at all.
 export async function setQuestionCategories(
   questionId: number,
-  categoryIds: number[]
+  categoryIds: number[],
+  dbc: DbExecutor = db
 ): Promise<void> {
-  await db
+  await dbc
     .delete(questionCategoriesTable)
     .where(eq(questionCategoriesTable.questionId, questionId));
   if (categoryIds.length === 0) return;
 
-  const existing = await db
+  const existing = await dbc
     .select({ id: categoriesTable.id })
     .from(categoriesTable)
     .where(inArray(categoriesTable.id, categoryIds));
@@ -62,7 +68,7 @@ export async function setQuestionCategories(
   const toInsert = Array.from(new Set(categoryIds.filter((id) => validIds.has(id))));
   if (toInsert.length === 0) return;
 
-  await db
+  await dbc
     .insert(questionCategoriesTable)
     .values(toInsert.map((categoryId) => ({ questionId, categoryId })));
 }

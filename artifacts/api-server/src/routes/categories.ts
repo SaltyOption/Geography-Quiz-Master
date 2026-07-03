@@ -18,6 +18,7 @@ import { requireAdmin, isRequestAdmin } from "../middlewares/requireAdmin";
 import { slugify, uniqueSlug } from "../lib/categorySlug";
 import { isCategoryVisible } from "../lib/categoryVisibility";
 import { validateImageUrlReachable, imageValidationMessage } from "../lib/imageValidation";
+import { collectDescendantIds } from "../lib/categoryTree";
 
 const router: IRouter = Router();
 
@@ -31,24 +32,6 @@ const serializeCategory = (c: typeof categoriesTable.$inferSelect) => ({
   createdAt: c.createdAt.toISOString(),
   updatedAt: c.updatedAt.toISOString(),
 });
-
-function collectDescendantIds(
-  rootId: number,
-  all: { id: number; parentId: number | null }[]
-): number[] {
-  const descendantIds: number[] = [];
-  const queue: number[] = [rootId];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    for (const c of all) {
-      if (c.parentId === id) {
-        descendantIds.push(c.id);
-        queue.push(c.id);
-      }
-    }
-  }
-  return descendantIds;
-}
 
 router.get("/categories", async (req, res): Promise<void> => {
   const admin = isRequestAdmin(req);

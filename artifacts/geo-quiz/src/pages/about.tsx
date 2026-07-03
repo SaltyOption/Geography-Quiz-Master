@@ -3,14 +3,9 @@ import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Globe, Compass, CalendarDays } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-const paragraphs: string[] = [
-  "World Geography Trivia helps curious learners explore the world one quiz at a time.",
-  "Whether you are brushing up on capitals, testing your knowledge of flags, learning where countries are located, or discovering famous landmarks, this site is designed to make geography feel fun, approachable, and memorable.",
-  "The goal is simple: help you build real geographic knowledge without making it feel like homework. Each quiz is meant to teach as well as test, with questions that encourage you to notice patterns, make connections, and learn something new about the world.",
-  "World Geography Trivia is for travelers, lifelong learners, trivia fans, students, teachers, and anyone who has ever looked at a map and thought, “I should probably know more about that place.”",
-  "So pick a quiz, follow your curiosity, and see where in the world it takes you.",
-];
+// Single source of truth for the About copy, shared with the prerender and
+// api-server SSR render paths.
+import { ABOUT_PARAGRAPHS } from "@workspace/ssr-bodies";
 
 export default function AboutPage() {
   usePageMeta({
@@ -37,7 +32,7 @@ export default function AboutPage() {
 
       <Card>
         <CardContent className="space-y-5 p-6 sm:p-8 text-lg leading-relaxed text-muted-foreground">
-          {paragraphs.map((p) => (
+          {ABOUT_PARAGRAPHS.map((p) => (
             <p key={p.slice(0, 24)}>{p}</p>
           ))}
         </CardContent>

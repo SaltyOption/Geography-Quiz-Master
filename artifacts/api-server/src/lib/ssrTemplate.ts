@@ -17,8 +17,7 @@ import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { getMetaDescription } from "@workspace/seo-content";
-
-const SITE_NAME = "World Geography Trivia";
+import { SITE_NAME, esc } from "@workspace/ssr-bodies";
 
 // Primary (production): the full frontend build (including the SPA shell) is
 // copied next to the running bundle by build.mjs. esbuild bundles this module
@@ -58,26 +57,10 @@ export function getRawTemplate(): string | null {
   return getTemplate();
 }
 
-/** Minimal HTML-attribute and text escaping for injected values. */
-export function esc(str: unknown): string {
-  return String(str ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 export interface PageMeta {
   title: string;
   description: string;
   path: string;
-}
-
-/** Shared minimal nav for the crawlable body fallback. */
-function sharedNav(): string {
-  return `<header style="border-bottom:1px solid #e5e7eb;padding:0.75rem 1rem;background:#fff">
-    <a href="/" style="font-weight:700;color:#0e7490;text-decoration:none">${esc(SITE_NAME)}</a>
-  </header>`;
 }
 
 /** Serialize one or more JSON-LD objects into a single <script> tag. */
@@ -238,5 +221,3 @@ export function buildPageHtml(
 
   return html;
 }
-
-export { sharedNav };

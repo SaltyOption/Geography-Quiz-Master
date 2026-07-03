@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean, primaryKey, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, primaryKey, index, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { quizzesTable } from "./quizzes";
@@ -21,7 +21,12 @@ export const quizCategoriesTable = pgTable(
     quizId: integer("quiz_id").notNull().references(() => quizzesTable.id, { onDelete: "cascade" }),
     categoryId: integer("category_id").notNull().references(() => categoriesTable.id, { onDelete: "cascade" }),
   },
-  (t) => [primaryKey({ columns: [t.quizId, t.categoryId] })],
+  (t) => [
+    primaryKey({ columns: [t.quizId, t.categoryId] }),
+    // The composite PK only serves quiz-first lookups; the category tree and
+    // import-by-category filter by category.
+    index("quiz_categories_category_id_idx").on(t.categoryId),
+  ],
 );
 
 export const questionCategoriesTable = pgTable(
@@ -30,7 +35,10 @@ export const questionCategoriesTable = pgTable(
     questionId: integer("question_id").notNull().references(() => questionsTable.id, { onDelete: "cascade" }),
     categoryId: integer("category_id").notNull().references(() => categoriesTable.id, { onDelete: "cascade" }),
   },
-  (t) => [primaryKey({ columns: [t.questionId, t.categoryId] })],
+  (t) => [
+    primaryKey({ columns: [t.questionId, t.categoryId] }),
+    index("question_categories_category_id_idx").on(t.categoryId),
+  ],
 );
 
 export const insertCategorySchema = createInsertSchema(categoriesTable).omit({ id: true, createdAt: true, updatedAt: true });

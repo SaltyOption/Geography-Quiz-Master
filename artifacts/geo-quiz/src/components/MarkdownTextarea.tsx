@@ -34,6 +34,11 @@ export interface MarkdownTextareaProps {
   showHints?: boolean;
   /** Shows a live rendered Markdown preview beneath the field. */
   showPreview?: boolean;
+  /**
+   * "stacked" (default) renders a compact preview below the field; "side"
+   * renders a full-size preview beside the field on large screens.
+   */
+  previewLayout?: "stacked" | "side";
 }
 
 export function MarkdownTextarea({
@@ -48,6 +53,7 @@ export function MarkdownTextarea({
   toolbar = "inline",
   showHints = true,
   showPreview = false,
+  previewLayout = "stacked",
   ...rest
 }: MarkdownTextareaProps) {
   const testId = rest["data-testid"];
@@ -116,6 +122,58 @@ export function MarkdownTextarea({
       applyLink();
     }
   }
+
+  const sideBySide = showPreview && previewLayout === "side";
+
+  const field = (
+    <Textarea
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
+      onKeyDown={handleKeyDown}
+      rows={rows}
+      placeholder={placeholder}
+      className={cn("font-mono text-sm", className)}
+      data-testid={testId}
+      ref={(el) => {
+        taRef.current = el;
+        inputRef?.(el);
+      }}
+    />
+  );
+
+  const preview = showPreview && (
+    <div
+      className={cn(
+        "overflow-auto rounded-md border bg-muted/30",
+        sideBySide ? "min-h-[320px] p-4" : "p-3",
+      )}
+      data-testid={testId ? `${testId}-preview` : undefined}
+    >
+      <p
+        className={cn(
+          "text-xs font-medium uppercase tracking-wide text-muted-foreground",
+          sideBySide ? "mb-3" : "mb-2",
+        )}
+      >
+        Preview
+      </p>
+      {value.trim() ? (
+        <div
+          className={cn(
+            "prose prose-stone max-w-none prose-headings:font-bold prose-a:text-primary",
+            !sideBySide && "prose-sm",
+          )}
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(value) }}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Your formatted text will appear here as you type.
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-2">
@@ -211,40 +269,16 @@ export function MarkdownTextarea({
           </>
         )}
       </div>
-      <Textarea
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
-        onKeyDown={handleKeyDown}
-        rows={rows}
-        placeholder={placeholder}
-        className={cn("font-mono text-sm", className)}
-        data-testid={testId}
-        ref={(el) => {
-          taRef.current = el;
-          inputRef?.(el);
-        }}
-      />
-      {showPreview && (
-        <div
-          className="overflow-auto rounded-md border bg-muted/30 p-3"
-          data-testid={testId ? `${testId}-preview` : undefined}
-        >
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Preview
-          </p>
-          {value.trim() ? (
-            <div
-              className="prose prose-sm prose-stone max-w-none prose-headings:font-bold prose-a:text-primary"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(value) }}
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Your formatted text will appear here as you type.
-            </p>
-          )}
+      {sideBySide ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {field}
+          {preview}
         </div>
+      ) : (
+        <>
+          {field}
+          {preview}
+        </>
       )}
       {showHints && (
         <p className="text-xs text-muted-foreground">

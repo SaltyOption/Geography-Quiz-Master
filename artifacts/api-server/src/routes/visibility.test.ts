@@ -129,11 +129,15 @@ describe("GET /api/questions/:id visibility", () => {
 });
 
 describe("GET /api/user/progress visibility", () => {
-  it("hides attempts whose quiz is now a draft from non-admin owners", async () => {
-    pushDbResult([
-      { id: 1, quizId: 7, quizTitle: "Live", published: true, score: 3, totalQuestions: 3, completedAt: now },
-      { id: 2, quizId: 8, quizTitle: "Secret", published: false, score: 1, totalQuestions: 3, completedAt: now },
-    ]);
+  // Draft-quiz attempts are excluded in the SQL WHERE (published = true for
+  // non-admins), which this FIFO mock cannot evaluate — the queued rows below
+  // are the already-filtered result set. The route runs two queries: the
+  // aggregate stats row, then the recent-attempts page.
+  it("serves stats and attempts from the visibility-filtered queries", async () => {
+    pushDbResult(
+      [{ totalAttempts: 1, totalQuizzesTaken: 1, averagePercentage: 100, bestPercentage: 100 }],
+      [{ id: 1, quizId: 7, quizTitle: "Live", score: 3, totalQuestions: 3, completedAt: now }],
+    );
     const res = await request(app)
       .get("/api/user/progress")
       .set("x-test-user-id", "user_regular");

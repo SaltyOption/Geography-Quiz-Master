@@ -1,0 +1,13 @@
+{
+  "name": "@workspace/ssr-bodies",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@workspace/image-config": "workspace:*",
+    "@workspace/markdown": "workspace:*"
+  }
+}

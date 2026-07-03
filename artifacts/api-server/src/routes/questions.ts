@@ -29,24 +29,7 @@ import {
   validateImageUrlReachable,
   imageValidationMessage,
 } from "../lib/imageValidation";
-
-function collectDescendantIds(
-  rootId: number,
-  all: { id: number; parentId: number | null }[]
-): number[] {
-  const descendantIds: number[] = [];
-  const queue: number[] = [rootId];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    for (const c of all) {
-      if (c.parentId === id) {
-        descendantIds.push(c.id);
-        queue.push(c.id);
-      }
-    }
-  }
-  return descendantIds;
-}
+import { collectDescendantIds } from "../lib/categoryTree";
 
 const router: IRouter = Router();
 
@@ -126,14 +109,16 @@ router.post("/quizzes/:id/questions", requireAdmin, async (req, res): Promise<vo
     return;
   }
 
-  const [question] = await db
-    .insert(questionsTable)
-    .values({ ...questionData, quizId: params.data.id })
-    .returning();
-
-  if (categoryIds && categoryIds.length > 0) {
-    await setQuestionCategories(question.id, categoryIds);
-  }
+  const question = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(questionsTable)
+      .values({ ...questionData, quizId: params.data.id })
+      .returning();
+    if (categoryIds && categoryIds.length > 0) {
+      await setQuestionCategories(created.id, categoryIds, tx);
+    }
+    return created;
+  });
 
   res.status(201).json({
     id: question.id,
@@ -356,27 +341,32 @@ router.patch("/questions/:id", requireAdmin, async (req, res): Promise<void> => 
     }
   }
 
-  let question: typeof questionsTable.$inferSelect | undefined;
-  if (Object.keys(updateFields).length > 0) {
-    [question] = await db
-      .update(questionsTable)
-      .set(updateFields)
-      .where(eq(questionsTable.id, params.data.id))
-      .returning();
-  } else {
-    [question] = await db
-      .select()
-      .from(questionsTable)
-      .where(eq(questionsTable.id, params.data.id));
-  }
+  // One transaction: a failure while replacing categories must roll back the
+  // field update too, not leave the question updated with categories wiped.
+  const question = await db.transaction(async (tx) => {
+    let updated: typeof questionsTable.$inferSelect | undefined;
+    if (Object.keys(updateFields).length > 0) {
+      [updated] = await tx
+        .update(questionsTable)
+        .set(updateFields)
+        .where(eq(questionsTable.id, params.data.id))
+        .returning();
+    } else {
+      [updated] = await tx
+        .select()
+        .from(questionsTable)
+        .where(eq(questionsTable.id, params.data.id));
+    }
+
+    if (updated && categoryIds !== undefined) {
+      await setQuestionCategories(updated.id, categoryIds, tx);
+    }
+    return updated;
+  });
 
   if (!question) {
     res.status(404).json({ error: "Question not found" });
     return;
-  }
-
-  if (categoryIds !== undefined) {
-    await setQuestionCategories(question.id, categoryIds);
   }
 
   res.json({

@@ -6,6 +6,7 @@ import {
   integer,
   boolean,
   jsonb,
+  index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -84,7 +85,7 @@ export const courseQuestionsTable = pgTable("course_questions", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (t) => [index("course_questions_lesson_id_idx").on(t.lessonId)]);
 
 export const courseModuleAttemptsTable = pgTable("course_module_attempts", {
   id: serial("id").primaryKey(),
@@ -98,7 +99,10 @@ export const courseModuleAttemptsTable = pgTable("course_module_attempts", {
   mastered: boolean("mastered").notNull().default(false),
   answers: jsonb("answers").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  // Mastery/progress reads look up a user's attempts within a module.
+  index("course_module_attempts_user_module_idx").on(t.userId, t.moduleId),
+]);
 
 // Saved progress for a logged-in user mid-module. One row per (user, module).
 // Cleared automatically when the user submits a final attempt.
