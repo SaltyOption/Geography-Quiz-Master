@@ -67,3 +67,9 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+
+# pnpm 11.9+ CI installs require an explicit per-package build approval in
+# addition to onlyBuiltDependencies; without this the Railway build fails
+# with ERR_PNPM_IGNORED_BUILDS.
+allowBuilds:
+  esbuild: true
