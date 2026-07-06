@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { useGetCategoryTree, useListQuizzes, useListCourses, useGetMe, type CategoryNode, type QuizSummary } from "@workspace/api-client-react";
+import { useGetCategoryTree, useListQuizzes, useListCourses, useGetMe, useGetUserProgress, type CategoryNode, type QuizSummary, type CourseSummary } from "@workspace/api-client-react";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Link } from "wouter";
-import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, Compass, Play, Lightbulb } from "lucide-react";
+import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, ArrowRight, Play, Image as ImageIcon } from "lucide-react";
+import { SEO_ARTICLES } from "@workspace/seo-content";
 import { Mascot } from "@/components/Mascot";
 import { ResponsiveImage } from "@/components/ResponsiveImage";
-import { SignUpBanner } from "@/components/SignUpBanner";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArticleCard } from "@/components/ArticleCard";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 
 function countAll(node: CategoryNode): { quizzes: number; subcategories: number } {
   let quizzes = node.quizCount;
@@ -77,36 +79,225 @@ function CategoryCard({ node }: { node: CategoryNode }) {
   );
 }
 
-function HomeQuizCard({ quiz }: { quiz: QuizSummary }) {
+// The By Topic and By Region rails each show four featured categories (in
+// this order) ahead of the rest, with hand-written taglines from the design
+// handoff; other categories fall back to no tagline.
+const FEATURED_CATEGORY_SLUGS = [
+  "ancient-sites", "capitals", "flags", "physical-geography",
+  "africa", "europe", "east-asia", "antarctica",
+];
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  "ancient-sites": "Pyramids, temples, and lost cities of the ancient world.",
+  capitals: "From Reykjavik to Wellington — name every capital city.",
+  flags: "Stripes, stars, and crescents — match flags to their nations.",
+  "physical-geography": "Mountains, deserts, rivers, and the forces that shape them.",
+  africa: "54 countries, from the Sahara to the Cape of Good Hope.",
+  europe: "Capitals, coastlines, and countries of the old continent.",
+  "east-asia": "From the Gobi Desert to the islands of Japan.",
+  antarctica: "The frozen continent — stations, seas, and ice shelves.",
+  asia: "Mountains, megacities, and monsoons across the largest continent.",
+  "north-america": "Great lakes, deserts, and coastlines from Canada to Panama.",
+};
+
+// Courses have no imagery of their own yet; reuse the closest category art so
+// the Learning Courses rail matches the card anatomy of the other sections.
+const COURSE_ART: Record<string, string> = {
+  "oceans-and-seas": "/regions/oceans-and-seas.png",
+  "rivers-and-lakes": "/regions/lakes-and-rivers.png",
+  "world-deserts": "/regions/physical-geography.png",
+};
+const COURSE_DESCRIPTIONS: Record<string, string> = {
+  "oceans-and-seas": "Currents, trenches, and the five oceans — how the water world works.",
+  "rivers-and-lakes": "Follow the Nile, Amazon, and Mekong from source to sea.",
+  "world-deserts": "Hot, cold, and coastal — life in Earth's driest places.",
+};
+
+function featuredFirst(children: CategoryNode[]): CategoryNode[] {
+  const rank = (n: CategoryNode) => {
+    const i = FEATURED_CATEGORY_SLUGS.indexOf(n.slug);
+    return i === -1 ? Infinity : i;
+  };
+  return [...children].sort((a, b) => rank(a) - rank(b));
+}
+
+function CategoryTile({
+  node,
+  imagePosition = "center",
+}: {
+  node: CategoryNode;
+  // Region map art carries a title banner at the top of the frame, so the
+  // By Region rail anchors the crop there; other art centers its subject.
+  imagePosition?: "top" | "center";
+}) {
+  const totals = countAll(node);
+  const description = CATEGORY_DESCRIPTIONS[node.slug];
   return (
-    <Card className="group flex h-full flex-col overflow-hidden transition-all hover:shadow-md hover:border-primary/50">
-      <CardHeader>
-        <div className="mb-2 flex items-center justify-between">
-          <Badge
-            variant={
-              quiz.difficulty === "hard"
-                ? "destructive"
-                : quiz.difficulty === "medium"
-                  ? "default"
-                  : "secondary"
-            }
-          >
-            {quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}
-          </Badge>
-          <span className="text-xs font-medium text-muted-foreground">
-            {quiz.questionCount} {quiz.questionCount === 1 ? "Question" : "Questions"}
-          </span>
+    <Link href={`/category/${node.slug}`}>
+      <Card className="group flex h-full cursor-pointer flex-col overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
+        <div className="relative h-[140px] w-full overflow-hidden bg-muted">
+          {node.imageUrl ? (
+            <ResponsiveImage
+              src={node.imageUrl}
+              alt={node.name}
+              loading="lazy"
+              decoding="async"
+              sizes="(min-width: 1024px) 300px, (min-width: 640px) 45vw, 90vw"
+              className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${imagePosition === "top" ? "object-top" : ""}`}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+            </div>
+          )}
         </div>
-        <CardTitle className="text-xl transition-colors group-hover:text-primary">{quiz.title}</CardTitle>
-        <CardDescription className="line-clamp-2">{quiz.description}</CardDescription>
-      </CardHeader>
-      <CardFooter className="mt-auto border-t bg-muted/20 pt-4">
-        <Button className="w-full" asChild>
-          <Link href={`/quiz/${quiz.id}`}>
-            <Play className="mr-2 h-4 w-4" /> Start Adventure
-          </Link>
-        </Button>
-      </CardFooter>
+        <CardHeader className="flex flex-1 flex-col gap-1.5">
+          <CardTitle className="text-base group-hover:text-primary transition-colors">
+            {node.name}
+          </CardTitle>
+          {description && (
+            <CardDescription className="text-[13px] leading-snug">{description}</CardDescription>
+          )}
+          <p className="mt-auto pt-3 text-xs text-muted-foreground">
+            {totals.quizzes} {totals.quizzes === 1 ? "quiz" : "quizzes"}
+            {node.children.length > 0 && (
+              <> · {node.children.length} {node.children.length === 1 ? "subcategory" : "subcategories"}</>
+            )}
+          </p>
+        </CardHeader>
+      </Card>
+    </Link>
+  );
+}
+
+function CourseTile({ course }: { course: CourseSummary }) {
+  const art = course.imageUrl ?? COURSE_ART[course.slug];
+  const description = COURSE_DESCRIPTIONS[course.slug] ?? course.description;
+  return (
+    <Link href={`/courses/${course.slug}`}>
+      <Card className="group flex h-full cursor-pointer flex-col overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
+        <div className="relative h-[130px] w-full overflow-hidden bg-muted">
+          {art ? (
+            <ResponsiveImage
+              src={art}
+              alt={course.title}
+              loading="lazy"
+              decoding="async"
+              sizes="(min-width: 1024px) 400px, (min-width: 640px) 45vw, 90vw"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <GraduationCap className="h-10 w-10 text-muted-foreground/40" />
+            </div>
+          )}
+        </div>
+        <CardHeader className="flex flex-1 flex-col gap-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle className="text-base group-hover:text-primary transition-colors">
+              {course.title}
+            </CardTitle>
+            <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+              {course.moduleCount} module{course.moduleCount === 1 ? "" : "s"}
+            </span>
+          </div>
+          {description && (
+            <CardDescription className="text-[13px] leading-snug">{description}</CardDescription>
+          )}
+          {course.masteredCount > 0 && (
+            <p className="mt-auto pt-2 text-xs font-medium text-green-700 dark:text-green-300">
+              {course.masteredCount} mastered
+            </p>
+          )}
+        </CardHeader>
+      </Card>
+    </Link>
+  );
+}
+
+/**
+ * Presents the World Cup quizzes as one multi-part series: numbered circles for
+ * each part (filled once attempted), a progress bar, and a Continue button that
+ * jumps to the first part the user hasn't completed yet. Completion comes from
+ * the signed-in user's attempt history; anonymous users simply see everything
+ * as not-yet-started, same as the category page.
+ */
+function WorldCupSeriesCard({ quizzes }: { quizzes: QuizSummary[] }) {
+  const { data: progress } = useGetUserProgress();
+  const parts = [...quizzes].sort((a, b) =>
+    a.title.localeCompare(b.title, undefined, { numeric: true }),
+  );
+  const completedIds = new Set((progress?.recentAttempts ?? []).map((a) => a.quizId));
+  const completedCount = parts.filter((p) => completedIds.has(p.id)).length;
+  const totalQuestions = parts.reduce((sum, q) => sum + q.questionCount, 0);
+  const nextPart = parts.find((p) => !completedIds.has(p.id)) ?? parts[0];
+  const difficulty = parts[0].difficulty;
+
+  return (
+    <Card className="rounded-2xl">
+      <CardContent className="p-6 sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-xl">
+            <div className="mb-3 flex items-center gap-3">
+              <Badge
+                variant={
+                  difficulty === "hard"
+                    ? "destructive"
+                    : difficulty === "medium"
+                      ? "default"
+                      : "secondary"
+                }
+              >
+                {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {parts.length} {parts.length === 1 ? "part" : "parts"} · {totalQuestions} questions
+              </span>
+            </div>
+            <h3 className="text-2xl font-bold tracking-tight">World Cup Flags</h3>
+            <p className="mt-2 text-muted-foreground">
+              Match the flag of every qualified nation, from Argentina to Uzbekistan — in{" "}
+              {parts.length} quick rounds of {parts[0].questionCount}.
+            </p>
+            <div className="mt-4 flex items-center gap-3">
+              <Progress
+                value={(completedCount / parts.length) * 100}
+                className="w-full max-w-[280px]"
+                aria-label={`${completedCount} of ${parts.length} parts complete`}
+              />
+              <span className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
+                {completedCount} of {parts.length} complete
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-2.5">
+              {parts.map((part, i) => {
+                const done = completedIds.has(part.id);
+                return (
+                  <Link
+                    key={part.id}
+                    href={`/quiz/${part.id}`}
+                    aria-label={`Part ${i + 1}: ${part.title}${done ? " (completed)" : ""}`}
+                    data-testid={`link-world-cup-part-${i + 1}`}
+                    className={
+                      done
+                        ? "flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:scale-105"
+                        : "flex h-10 w-10 items-center justify-center rounded-full border-2 border-border bg-background text-sm font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                    }
+                  >
+                    {i + 1}
+                  </Link>
+                );
+              })}
+            </div>
+            <Button asChild size="lg" className="rounded-full" data-testid="button-world-cup-continue">
+              <Link href={`/quiz/${nextPart.id}`}>
+                {completedCount > 0 ? "Continue" : "Start"} <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 }
@@ -124,7 +315,6 @@ export default function Home() {
   const { data: courses } = useListCourses();
   const { data: me } = useGetMe();
   const isAdmin = me?.isAdmin ?? false;
-  const [showAllCourses, setShowAllCourses] = useState(false);
   const [expandedRoots, setExpandedRoots] = useState<Record<number, boolean>>({});
 
   if (isLoading) {
@@ -163,7 +353,6 @@ export default function Home() {
 
   return (
     <>
-      <SignUpBanner />
       <div className="container max-w-7xl py-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Hero */}
         <section className="relative mb-12 overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/5 via-background to-secondary/10 px-6 py-10 sm:px-10 sm:py-14">
@@ -177,41 +366,20 @@ export default function Home() {
               <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
                 Explore the <span className="text-secondary">World</span>
               </h1>
-              <p className="mt-4 text-lg text-muted-foreground sm:text-xl">
-                Continents, capitals, cultures, and landscapes — one quick quiz at a time.
+              <p className="mt-4 max-w-md text-lg text-muted-foreground sm:text-xl">
+                Continents, capitals, cultures, and landscapes — one quick quiz at a
+                time. Save your scores and watch your streak grow.
               </p>
-              <p className="mt-3 text-base text-muted-foreground sm:text-lg">
-                Not sure where to start? Jump right in by clicking on our{" "}
-                <Link
-                  href="/daily"
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  Daily Quiz
-                </Link>{" "}
-                or why not start with{" "}
-                <a
-                  href="#by-region"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document
-                      .getElementById("by-region")
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  Continents
-                </a>
-                ?
-              </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-3 md:justify-start">
-                <Button asChild size="lg" data-testid="button-hero-daily">
+              <div className="mt-7 flex flex-wrap justify-center gap-3 md:justify-start">
+                <Button asChild size="lg" className="rounded-full" data-testid="button-hero-daily">
                   <Link href="/daily">
-                    <Sparkles className="mr-2 h-4 w-4" /> Daily quiz
+                    <Play className="mr-2 h-4 w-4" /> Play today's quiz
                   </Link>
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
+                  className="rounded-full"
                   data-testid="button-hero-browse"
                   onClick={() =>
                     document
@@ -219,12 +387,7 @@ export default function Home() {
                       ?.scrollIntoView({ behavior: "smooth", block: "start" })
                   }
                 >
-                  <Compass className="mr-2 h-4 w-4" /> Browse quizzes
-                </Button>
-                <Button asChild size="lg" variant="outline" data-testid="button-hero-did-you-know">
-                  <Link href="/did-you-know">
-                    <Lightbulb className="mr-2 h-4 w-4" /> Did you know?
-                  </Link>
+                  Browse all quizzes
                 </Button>
               </div>
             </div>
@@ -279,6 +442,7 @@ export default function Home() {
             {/* Quizzes first */}
             {roots.map((root) => {
               const isQuizListRoot = root.name === QUIZ_LIST_ROOT;
+              const isRailRoot = root.name === "By Topic" || root.name === "By Region";
               const linkedQuizzes = isQuizListRoot
                 ? (quizzes ?? []).filter((q) => q.categories.some((c) => c.id === root.id))
                 : [];
@@ -290,12 +454,17 @@ export default function Home() {
                 >
                   <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight">{root.name}</h2>
+                      <h2 className="text-2xl font-bold tracking-tight">
+                        {isQuizListRoot && (
+                          <span aria-hidden="true" className="mr-2">
+                            🏆
+                          </span>
+                        )}
+                        {root.name}
+                      </h2>
                       <p className="text-sm text-muted-foreground">
                         {isQuizListRoot ? (
-                          <>
-                            {linkedQuizzes.length} {linkedQuizzes.length === 1 ? "quiz" : "quizzes"}
-                          </>
+                          <>The tournament is on — how well do you know the 48 qualified nations?</>
                         ) : (
                           <>
                             {countAll(root).quizzes} {countAll(root).quizzes === 1 ? "quiz" : "quizzes"} across {root.children.length} {root.children.length === 1 ? "category" : "categories"}
@@ -303,7 +472,13 @@ export default function Home() {
                         )}
                       </p>
                     </div>
-                    {!isQuizListRoot && root.children.length > 2 ? (
+                    {isRailRoot ? (
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/category/${root.slug}`}>
+                          View all {root.children.length} <ArrowRight className="ml-1 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    ) : !isQuizListRoot && root.children.length > 2 ? (
                       <div className="flex items-center gap-2">
                         <Button asChild variant="ghost" size="sm">
                           <Link href={`/category/${root.slug}`}>
@@ -345,11 +520,7 @@ export default function Home() {
                         </CardContent>
                       </Card>
                     ) : (
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {linkedQuizzes.map((quiz) => (
-                          <HomeQuizCard key={quiz.id} quiz={quiz} />
-                        ))}
-                      </div>
+                      <WorldCupSeriesCard quizzes={linkedQuizzes} />
                     )
                   ) : root.children.length === 0 ? (
                     <Card className="border-dashed">
@@ -360,6 +531,16 @@ export default function Home() {
                         </Link>
                       </CardContent>
                     </Card>
+                  ) : isRailRoot ? (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {featuredFirst(root.children).slice(0, 4).map((child) => (
+                        <CategoryTile
+                          key={child.id}
+                          node={child}
+                          imagePosition={root.name === "By Region" ? "top" : "center"}
+                        />
+                      ))}
+                    </div>
                   ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {root.children.map((child, i) => (
@@ -385,49 +566,41 @@ export default function Home() {
                       Layered modules with explanations and fun facts. Master each module to unlock the next.
                     </p>
                   </div>
-                  {courseList.length > 2 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      data-testid="button-home-courses-toggle"
-                      onClick={() => setShowAllCourses((v) => !v)}
-                    >
-                      {showAllCourses ? (
-                        <>Show less <ChevronUp className="ml-1 h-4 w-4" /></>
-                      ) : (
-                        <>View all <ChevronDown className="ml-1 h-4 w-4" /></>
-                      )}
-                    </Button>
-                  )}
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/courses">
+                      View all {courseList.length} <ArrowRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {courseList.map((c, i) => (
-                    <Link key={c.id} href={`/courses/${c.slug}`} className={!showAllCourses && i >= 2 ? "hidden" : undefined}>
-                      <Card className="group h-full cursor-pointer overflow-hidden transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-0.5">
-                        <CardHeader>
-                          <div className="mb-2 flex items-start justify-between gap-2">
-                            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                              <GraduationCap className="h-5 w-5" />
-                            </div>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-                          </div>
-                          <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                            {c.title}
-                          </CardTitle>
-                          {c.description && (
-                            <CardDescription className="line-clamp-2">{c.description}</CardDescription>
-                          )}
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-sm text-muted-foreground">
-                            {c.moduleCount} module{c.moduleCount === 1 ? "" : "s"}
-                            {c.masteredCount > 0 && (
-                              <> · <span className="text-green-700 dark:text-green-300 font-medium">{c.masteredCount} mastered</span></>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
+                  {courseList.slice(0, 3).map((c) => (
+                    <CourseTile key={c.id} course={c} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Articles */}
+            {SEO_ARTICLES.length > 0 && (
+              <section>
+                <div className="mb-5 flex items-end justify-between gap-4 border-b pb-3">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                      <BookOpen className="h-6 w-6 text-secondary" /> Articles
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      The geography stories behind the quizzes
+                    </p>
+                  </div>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/articles">
+                      View all {SEO_ARTICLES.length} <ArrowRight className="ml-1 h-4 w-4" />
                     </Link>
+                  </Button>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {SEO_ARTICLES.map((article) => (
+                    <ArticleCard key={article.slug} article={article} />
                   ))}
                 </div>
               </section>

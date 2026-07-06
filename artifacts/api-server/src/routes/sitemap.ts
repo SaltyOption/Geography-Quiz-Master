@@ -7,6 +7,7 @@ import {
   coursesTable,
   articlesTable,
 } from "@workspace/db";
+import { SEO_ARTICLES } from "@workspace/seo-content";
 import { buildVisibleCategoryIds } from "../lib/categoryVisibility";
 
 const router: IRouter = Router();
@@ -81,9 +82,16 @@ router.get("/sitemap.xml", async (req, res) => {
     { loc: `${base}/`, changefreq: "daily", priority: "1.0" },
     { loc: `${base}/daily`, changefreq: "daily", priority: "0.9" },
     { loc: `${base}/courses`, changefreq: "weekly", priority: "0.8" },
+    { loc: `${base}/articles`, changefreq: "weekly", priority: "0.8" },
     { loc: `${base}/did-you-know`, changefreq: "weekly", priority: "0.7" },
     { loc: `${base}/privacy`, changefreq: "monthly", priority: "0.3" },
   ];
+
+  const seoArticleUrls = SEO_ARTICLES.map((article) => ({
+    loc: `${base}/articles/${article.slug}`,
+    changefreq: "monthly",
+    priority: "0.7",
+  }));
 
   const categoryUrls = publishedCategories.map((cat) => ({
     loc: `${base}/category/${cat.slug}`,
@@ -111,6 +119,7 @@ router.get("/sitemap.xml", async (req, res) => {
 
   const allUrls = [
     ...staticUrls,
+    ...seoArticleUrls,
     ...categoryUrls,
     ...quizUrls,
     ...courseUrls,

@@ -35,6 +35,8 @@ const ModuleTakingPage = lazy(
 );
 const DidYouKnowPage = lazy(() => import("@/pages/did-you-know/index"));
 const ArticleDetailPage = lazy(() => import("@/pages/did-you-know/[slug]"));
+const ArticlesIndexPage = lazy(() => import("@/pages/articles/index"));
+const SeoArticlePage = lazy(() => import("@/pages/articles/[slug]"));
 const UserProfilePage = lazy(() => import("@/pages/profile"));
 
 // The admin CMS is lazy-loaded so anonymous visitors never download it.
@@ -219,6 +221,9 @@ function ClerkProviderWithRoutes() {
 
               <Route path="/did-you-know" component={DidYouKnowPage} />
               <Route path="/did-you-know/:slug" component={ArticleDetailPage} />
+
+              <Route path="/articles" component={ArticlesIndexPage} />
+              <Route path="/articles/:slug" component={SeoArticlePage} />
 
               <Route path="/admin">
                 <AdminGuard><AdminDashboard /></AdminGuard>

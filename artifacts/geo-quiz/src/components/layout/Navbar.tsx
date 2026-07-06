@@ -1,9 +1,20 @@
 import { Link, useLocation } from "wouter";
-import { Settings, LogOut, User as UserIcon, GraduationCap } from "lucide-react";
+import { Settings, LogOut, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Show, useUser, useClerk } from "@clerk/react";
 import { useGetMe } from "@workspace/api-client-react";
 import { Mascot } from "@/components/Mascot";
+
+const NAV_LINKS = [
+  { href: "/", label: "Quizzes", testId: "link-nav-quizzes" },
+  { href: "/courses", label: "Courses", testId: "link-courses" },
+  { href: "/daily", label: "Daily Quiz", testId: "link-nav-daily" },
+  { href: "/articles", label: "Articles", testId: "link-nav-articles" },
+];
+
+function isActive(location: string, href: string): boolean {
+  return href === "/" ? location === "/" : location.startsWith(href);
+}
 
 export function Navbar() {
   const [location] = useLocation();
@@ -32,15 +43,22 @@ export function Navbar() {
           </span>
         </Link>
 
-        <nav className="flex min-w-0 items-center gap-1 sm:gap-2">
-          {!onAdminPage && (
-            <Button variant="ghost" size="sm" asChild data-testid="link-courses">
-              <Link href="/courses">
-                <GraduationCap className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Courses</span>
+        <nav className="flex min-w-0 items-center gap-0.5 sm:gap-1">
+          {!onAdminPage &&
+            NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                data-testid={link.testId}
+                className={`hidden rounded-md px-3 py-2 text-sm font-medium transition-colors md:inline-block ${
+                  isActive(location, link.href)
+                    ? "font-bold text-secondary"
+                    : "text-foreground/70 hover:text-foreground"
+                }`}
+              >
+                {link.label}
               </Link>
-            </Button>
-          )}
+            ))}
           {onAdminPage ? (
             <Button variant="ghost" size="sm" asChild>
               <Link href="/">
@@ -63,8 +81,8 @@ export function Navbar() {
             <Button variant="ghost" size="sm" asChild>
               <Link href="/sign-in">Sign In</Link>
             </Button>
-            <Button size="sm" asChild>
-              <Link href="/sign-up">Sign Up</Link>
+            <Button size="sm" className="rounded-full" asChild>
+              <Link href="/sign-up">Sign Up Free</Link>
             </Button>
           </Show>
 

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@workspace/image-config": "workspace:*",
-    "@workspace/markdown": "workspace:*"
+    "@workspace/markdown": "workspace:*",
+    "@workspace/seo-content": "workspace:*"
   }
 }

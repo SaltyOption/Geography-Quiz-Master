@@ -22,7 +22,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
-import { getMetaDescription } from "@workspace/seo-content";
+import { getMetaDescription, SEO_ARTICLES } from "@workspace/seo-content";
 // Crawlable page bodies come from the shared package so this script and the
 // api-server SSR routes emit identical markup — edit them there, not here.
 import {
@@ -38,6 +38,9 @@ import {
   quizBody,
   categoryBody,
   courseDetailBody,
+  seoArticlesIndexBody,
+  seoArticleBody,
+  seoArticleJsonLd,
 } from "@workspace/ssr-bodies";
 
 const { Pool } = pg;
@@ -148,10 +151,10 @@ function writeRoute(routePath, html) {
 
 // Run a query against a table that may not exist in production yet.
 //
-// The prerender runs during the production *build*, but Replit applies the
-// dev→prod schema diff only AFTER a successful build (as part of publish). So
-// the first publish that introduces a new table cannot see that table here —
-// it gets created later in the same publish. Treat "relation does not exist"
+// The prerender runs during the production *build*, but the schema push
+// (drizzle-kit push, the Railway pre-deploy command) runs only AFTER a
+// successful build. So the first deploy that introduces a new table cannot
+// see that table here — it gets created later in the same deploy. Treat "relation does not exist"
 // (Postgres 42P01) as an empty result so the build still succeeds and the
 // publish can proceed; the table is created during that publish and the next
 // build prerenders its routes. Any other error (connection, syntax, etc.)
@@ -708,6 +711,53 @@ for (const article of data.articles) {
 }
 
 // ---------------------------------------------------------------------------
+// 7d. SEO articles (/articles and /articles/:slug) — static editorial content
+// from @workspace/seo-content, rendered with the same shared builders as the
+// api-server SSR routes. Related quizzes resolve against the published quiz
+// list already fetched above; missing ids are silently skipped.
+// ---------------------------------------------------------------------------
+{
+  const meta = {
+    title: "Articles",
+    description:
+      getMetaDescription("/articles") ??
+      "Geography articles from World Geography Trivia — the stories behind the quizzes.",
+    path: "/articles",
+  };
+  writeRoute(
+    "/articles",
+    injectBody(injectHead(template, meta), seoArticlesIndexBody(SEO_ARTICLES)),
+  );
+}
+
+console.log(`\nPrerendering ${SEO_ARTICLES.length} SEO article pages…`);
+for (const article of SEO_ARTICLES) {
+  const meta = {
+    title: article.title,
+    description: article.metaDescription,
+    path: `/articles/${article.slug}`,
+  };
+  const quizById = new Map(data.quizzes.map((q) => [q.id, q]));
+  const relatedQuizzes = article.relatedQuizIds
+    .map((id) => quizById.get(id))
+    .filter(Boolean)
+    .map((q) => ({
+      id: q.id,
+      title: q.title,
+      questionCount: q.questionCount,
+      difficulty: q.difficulty,
+    }));
+  const otherArticles = SEO_ARTICLES.filter((a) => a.slug !== article.slug);
+
+  let articleHtml = injectBody(
+    injectHead(template, meta),
+    seoArticleBody(article, relatedQuizzes, otherArticles),
+  );
+  articleHtml = injectJsonLd(articleHtml, seoArticleJsonLd(article, domain));
+  writeRoute(`/articles/${article.slug}`, articleHtml);
+}
+
+// ---------------------------------------------------------------------------
 // 8. sitemap.xml — generated from live DB data + VITE_CANONICAL_DOMAIN
 // ---------------------------------------------------------------------------
 console.log("\nGenerating sitemap.xml and robots.txt…");
@@ -745,6 +795,7 @@ console.log("\nGenerating sitemap.xml and robots.txt…");
     { loc: `${base}/`, changefreq: "daily", priority: "1.0" },
     { loc: `${base}/daily`, changefreq: "daily", priority: "0.9" },
     { loc: `${base}/courses`, changefreq: "weekly", priority: "0.8" },
+    { loc: `${base}/articles`, changefreq: "weekly", priority: "0.8" },
     { loc: `${base}/did-you-know`, changefreq: "weekly", priority: "0.7" },
     { loc: `${base}/about`, changefreq: "monthly", priority: "0.4" },
     { loc: `${base}/privacy`, changefreq: "monthly", priority: "0.3" },
@@ -774,8 +825,15 @@ console.log("\nGenerating sitemap.xml and robots.txt…");
     priority: "0.6",
   }));
 
+  const seoArticleUrls = SEO_ARTICLES.map((article) => ({
+    loc: `${base}/articles/${article.slug}`,
+    changefreq: "monthly",
+    priority: "0.7",
+  }));
+
   const allUrls = [
     ...staticUrls,
+    ...seoArticleUrls,
     ...categoryUrls,
     ...quizUrls,
     ...courseUrls,

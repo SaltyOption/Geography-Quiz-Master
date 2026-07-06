@@ -43,7 +43,11 @@ import {
   homeBody,
   privacyBody,
   quizBody,
+  seoArticleBody,
+  seoArticleJsonLd,
+  seoArticlesIndexBody,
 } from "@workspace/ssr-bodies";
+import { SEO_ARTICLES, getSeoArticle, getMetaDescription } from "@workspace/seo-content";
 import { buildPageHtml, getRawTemplate } from "../lib/ssrTemplate";
 import { collectDescendantIds } from "../lib/categoryTree";
 import { isRequestAdmin } from "../middlewares/requireAdmin";
@@ -646,6 +650,66 @@ router.get("/did-you-know/:slug", async (req: Request, res: Response) => {
     articleLd,
   );
 
+  res.set(HTML_HEADERS).send(html);
+});
+
+// ---------------------------------------------------------------------------
+// Route: GET /articles and /articles/:slug — static SEO articles.
+//
+// Article content lives in @workspace/seo-content (not the database), so these
+// routes only hit the DB to resolve each article's related quizzes for the
+// "Test yourself" links.
+// ---------------------------------------------------------------------------
+
+router.get("/articles", (_req: Request, res: Response) => {
+  const html = buildPageHtml(
+    {
+      title: "Articles",
+      description:
+        getMetaDescription("/articles") ??
+        "Geography articles from World Geography Trivia — the stories behind the quizzes.",
+      path: "/articles",
+    },
+    seoArticlesIndexBody(SEO_ARTICLES),
+  );
+  res.set(HTML_HEADERS).send(html);
+});
+
+router.get("/articles/:slug", async (req: Request, res: Response) => {
+  const article = getSeoArticle(req.params.slug as string);
+  if (!article) {
+    res.status(404).end();
+    return;
+  }
+
+  const quizRows = article.relatedQuizIds.length
+    ? await db
+        .select({
+          id: quizzesTable.id,
+          title: quizzesTable.title,
+          difficulty: quizzesTable.difficulty,
+          published: quizzesTable.published,
+          questionCount: sql<number>`(select count(*)::int from ${questionsTable} where ${questionsTable.quizId} = ${quizzesTable.id})`,
+        })
+        .from(quizzesTable)
+        .where(inArray(quizzesTable.id, article.relatedQuizIds))
+    : [];
+  const byId = new Map(quizRows.filter((q) => q.published).map((q) => [q.id, q]));
+  const relatedQuizzes = article.relatedQuizIds
+    .map((id) => byId.get(id))
+    .filter((q): q is NonNullable<typeof q> => Boolean(q));
+  const otherArticles = SEO_ARTICLES.filter((a) => a.slug !== article.slug);
+
+  const domain = (process.env.VITE_CANONICAL_DOMAIN ?? "").replace(/\/$/, "");
+  const html = buildPageHtml(
+    {
+      title: article.title,
+      description: article.metaDescription,
+      path: `/articles/${article.slug}`,
+    },
+    seoArticleBody(article, relatedQuizzes, otherArticles),
+    seoArticleJsonLd(article, domain),
+  );
   res.set(HTML_HEADERS).send(html);
 });
 

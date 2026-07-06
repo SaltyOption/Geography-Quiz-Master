@@ -54,3 +54,17 @@ export declare function articleDetailBody(article: {
   body: string;
   imageUrl: string | null;
 }): string;
+
+import type { SeoArticle } from "@workspace/seo-content";
+
+export declare function seoArticlesIndexBody(
+  articles: Pick<SeoArticle, "slug" | "title" | "cardDescription" | "readMinutes">[],
+): string;
+
+export declare function seoArticleBody(
+  article: SeoArticle,
+  relatedQuizzes?: { id: number; title: string; questionCount: number; difficulty: string }[],
+  otherArticles?: Pick<SeoArticle, "slug" | "title">[],
+): string;
+
+export declare function seoArticleJsonLd(article: SeoArticle, domain: string): object;

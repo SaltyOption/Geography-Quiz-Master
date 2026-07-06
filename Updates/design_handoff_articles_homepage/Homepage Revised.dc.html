@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f6f3ee;font-family:'Figtree',sans-serif;color:#1c2333}
+.serif{font-family:'Source Serif 4',serif}
+.wrap{max-width:1180px;margin:0 auto;padding:0 32px}
+.navy{background:#24407c;color:#fff}
+.btn{border:none;border-radius:999px;padding:10px 22px;font-family:'Figtree',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.btn-primary{background:#24407c;color:#fff}
+.btn-ghost{background:#fff;color:#1c2333;border:1px solid #d9d2c7}
+.nav{background:#fbf9f6;border-bottom:1px solid #e8e2d8;padding:14px 0}
+.navlink{color:#3a4258;text-decoration:none;font-size:14px;font-weight:500}
+.hero{background:linear-gradient(135deg,#fdf0e4,#f9e7dd);border-radius:24px;margin-top:28px;padding:56px 64px 40px;position:relative;overflow:hidden}
+.badge{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid #f0ddcb;border-radius:999px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:.12em;color:#d4570f}
+.h1{font-size:56px;line-height:1.05;margin:18px 0 14px;font-weight:700}
+.accent{color:#d4570f}
+.sub{color:#5a6175;font-size:16px;max-width:440px;line-height:1.55;margin:0}
+.stat{font-size:26px;font-weight:700}
+.statlbl{font-size:11px;letter-spacing:.14em;color:#8a8271;font-weight:600}
+.statrow{border-top:1px solid #ecd9c9;margin-top:36px;padding-top:22px}
+.sect{margin-top:52px}
+.sh{font-size:26px;font-weight:700;margin:0}
+.ssub{color:#7a7264;font-size:13px;margin:4px 0 0}
+.viewall{color:#24407c;font-size:13px;font-weight:600;text-decoration:none}
+.card{background:#fff;border:1px solid #e8e2d8;border-radius:16px;overflow:hidden;transition:box-shadow .15s,transform .15s}
+.card:hover{box-shadow:0 8px 24px rgba(36,64,124,.1);transform:translateY(-2px)}
+.cardbody{padding:16px 18px 18px}
+.cardtitle{font-size:16px;font-weight:700;margin:0}
+.carddesc{color:#6b7183;font-size:13px;line-height:1.45;margin:6px 0 0}
+.cardmeta{color:#8a8fa0;font-size:12px;margin-top:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:20px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:20px}
+.pill-easy{background:#e8590c;color:#fff;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700}
+.wc{background:#fff;border:1px solid #dfe4f0;border-radius:18px;padding:24px 28px;margin-top:20px}
+.wcprog{background:#eef1f8;border-radius:999px;height:8px;overflow:hidden}
+.wcfill{background:#24407c;height:100%;border-radius:999px}
+.step{width:34px;height:34px;border-radius:50%;border:2px solid #d9dff0;color:#8a8fa0;font-size:13px;font-weight:700;background:#fff}
+.step.done{background:#24407c;border-color:#24407c;color:#fff}
+.artimg{width:100%;height:130px;object-fit:cover;display:block}
+.coursetag{background:#eef1f8;color:#24407c;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700}
+.footer{border-top:1px solid #e8e2d8;margin-top:64px;padding:28px 0;color:#8a8271;font-size:13px}
+.flink{color:#5a6175;text-decoration:none;font-size:13px}
+.note{background:#fff8ef;border:1px dashed #e0c9a8;border-radius:12px;padding:12px 18px;font-size:12px;color:#8a7350;margin-top:20px;font-family:monospace}
+image-slot{display:block}
+</style>
+</helmet>
+<div style="position:fixed;left:-9999px;top:-9999px;width:0;height:0;overflow:hidden"><x-import component-from-global-scope="image-slot" from="./image-slot.js" hint-size="0px,0px"></x-import></div>
+<nav class="nav"><div class="wrap fx ac jb"><div class="fx ac gap10"><image-slot id="logo" style="width:34px;height:34px" shape="circle" placeholder="logo"></image-slot><span class="serif fw7 fs16">World Geography <span class="accent">Trivia</span></span></div><div class="fx ac gap24"><a href="#" class="navlink">Quizzes</a><a href="#" class="navlink">Courses</a><a href="#" class="navlink">Daily Quiz</a><a href="#" class="navlink">Sign In</a><button class="btn btn-primary">Sign Up Free</button></div></div></nav>
+<div class="wrap">
+<section class="hero"><div class="fx jb ac gap24"><div class="f1"><span class="badge">✦ WORLD GEOGRAPHY TRIVIA</span><h1 class="serif h1">Explore the <span class="accent">World</span></h1><p class="sub">Continents, capitals, cultures, and landscapes — one quick quiz at a time. Save your scores and watch your streak grow.</p><div class="fx ac gap12 mt16" style="margin-top:26px"><button class="btn btn-primary">▶ Play today's quiz</button><button class="btn btn-ghost">Browse all quizzes</button></div></div><image-slot id="mascot" style="width:280px;height:260px" fit="contain" placeholder="Drop the swallow mascot art here"></image-slot></div><div class="statrow fx" style="gap:80px"><div><div class="stat">43</div><div class="statlbl">QUIZZES</div></div><div><div class="stat">25</div><div class="statlbl">CATEGORIES</div></div><div><div class="stat">7</div><div class="statlbl">COURSES</div></div></div></section>
+<sc-if value="{{ showWorldCup }}" hint-placeholder-val="{{ true }}"><section class="sect"><div class="fx ac jb"><div><h2 class="serif sh">🏆 World Cup 2026</h2><p class="ssub">The tournament is on — how well do you know the 48 qualified nations?</p></div><a href="#" class="viewall">View all →</a></div><div class="wc fx ac jb gap24"><div class="f1"><div class="fx ac gap10"><span class="pill-easy">Easy</span><span class="cardmeta" style="margin-top:0">4 parts · 48 questions</span></div><h3 class="cardtitle" style="font-size:19px;margin-top:10px">World Cup Flags</h3><p class="carddesc">Match the flag of every qualified nation, from Argentina to Uzbekistan — in four quick rounds of 12.</p><div class="fx ac gap12" style="margin-top:16px"><div class="wcprog f1"><div class="wcfill" style="width:25%"></div></div><span class="cardmeta" style="margin-top:0;white-space:nowrap">1 of 4 complete</span></div></div><div class="fx ac gap10 noshrink"><button class="step done">1</button><button class="step">2</button><button class="step">3</button><button class="step">4</button><button class="btn btn-primary" style="margin-left:14px">Continue →</button></div></div></section></sc-if>
+<section class="sect"><div class="fx ac jb"><div><h2 class="serif sh">By Topic</h2><p class="ssub">19 quizzes across 13 categories</p></div><a href="#" class="viewall">View all 13 →</a></div><div class="grid4"><div class="card"><image-slot id="topic-ancient" style="width:100%;height:140px" shape="rect" placeholder="Ancient Sites art"></image-slot><div class="cardbody"><h3 class="cardtitle">Ancient Sites</h3><p class="carddesc">Pyramids, temples, and lost cities of the ancient world.</p><div class="cardmeta">7 quizzes</div></div></div><div class="card"><image-slot id="topic-capitals" style="width:100%;height:140px" shape="rect" placeholder="Capitals art"></image-slot><div class="cardbody"><h3 class="cardtitle">Capitals</h3><p class="carddesc">From Reykjavik to Wellington — name every capital city.</p><div class="cardmeta">3 quizzes</div></div></div><div class="card"><image-slot id="topic-flags" style="width:100%;height:140px" shape="rect" placeholder="Flags art"></image-slot><div class="cardbody"><h3 class="cardtitle">Flags</h3><p class="carddesc">Stripes, stars, and crescents — match flags to their nations.</p><div class="cardmeta">4 quizzes</div></div></div><div class="card"><image-slot id="topic-physical" style="width:100%;height:140px" shape="rect" placeholder="Physical Geography art"></image-slot><div class="cardbody"><h3 class="cardtitle">Physical Geography</h3><p class="carddesc">Mountains, deserts, rivers, and the forces that shape them.</p><div class="cardmeta">5 quizzes</div></div></div></div></section>
+<section class="sect"><div class="fx ac jb"><div><h2 class="serif sh">By Region</h2><p class="ssub">20 quizzes across 12 categories</p></div><a href="#" class="viewall">View all 12 →</a></div><div class="grid4"><div class="card"><image-slot id="region-africa" style="width:100%;height:140px" shape="rect" placeholder="Africa map art"></image-slot><div class="cardbody"><h3 class="cardtitle">Africa</h3><p class="carddesc">54 countries, from the Sahara to the Cape of Good Hope.</p><div class="cardmeta">3 quizzes · 1 subcategory</div></div></div><div class="card"><image-slot id="region-europe" style="width:100%;height:140px" shape="rect" placeholder="Europe art"></image-slot><div class="cardbody"><h3 class="cardtitle">Europe</h3><p class="carddesc">Capitals, coastlines, and countries of the old continent.</p><div class="cardmeta">4 quizzes</div></div></div><div class="card"><image-slot id="region-eastasia" style="width:100%;height:140px" shape="rect" placeholder="East Asia art"></image-slot><div class="cardbody"><h3 class="cardtitle">East Asia</h3><p class="carddesc">From the Gobi Desert to the islands of Japan.</p><div class="cardmeta">2 quizzes</div></div></div><div class="card"><image-slot id="region-antarctica" style="width:100%;height:140px" shape="rect" placeholder="Antarctica art"></image-slot><div class="cardbody"><h3 class="cardtitle">Antarctica</h3><p class="carddesc">The frozen continent — stations, seas, and ice shelves.</p><div class="cardmeta">1 quiz</div></div></div></div></section>
+<section class="sect"><div class="fx ac jb"><div><h2 class="serif sh">🎓 Learning Courses</h2><p class="ssub">Layered modules with explanations and fun facts. Master each module to unlock the next.</p></div><a href="#" class="viewall">View all 7 →</a></div><div class="grid3"><div class="card"><image-slot id="course-oceans" style="width:100%;height:130px" shape="rect" placeholder="Oceans art"></image-slot><div class="cardbody"><div class="fx ac jb"><h3 class="cardtitle">Oceans and Seas</h3><span class="coursetag">7 modules</span></div><p class="carddesc">Currents, trenches, and the five oceans — how the water world works.</p></div></div><div class="card"><image-slot id="course-rivers" style="width:100%;height:130px" shape="rect" placeholder="Rivers art"></image-slot><div class="cardbody"><div class="fx ac jb"><h3 class="cardtitle">Rivers and Lakes</h3><span class="coursetag">7 modules</span></div><p class="carddesc">Follow the Nile, Amazon, and Mekong from source to sea.</p></div></div><div class="card"><image-slot id="course-deserts" style="width:100%;height:130px" shape="rect" placeholder="Deserts art"></image-slot><div class="cardbody"><div class="fx ac jb"><h3 class="cardtitle">World Deserts</h3><span class="coursetag">7 modules</span></div><p class="carddesc">Hot, cold, and coastal — life in Earth's driest places.</p></div></div></div></section>
+<section class="sect"><div class="fx ac jb"><div><h2 class="serif sh">📖 Articles</h2><p class="ssub">The geography stories behind the quizzes</p></div><a href="Article Page.dc.html" class="viewall">View all 6 →</a></div><div class="grid3"><a href="Article Page.dc.html" class="card" style="text-decoration:none;color:inherit"><img src="vatican-illustration.svg" alt="Vatican City illustration" class="artimg"><div class="cardbody"><h3 class="cardtitle">What Is the Smallest Country in the World?</h3><p class="carddesc">Vatican City wins at 0.49 km² — but the nine runners-up are just as fascinating.</p><div class="cardmeta">8 min read</div></div></a><a href="#" class="card" style="text-decoration:none;color:inherit"><img src="istanbul-illustration.svg" alt="Istanbul illustration — mosque and skyline joined by a Bosphorus bridge" class="artimg"><div class="cardbody"><h3 class="cardtitle">Why Is Istanbul on Two Continents?</h3><p class="carddesc">The strait that splits a megacity between Europe and Asia — and who drew the line.</p><div class="cardmeta">7 min read</div></div></a><a href="#" class="card" style="text-decoration:none;color:inherit"><img src="uk-gb-england-illustration.svg" alt="Map illustration of the British Isles" class="artimg"><div class="cardbody"><h3 class="cardtitle">UK vs. Great Britain vs. England</h3><p class="carddesc">Four terms, four different things — the definitive untangling.</p><div class="cardmeta">6 min read</div></div></a></div><div class="grid3"><a href="#" class="card" style="text-decoration:none;color:inherit"><img src="multiple-capitals-illustration.svg" alt="Three government buildings with location pins" class="artimg"><div class="cardbody"><h3 class="cardtitle">Which Countries Have More Than One Capital?</h3><p class="carddesc">South Africa has three — and it's far from alone. The full list, explained.</p><div class="cardmeta">7 min read</div></div></a><a href="#" class="card" style="text-decoration:none;color:inherit"><img src="worldcup-host-cities-illustration.svg" alt="Map of North America with 16 host city pins" class="artimg"><div class="cardbody"><h3 class="cardtitle">Geography of the 2026 World Cup Host Cities</h3><p class="carddesc">From Mexico City's 7,350-foot altitude to Vancouver's Pacific coast — all 16 cities.</p><div class="cardmeta">9 min read</div></div></a><a href="#" class="card" style="text-decoration:none;color:inherit"><img src="worldcup-teams-illustration.svg" alt="Globe with team markers and pennant flags" class="artimg"><div class="cardbody"><h3 class="cardtitle">Where Is Every World Cup 2026 Team From?</h3><p class="carddesc">All 48 teams mapped — including four debutants and the smallest nation ever to qualify.</p><div class="cardmeta">8 min read</div></div></a></div></section>
+<p class="note">↑ Drag your existing illustrations onto any card — the striped boxes are drop targets. Card art persists once dropped.</p>
+</div>
+<footer class="footer"><div class="wrap fx ac jb"><span>© 2026 World Geography Trivia</span><div class="fx ac gap24"><a href="#" class="flink">Did You Know</a><a href="#" class="flink">About</a><a href="#" class="flink">Contact</a><a href="#" class="flink">Privacy</a></div></div></footer>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showWorldCup&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sections&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { showWorldCup: this.props.showWorldCup ?? true };
+  }
+}
+</script>
+</body>
+</html>
