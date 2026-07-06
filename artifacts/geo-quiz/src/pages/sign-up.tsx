@@ -3,8 +3,8 @@ import { SignUp } from "@clerk/react";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function SignUpPage() {
-  // To update login providers, app branding, or OAuth settings use the Auth
-  // pane in the workspace toolbar. More information can be found in the Replit docs.
+  // To update login providers, app branding, or OAuth settings use the Clerk
+  // dashboard for the application whose keys are configured in the environment.
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 relative overflow-hidden">
       {/* Subtle world map background gradient */}

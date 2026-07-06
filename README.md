@@ -1,8 +1,10 @@
-# Workspace
+# World Geography Trivia
 
 ## Overview
 
 World Geography Trivia — a full-stack geography quiz platform. Visitors can take geography quizzes and track their progress. Admins can manage quiz content. Users can create accounts to save their history.
+
+Production: https://worldgeographytrivia.com
 
 ## Stack
 
@@ -17,6 +19,7 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - **Build**: esbuild (CJS bundle)
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
 - **Authentication**: Clerk (via setupClerkWhitelabelAuth)
+- **Hosting**: Railway (web service + managed Postgres + cron job)
 
 ## Architecture
 
@@ -26,6 +29,37 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - `lib/api-spec` — OpenAPI spec (source of truth for API contract)
 - `lib/api-client-react` — Generated React Query hooks
 - `lib/api-zod` — Generated Zod validation schemas
+
+In production a single Express server (`api-server`) serves everything: the API, the SSR page shells, and every static file. Its build copies the entire geo-quiz `dist/public` into its own bundle (see `artifacts/api-server/build.mjs`), so the shell and every asset it references always come from one build and can never diverge.
+
+## Local Development
+
+```sh
+pnpm install
+
+# Terminal 1 — Vite dev server (the api-server proxies to it):
+PORT=26064 BASE_PATH=/ pnpm --filter @workspace/geo-quiz run dev
+
+# Terminal 2 — API server:
+PORT=8080 pnpm --filter @workspace/api-server run dev
+
+# Browse http://localhost:8080
+```
+
+Required env vars for a working local stack: `DATABASE_URL` (any Postgres), `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`, and optionally `ADMIN_USER_IDS`. The api-server's dev proxy target can be overridden with `WEB_DEV_URL` (defaults to `http://localhost:26064`).
+
+## Deployment (Railway)
+
+Two services deploy from this repo:
+
+1. **Web service** — uses [`railway.json`](railway.json):
+   - **Build**: runs the broken-image pre-deploy gate (`check-db-image-files`, needs `DATABASE_URL` at build time), then builds the frontend and the api-server.
+   - **Pre-deploy**: `pnpm --filter @workspace/db run push` (applies schema changes before the new code serves traffic).
+   - **Start**: `node --enable-source-maps artifacts/api-server/dist/index.mjs`. Railway injects `PORT`.
+   - **Health check**: `GET /api/healthz`.
+2. **Scheduled broken-image check** — a second service from the same repo with its config path set to [`railway.cron.json`](railway.cron.json). Runs `check-db-image-files` daily against the production database (see below).
+
+Service variables to set on the web service (build and runtime): `DATABASE_URL` (reference the Railway Postgres service), `NODE_ENV=production`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`, `ADMIN_USER_IDS`, `VITE_CANONICAL_DOMAIN=https://worldgeographytrivia.com`, and optionally `BROKEN_IMAGE_ALERT_WEBHOOK_URL` and `TRUST_PROXY_HOPS` (defaults to 1, correct for Railway's edge proxy). The cron service needs `DATABASE_URL` and optionally `BROKEN_IMAGE_ALERT_WEBHOOK_URL`.
 
 ## Features
 
@@ -72,7 +106,7 @@ World Geography Trivia — a full-stack geography quiz platform. Visitors can ta
 - Table `contact_messages` — id (serial PK), name, email, reason (nullable text), message, createdAt.
 - Endpoints: `POST /api/contact` is **public** (no auth) and bounded (name ≤100, email ≤200, message ≤5000 chars; email format validated). It stores the message and returns `{ id }`. `GET /api/contact/messages` (admin-only via `requireAdmin`) returns `{ messages, total }` newest-first.
 - Admin page `/admin/contact` (linked from the admin dashboard) lists submissions newest-first, each with a `mailto:` reply link.
-- Email delivery is **deferred**: submissions are currently stored only (visible in the admin panel). Emailing each submission to worldgeographytrivia@gmail.com can be added later by connecting a Gmail (or other email) integration and calling a send helper from the `POST /api/contact` handler (best-effort, must not fail the DB save).
+- Email delivery is **deferred**: submissions are currently stored only (visible in the admin panel). Emailing each submission to worldgeographytrivia@gmail.com can be added later by connecting a transactional-email provider (e.g. Resend) and calling a send helper from the `POST /api/contact` handler (best-effort, must not fail the DB save).
 
 ## About
 
@@ -117,40 +151,40 @@ The home page is a category browser only (no quizzes shown directly) — it grou
 - `pnpm run typecheck` — full typecheck
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/scripts run check-db-image-files` — maintenance check: flags DB image URLs (question/category/course `image_url`) under `/regions/` or `/landmarks/` whose source file or responsive variants are missing from `public/`. Needs `DATABASE_URL`; exits non-zero on missing files. Run against dev or prod. This check also runs automatically as a **pre-deploy gate**: it is the first step of the api-server's production `build` (in `artifacts/api-server/.replit-artifact/artifact.toml`), running against the production database before the frontend/api-server builds. A failure fails the whole deploy build, so broken image references block publishing until fixed. It additionally runs on a **schedule** against production (see "Scheduled Broken-Image Check" below).
+- `pnpm --filter @workspace/db run push` — push DB schema changes (also runs automatically as the Railway pre-deploy command)
+- `pnpm --filter @workspace/scripts run check-db-image-files` — maintenance check: flags DB image URLs (question/category/course `image_url`) under `/regions/` or `/landmarks/` whose source file or responsive variants are missing from `public/`. Needs `DATABASE_URL`; exits non-zero on missing files. Run against dev or prod. This check also runs automatically as a **pre-deploy gate**: it is the first step of the web service's build (see `railway.json`), running against the production database before the frontend/api-server builds. A failure fails the whole deploy build, so broken image references block publishing until fixed. It additionally runs on a **schedule** against production (see "Scheduled Broken-Image Check" below).
 
 ## Scheduled Broken-Image Check
 
-The pre-deploy gate only catches broken image references at publish time. Admins add and edit image URLs through the live admin UI without redeploying, so a bad reference can sit in production until the next deploy. A **Scheduled Deployment** runs the same `check-db-image-files` script on a regular cadence against the production database to catch these promptly.
+The pre-deploy gate only catches broken image references at publish time. Admins add and edit image URLs through the live admin UI without redeploying, so a bad reference can sit in production until the next deploy. A **Railway cron service** runs the same `check-db-image-files` script on a regular cadence against the production database to catch these promptly.
 
 - **What it runs:** the existing `pnpm --filter @workspace/scripts run check-db-image-files` script — no separate logic. It exits non-zero when any DB image URL points at a missing source file or responsive variant.
-- **Why a fresh checkout is enough:** the responsive variants (`-400/-768/-1024.webp/.avif`) under `public/regions` and `public/landmarks` are committed to git, so the script needs no frontend build — only `pnpm install` to get `tsx` + workspace deps. It reads `DATABASE_URL` (auto-provisioned in production) to inspect the live DB.
-- **How failures reach the team:** a non-zero exit makes the scheduled run fail, which Replit surfaces in the Deployments pane and notifies the deployer about. Broken-image details are printed to the run logs (`source#id -> url` + the missing files).
-- **Active alerting (optional):** when broken images are found the script notifies through two independent, best-effort channels. Only genuinely broken images trigger an alert — transient failures (timeouts/DNS/5xx/429) never notify. Each channel is best-effort: when unconfigured it is a no-op, and a delivery failure is logged but never changes the run's exit code.
-  - **Webhook:** when `BROKEN_IMAGE_ALERT_WEBHOOK_URL` is set, the script POSTs a JSON notification (Slack-compatible `text` summary plus a structured `broken` array of `{ source, id, url, reason }`) so the team is alerted without watching the Deployments pane. Works with Slack incoming webhooks and generic JSON webhooks. Set `BROKEN_IMAGE_ALERT_WEBHOOK_URL` in the production (and/or dev) Secrets pane.
-  - **Email:** when the Replit-managed **Gmail integration** (the `google-mail` connector) is connected, the script emails a plain-text summary (subject + the `source#id -> url (reason)` list) via the Gmail API, using a token fetched fresh from the Replit connectors proxy (no SMTP/OAuth secrets in code). The recipient defaults to `worldgeographytrivia@gmail.com` and can be overridden with `BROKEN_IMAGE_ALERT_EMAIL_TO`. To enable, connect Gmail through the integrations panel (account must have access to the recipient/sender inbox); when Gmail is not connected, email alerting is silently skipped.
+- **Why a fresh checkout is enough:** the responsive variants (`-400/-768/-1024.webp/.avif`) under `public/regions` and `public/landmarks` are committed to git, so the script needs no frontend build — only `pnpm install` to get `tsx` + workspace deps. It reads `DATABASE_URL` to inspect the live DB.
+- **How failures reach the team:** a non-zero exit makes the scheduled run fail, which Railway surfaces in the service's deploy/run logs and observability alerts. Broken-image details are printed to the run logs (`source#id -> url` + the missing files).
+- **Active alerting (optional):** when `BROKEN_IMAGE_ALERT_WEBHOOK_URL` is set, the script POSTs a JSON notification (Slack-compatible `text` summary plus a structured `broken` array of `{ source, id, url, reason }`) so the team is alerted without watching logs. Works with Slack incoming webhooks and generic JSON webhooks. Only genuinely broken images trigger an alert — transient failures (timeouts/DNS/5xx/429) never notify. The webhook is best-effort: when unconfigured it is a no-op, and a delivery failure is logged but never changes the run's exit code.
 
-### One-time setup (do this in the Deployments pane — agents cannot create it)
+### One-time setup (in the Railway dashboard)
 
-Create a **separate Scheduled Deployment** (alongside the existing autoscale api-server deployment):
+Create a **second service** from this same repo (alongside the web service):
 
-- **Deployment type:** Scheduled
-- **Build command:** `pnpm install`
-- **Run command:** `pnpm --filter @workspace/scripts run check-db-image-files`
-- **Schedule:** a regular cadence (e.g. daily) — adjust to how often admins edit images
-- Production secrets (`DATABASE_URL`) are shared automatically, so no extra config is needed.
+- **Config path:** `railway.cron.json` (sets the start command, a daily `0 6 * * *` schedule, and no restarts)
+- **Variables:** `DATABASE_URL` (reference the Postgres service), optionally `BROKEN_IMAGE_ALERT_WEBHOOK_URL`
+- Adjust the `cronSchedule` in `railway.cron.json` to how often admins edit images.
 
-## Environment Variables (Auto-Provisioned)
+## Environment Variables
 
 - `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` — Clerk auth keys
-- `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` — PostgreSQL
+- `DATABASE_URL` — PostgreSQL connection string
+- `ADMIN_USER_IDS` — comma-separated Clerk user IDs with admin access
+- `VITE_CANONICAL_DOMAIN` — canonical origin for SEO/sitemap/SSR (`https://worldgeographytrivia.com` in production)
+- `BROKEN_IMAGE_ALERT_WEBHOOK_URL` — optional webhook for broken-image alerts
+- `TRUST_PROXY_HOPS` — number of reverse proxies in front of the server (default 1)
 
 ## Admin Access
 
 - Admin write endpoints (`POST/PATCH/DELETE` on quizzes, questions, categories) and the `/admin/*` UI are restricted via the `requireAdmin` middleware. It rejects unauthenticated requests with `401` and signed-in non-admins with `403`.
 - Admin identity is configured via the `ADMIN_USER_IDS` env var: a comma-separated list of Clerk user IDs. If unset/empty, no one is an admin (fail-closed).
-- Set `ADMIN_USER_IDS` in the workspace Secrets pane so it's available in both development and the deployed app.
+- Set `ADMIN_USER_IDS` in your environment (Railway service variables in production, shell env or a local `.env` in development) so it's available in both development and the deployed app.
 - Bootstrap UX: visit `/admin` while signed in but not yet an admin — the page displays your Clerk user ID so you can copy it into `ADMIN_USER_IDS`, then refresh.
 - The client uses `GET /api/me` (`useGetMe`) to decide whether to show the Admin nav link and to gate `/admin/*` routes. The server is the security boundary; the client guard is UX only.
 

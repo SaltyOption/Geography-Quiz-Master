@@ -85,8 +85,8 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 // Resolve the publishable key from the incoming request host so the same
-// server can serve multiple Clerk custom domains (e.g. the .replit.app domain
-// and worldgeographytrivia.com). Falls back to CLERK_PUBLISHABLE_KEY when the
+// server can serve multiple Clerk custom domains (e.g. a platform preview
+// domain and worldgeographytrivia.com). Falls back to CLERK_PUBLISHABLE_KEY when the
 // host doesn't map to a custom domain. getClerkProxyHost is shared with
 // clerkProxyMiddleware so both halves of the auth setup agree on the canonical
 // hostname — otherwise sessions issued on a custom domain fail to validate.

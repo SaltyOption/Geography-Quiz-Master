@@ -85,9 +85,9 @@ export function AdminGuard({ children }: { children: ReactNode }) {
             <code className="bg-muted px-1.5 py-0.5 rounded text-foreground font-mono text-xs">
               ADMIN_USER_IDS
             </code>{" "}
-            environment variable (comma-separated for multiple admins). Set it in your Replit
-            workspace Secrets pane so it's available in both development and the deployed app, then
-            refresh this page.
+            environment variable (comma-separated for multiple admins). Set it in your hosting
+            environment's variables so it's available in both development and the deployed app,
+            then refresh this page.
           </p>
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">

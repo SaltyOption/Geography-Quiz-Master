@@ -30,25 +30,17 @@
 // network failures (timeouts, DNS errors, 5xx, 429) are reported as warnings
 // but do NOT fail the run, so a flaky CDN or network blip cannot block a deploy.
 //
-// Alerting: a non-zero exit only surfaces in the Replit Deployments pane when
-// someone looks. Admins edit image URLs through the live admin UI between
+// Alerting: a non-zero exit only surfaces in the hosting platform's job logs
+// when someone looks. Admins edit image URLs through the live admin UI between
 // deploys, so a newly-broken image can sit in production unnoticed. When
 // genuinely broken images are found (NOT transient failures), this script
-// notifies through two independent, best-effort channels:
+// notifies through a configurable webhook (set BROKEN_IMAGE_ALERT_WEBHOOK_URL).
+// The payload includes a Slack-compatible `text` summary plus a structured
+// `broken` array (source#id -> url + reason).
 //
-//   1. A configurable webhook (set BROKEN_IMAGE_ALERT_WEBHOOK_URL). The payload
-//      includes a Slack-compatible `text` summary plus a structured `broken`
-//      array (source#id -> url + reason).
-//   2. A direct email summary, sent through the Replit-managed Gmail
-//      integration (the `google-mail` connector). The recipient defaults to
-//      worldgeographytrivia@gmail.com and can be overridden with
-//      BROKEN_IMAGE_ALERT_EMAIL_TO. Email is sent only when the Gmail
-//      integration is connected (credentials available from the Replit
-//      connectors proxy); otherwise it is a no-op.
-//
-// Both channels are best-effort: when unconfigured they are a no-op, and a
-// delivery failure is logged but never changes the run's success/exit code.
-// Only genuinely broken images notify — transient failures never do.
+// The webhook is best-effort: when unconfigured it is a no-op, and a delivery
+// failure is logged but never changes the run's success/exit code. Only
+// genuinely broken images notify — transient failures never do.
 
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -82,14 +74,6 @@ const ALERT_TIMEOUT_MS = 10_000;
 // Cap the number of rows enumerated in the alert text so a large batch cannot
 // produce an oversized payload; the full list is always in the run logs.
 const ALERT_MAX_ROWS = 50;
-
-// Email alerting via the Replit-managed Gmail integration (the `google-mail`
-// connector). The recipient defaults to the shared inbox noted for contact-form
-// delivery and can be overridden per environment.
-const GMAIL_CONNECTOR = "google-mail";
-const DEFAULT_ALERT_EMAIL = "worldgeographytrivia@gmail.com";
-const ALERT_EMAIL_TO =
-  process.env.BROKEN_IMAGE_ALERT_EMAIL_TO?.trim() || DEFAULT_ALERT_EMAIL;
 
 // public/ lives in the geo-quiz frontend artifact; that is what the proxy
 // serves these URLs from in production.
@@ -233,128 +217,6 @@ async function sendBrokenImageAlert(broken: BrokenItem[]): Promise<void> {
   }
 }
 
-// Fetch a Gmail access token from the Replit connectors proxy. Returns null
-// (treated as "unconfigured", a no-op) when the integration is not connected or
-// the proxy environment is unavailable. This mirrors the secure connectors
-// pattern: no raw SMTP/OAuth credentials live in code, and the token is fetched
-// fresh on every run rather than cached.
-async function getGmailAccessToken(): Promise<string | null> {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? `repl ${process.env.REPL_IDENTITY}`
-    : process.env.WEB_REPL_RENEWAL
-      ? `depl ${process.env.WEB_REPL_RENEWAL}`
-      : null;
-  if (!hostname || !xReplitToken) return null;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ALERT_TIMEOUT_MS);
-  try {
-    const res = await fetch(
-      `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=${GMAIL_CONNECTOR}`,
-      {
-        headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken },
-        signal: controller.signal,
-      },
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      items?: Array<{
-        settings?: {
-          access_token?: string;
-          oauth?: { credentials?: { access_token?: string } };
-        };
-      }>;
-    };
-    const settings = data.items?.[0]?.settings;
-    return (
-      settings?.access_token ??
-      settings?.oauth?.credentials?.access_token ??
-      null
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function sendBrokenImageEmailAlert(broken: BrokenItem[]): Promise<void> {
-  if (broken.length === 0) return;
-
-  let token: string | null = null;
-  try {
-    token = await getGmailAccessToken();
-  } catch (err) {
-    // Best-effort: a credential lookup failure must not change the run outcome.
-    console.error(
-      `Failed to read Gmail connection for email alert: ${describeError(err)}.`,
-    );
-    return;
-  }
-
-  if (!token) {
-    console.log(
-      "\nEmail alerting skipped: connect the Gmail integration to email broken-image alerts.",
-    );
-    return;
-  }
-
-  const subject = `World Geography Trivia — ${broken.length} broken image URL(s) detected`;
-  const body = [
-    `${broken.length} broken image URL(s) were detected in the production database.`,
-    "",
-    ...buildBrokenLines(broken),
-  ].join("\n");
-
-  // RFC 2822 message, base64url-encoded for the Gmail send API.
-  const mime = [
-    `To: ${ALERT_EMAIL_TO}`,
-    `Subject: ${subject}`,
-    "MIME-Version: 1.0",
-    'Content-Type: text/plain; charset="UTF-8"',
-    "",
-    body,
-  ].join("\r\n");
-  const raw = Buffer.from(mime, "utf-8").toString("base64url");
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ALERT_TIMEOUT_MS);
-  try {
-    const res = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ raw }),
-        signal: controller.signal,
-      },
-    );
-    if (!res.ok) {
-      console.error(
-        `Failed to deliver broken-image email alert: Gmail API returned ${res.status}.`,
-      );
-    } else {
-      console.log(
-        `\nSent broken-image email alert for ${broken.length} URL(s) to ${ALERT_EMAIL_TO}.`,
-      );
-    }
-    try {
-      await res.body?.cancel();
-    } catch {
-      // ignore
-    }
-  } catch (err) {
-    // Best-effort: a delivery failure must not change the run outcome.
-    console.error(
-      `Failed to deliver broken-image email alert: ${describeError(err)}.`,
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 async function main(): Promise<void> {
   const refs = await collectImageRefs();
 
@@ -438,7 +300,7 @@ async function main(): Promise<void> {
   }
 
   // Actively notify (best-effort) so a newly-broken image surfaces without
-  // someone watching the Deployments pane. Only genuinely broken images are
+  // someone watching the job logs. Only genuinely broken images are
   // included — transient failures are intentionally excluded.
   const brokenItems: BrokenItem[] = [
     ...brokenLocal.map((ref) => ({
@@ -457,7 +319,6 @@ async function main(): Promise<void> {
     })),
   ];
   await sendBrokenImageAlert(brokenItems);
-  await sendBrokenImageEmailAlert(brokenItems);
 
   process.exitCode = 1;
 }
