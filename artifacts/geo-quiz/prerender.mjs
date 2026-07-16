@@ -30,6 +30,7 @@ import {
   esc,
   homeBody,
   dailyBody,
+  guessTheCountryBody,
   coursesBody,
   privacyBody,
   aboutBody,
@@ -426,14 +427,9 @@ console.log("\nPrerendering static routes…");
     path: "/guess-the-country",
   };
   // The game itself is fully client-rendered (it depends on the visitor's date
-  // and localStorage), so the crawlable body is a hand-written static summary.
-  // React replaces it with the live game on hydration.
-  const body = `<main style="max-width:480px;margin:0 auto;padding:24px 16px">
-    <h1>Where's Atlas?</h1>
-    <p>A daily geography guessing game from ${esc(SITE_NAME)}. Atlas the swallow has flown to a mystery country — find it in six guesses using capital-to-capital distance and direction hints. A new puzzle every day, the same for everyone.</p>
-    <p>Enable JavaScript to play today's puzzle.</p>
-  </main>`;
-  writeRoute("/guess-the-country", injectBody(injectHead(template, meta), body));
+  // and localStorage), so the crawlable body is a static summary shared with the
+  // api-server SSR route via @workspace/ssr-bodies. React replaces it on hydration.
+  writeRoute("/guess-the-country", injectBody(injectHead(template, meta), guessTheCountryBody()));
 }
 
 // ---------------------------------------------------------------------------

@@ -39,6 +39,7 @@ import {
   courseDetailBody,
   coursesBody,
   dailyBody,
+  guessTheCountryBody,
   didYouKnowBody,
   homeBody,
   privacyBody,
@@ -495,6 +496,24 @@ router.get("/daily", (_req: Request, res: Response) => {
       path: "/daily",
     },
     dailyBody(),
+  );
+
+  res.set(HTML_HEADERS).send(html);
+});
+
+// ---------------------------------------------------------------------------
+// Route: GET /guess-the-country  (Where's Atlas? daily game)
+// ---------------------------------------------------------------------------
+
+router.get("/guess-the-country", (_req: Request, res: Response) => {
+  const html = buildPageHtml(
+    {
+      title: "Where's Atlas? — Daily Country Guessing Game",
+      description:
+        "Atlas the swallow has flown to a mystery country. Guess it in 6 tries using capital-to-capital distance and direction hints — a new puzzle every day.",
+      path: "/guess-the-country",
+    },
+    guessTheCountryBody(),
   );
 
   res.set(HTML_HEADERS).send(html);

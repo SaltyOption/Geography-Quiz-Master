@@ -8,6 +8,8 @@ export declare function sharedNav(): string;
 
 export declare function dailyBody(): string;
 
+export declare function guessTheCountryBody(): string;
+
 export declare function privacyBody(): string;
 
 export declare function aboutBody(): string;
