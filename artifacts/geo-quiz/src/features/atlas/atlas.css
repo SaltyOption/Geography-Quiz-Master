@@ -1,0 +1,102 @@
+/*
+ * Scoped styles for the vendored "Where's Atlas?" game (src/features/atlas/game).
+ *
+ * The original standalone app styled the global <body> with its dark "nautical
+ * chart" theme. Here the game is one page inside the light-themed main site, so
+ * every rule is scoped under `.atlas-game` and the dark background is applied to
+ * that wrapper only — it never leaks onto the rest of World Geography Trivia.
+ *
+ * The @keyframes stay global because the game's components reference them by
+ * name from inline `animation` styles.
+ */
+
+.atlas-game {
+  --ocean: #0b2233;
+  --panel: #12314a;
+  --panel-lite: #1a3f5c;
+  --ink: #e8f1f4;
+  --faded: #8fb0bf;
+  --coral: #ff7a5c;
+  --teal: #3fc9a5;
+  --sand: #e4c580;
+  --line: #25506f;
+
+  background: var(--ocean);
+  color: var(--ink);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Fill the viewport below the sticky 4rem navbar so the ocean reaches the fold. */
+  min-height: calc(100dvh - 4rem);
+}
+
+.atlas-game *,
+.atlas-game *::before,
+.atlas-game *::after {
+  box-sizing: border-box;
+}
+
+.atlas-game button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.atlas-game input:focus-visible,
+.atlas-game button:focus-visible,
+.atlas-game [tabindex]:focus-visible {
+  outline: 2px solid var(--sand);
+  outline-offset: 2px;
+}
+
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-game *,
+  .atlas-game *::before,
+  .atlas-game *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

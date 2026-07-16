@@ -1,0 +1,26 @@
+// Common alternative names players might type. Keyed by our display name.
+// Used by autocomplete matching (SPEC.md "Data").
+export const ALIASES = {
+  "United States": ["USA", "US", "America", "United States of America"],
+  "United Kingdom": ["UK", "Britain", "Great Britain", "England"],
+  "United Arab Emirates": ["UAE", "Emirates"],
+  "Ivory Coast": ["Côte d'Ivoire", "Cote d'Ivoire"],
+  Czechia: ["Czech Republic"],
+  "DR Congo": ["Democratic Republic of the Congo", "Congo-Kinshasa", "DRC", "Zaire"],
+  Congo: ["Republic of the Congo", "Congo-Brazzaville"],
+  Myanmar: ["Burma"],
+  "North Macedonia": ["Macedonia"],
+  Eswatini: ["Swaziland"],
+  Turkey: ["Türkiye", "Turkiye"],
+  Netherlands: ["Holland"],
+  Russia: ["Russian Federation"],
+  "South Korea": ["Korea", "Republic of Korea", "ROK"],
+  "North Korea": ["DPRK"],
+  "Cape Verde": ["Cabo Verde"],
+  "Timor-Leste": ["East Timor"],
+  Vietnam: ["Viet Nam"],
+  Laos: ["Lao"],
+  Syria: ["Syrian Arab Republic"],
+  Tanzania: ["United Republic of Tanzania"],
+  Vatican: ["Holy See"],
+};

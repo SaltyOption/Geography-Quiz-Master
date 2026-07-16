@@ -29,6 +29,7 @@ const PrivacyPage = lazy(() => import("@/pages/privacy"));
 const ContactPage = lazy(() => import("@/pages/contact"));
 const AboutPage = lazy(() => import("@/pages/about"));
 const CoursesPage = lazy(() => import("@/pages/courses"));
+const GuessTheCountryPage = lazy(() => import("@/pages/guess-the-country"));
 const CourseDetailPage = lazy(() => import("@/pages/courses/[slug]"));
 const ModuleTakingPage = lazy(
   () => import("@/pages/courses/[slug]/modules/[moduleSlug]"),
@@ -209,6 +210,7 @@ function ClerkProviderWithRoutes() {
               <Route path="/profile" component={UserPortal} />
               
               <Route path="/daily" component={DailyQuizPage} />
+              <Route path="/guess-the-country" component={GuessTheCountryPage} />
               <Route path="/privacy" component={PrivacyPage} />
               <Route path="/contact" component={ContactPage} />
               <Route path="/about" component={AboutPage} />

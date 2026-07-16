@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/", label: "Quizzes", testId: "link-nav-quizzes" },
   { href: "/courses", label: "Courses", testId: "link-courses" },
   { href: "/daily", label: "Daily Quiz", testId: "link-nav-daily" },
+  { href: "/guess-the-country", label: "Where's Atlas?", testId: "link-nav-atlas" },
   { href: "/articles", label: "Articles", testId: "link-nav-articles" },
 ];
 

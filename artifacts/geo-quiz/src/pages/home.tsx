@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useGetCategoryTree, useListQuizzes, useListCourses, useGetMe, useGetUserProgress, type CategoryNode, type QuizSummary, type CourseSummary } from "@workspace/api-client-react";
 import { usePageMeta, canonicalOrigin } from "@/hooks/usePageMeta";
 import { Link } from "wouter";
-import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, ArrowRight, Play, Image as ImageIcon } from "lucide-react";
+import { Loader2, FolderTree, ChevronRight, ChevronDown, ChevronUp, BookOpen, GraduationCap, Sparkles, ArrowRight, Play, Compass, Image as ImageIcon } from "lucide-react";
 import { SEO_ARTICLES } from "@workspace/seo-content";
 import { Mascot } from "@/components/Mascot";
 import { ResponsiveImage } from "@/components/ResponsiveImage";
@@ -376,6 +376,11 @@ export default function Home() {
                     <Play className="mr-2 h-4 w-4" /> Play today's quiz
                   </Link>
                 </Button>
+                <Button asChild size="lg" variant="secondary" className="rounded-full" data-testid="button-hero-atlas">
+                  <Link href="/guess-the-country">
+                    <Compass className="mr-2 h-4 w-4" /> Where's Atlas?
+                  </Link>
+                </Button>
                 <Button
                   size="lg"
                   variant="outline"
@@ -418,6 +423,55 @@ export default function Home() {
               </div>
             </div>
           )}
+        </section>
+
+        {/* Where's Atlas? — daily country-guessing game */}
+        <section className="mb-12">
+          <div
+            className="relative overflow-hidden rounded-3xl border border-[#25506f] px-6 py-8 sm:px-10 sm:py-10"
+            style={{ background: "linear-gradient(135deg, #0b2233 0%, #12314a 100%)" }}
+          >
+            <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#ff7a5c]/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-[#3fc9a5]/10 blur-3xl" />
+            <div className="relative flex flex-col items-center gap-6 text-center md:flex-row md:items-center md:justify-between md:text-left">
+              <div className="max-w-xl">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e4c580]/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e4c580]">
+                  <Compass className="h-3.5 w-3.5" /> New · Daily Game
+                </div>
+                <h2 className="text-3xl font-bold tracking-tight text-[#e8f1f4] sm:text-4xl">
+                  Where's <span className="text-[#ff7a5c]">Atlas?</span>
+                </h2>
+                <p className="mt-3 text-[#8fb0bf] sm:text-lg">
+                  Atlas the swallow has flown to a mystery country. Find it in six guesses
+                  using capital-to-capital <span className="text-[#e8f1f4]">distance</span> and{" "}
+                  <span className="text-[#e8f1f4]">direction</span> hints — a brand-new puzzle every day.
+                </p>
+                <div className="mt-6 flex justify-center md:justify-start">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="rounded-full bg-[#ff7a5c] text-[#0b2233] hover:bg-[#ff7a5c]/90"
+                    data-testid="button-atlas-play"
+                  >
+                    <Link href="/guess-the-country">
+                      Play Where's Atlas <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="flex shrink-0 justify-center md:justify-end">
+                <img
+                  src="/atlas-mascot.png"
+                  alt="Atlas the swallow"
+                  width={361}
+                  height={460}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-32 w-auto object-contain drop-shadow-lg sm:h-40 md:h-44"
+                />
+              </div>
+            </div>
+          </div>
         </section>
 
         {roots.length === 0 ? (
