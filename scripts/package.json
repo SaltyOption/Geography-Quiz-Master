@@ -9,6 +9,7 @@
     "seed-did-you-know": "tsx ./src/seed-did-you-know.ts",
     "seed-island-quizzes": "tsx ./src/seed-island-quizzes.ts",
     "dedupe-quiz-questions": "tsx ./src/dedupe-quiz-questions.ts",
+    "split-biomes-quiz": "tsx ./src/split-biomes-quiz.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
