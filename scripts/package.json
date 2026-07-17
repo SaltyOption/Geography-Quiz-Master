@@ -10,6 +10,7 @@
     "seed-island-quizzes": "tsx ./src/seed-island-quizzes.ts",
     "dedupe-quiz-questions": "tsx ./src/dedupe-quiz-questions.ts",
     "split-biomes-quiz": "tsx ./src/split-biomes-quiz.ts",
+    "rebalance-sibling-quizzes": "tsx ./src/rebalance-sibling-quizzes.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
