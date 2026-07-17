@@ -12,6 +12,7 @@
     "split-biomes-quiz": "tsx ./src/split-biomes-quiz.ts",
     "rebalance-sibling-quizzes": "tsx ./src/rebalance-sibling-quizzes.ts",
     "split-capitals-quiz": "tsx ./src/split-capitals-quiz.ts",
+    "split-mapskills-quiz": "tsx ./src/split-mapskills-quiz.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
