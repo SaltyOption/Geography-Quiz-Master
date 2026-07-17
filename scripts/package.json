@@ -8,6 +8,7 @@
     "check-db-image-files": "tsx ./src/check-db-image-files.ts",
     "seed-did-you-know": "tsx ./src/seed-did-you-know.ts",
     "seed-island-quizzes": "tsx ./src/seed-island-quizzes.ts",
+    "dedupe-quiz-questions": "tsx ./src/dedupe-quiz-questions.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
